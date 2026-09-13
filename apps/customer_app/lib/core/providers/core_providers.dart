@@ -1,0 +1,21 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../network/api_client.dart';
+import '../storage/local_storage_service.dart';
+import '../storage/secure_storage_service.dart';
+
+/// Provider for Local SharedPreferences Storage Service.
+/// Overridden at runtime in main() after initialization.
+final localStorageProvider = Provider<LocalStorageService>((ref) {
+  throw UnimplementedError('localStorageProvider must be overridden in ProviderScope');
+});
+
+/// Provider for Secure Storage Service (Encrypted Keystore / Keychain).
+final secureStorageProvider = Provider<SecureStorageService>((ref) {
+  return SecureStorageService();
+});
+
+/// Provider for the centralized ApiClient.
+final apiClientProvider = Provider<ApiClient>((ref) {
+  final secureStorage = ref.watch(secureStorageProvider);
+  return ApiClient(secureStorage: secureStorage);
+});
