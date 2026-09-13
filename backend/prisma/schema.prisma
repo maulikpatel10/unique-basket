@@ -1,0 +1,340 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String        @id @default(uuid()) @db.Uuid
+  phone        String        @unique @db.VarChar(15)
+  name         String?       @db.VarChar(100)
+  email        String?       @db.VarChar(100)
+  isActive     Boolean       @default(true) @map("is_active")
+  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  addresses    UserAddress[]
+  orders       Order[]
+  deviceTokens DeviceToken[]
+  cartItems    CartItem[]
+
+  @@map("users")
+}
+
+model UserAddress {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String   @db.VarChar(50)
+  addressLine String   @map("address_line") @db.Text
+  city        String   @db.VarChar(100)
+  state       String   @db.VarChar(100)
+  pincode     String   @db.VarChar(10)
+  latitude    Decimal  @db.Decimal(10, 8)
+  longitude   Decimal  @db.Decimal(11, 8)
+  isDefault   Boolean  @default(false) @map("is_default")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  orders      Order[]
+
+  @@map("user_addresses")
+}
+
+model Store {
+  id                String          @id @default(uuid()) @db.Uuid
+  storeId           String          @unique @map("store_id") @db.VarChar(50)
+  name              String          @db.VarChar(100)
+  address           String          @db.Text
+  city              String          @db.VarChar(100)
+  state             String          @db.VarChar(100)
+  pincode           String          @db.VarChar(10)
+  latitude          Decimal         @db.Decimal(10, 8)
+  longitude         Decimal         @db.Decimal(11, 8)
+  deliveryRadiusKm  Decimal         @default(10.00) @map("delivery_radius_km") @db.Decimal(5, 2)
+  phone             String          @db.VarChar(15)
+  email             String?         @db.VarChar(100)
+  openingTime       String          @map("opening_time") @db.VarChar(10) // HH:MM
+  closingTime       String          @map("closing_time") @db.VarChar(10) // HH:MM
+  isActive          Boolean         @default(true) @map("is_active")
+  createdAt         DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  managers             StoreManager[]
+  inventory            StoreInventory[]
+  orders               Order[]
+  inventoryTransactions InventoryTransaction[]
+
+  @@map("stores")
+}
+
+model AdminUser {
+  id           String         @id @default(uuid()) @db.Uuid
+  email        String         @unique @db.VarChar(100)
+  passwordHash String         @map("password_hash") @db.VarChar(255)
+  name         String         @db.VarChar(100)
+  role         AdminRole
+  isActive     Boolean        @default(true) @map("is_active")
+  createdAt    DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  managers             StoreManager[]
+  auditLogs            AuditLog[]
+  deviceTokens         DeviceToken[]
+  inventoryTransactions InventoryTransaction[]
+
+  @@map("admin_users")
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  STORE_MANAGER
+}
+
+model StoreManager {
+  id          String    @id @default(uuid()) @db.Uuid
+  adminUserId String    @map("admin_user_id") @db.Uuid
+  adminUser   AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+  storeId     String    @map("store_id") @db.Uuid
+  store       Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  assignedAt  DateTime  @default(now()) @map("assigned_at") @db.Timestamptz(6)
+
+  @@unique([adminUserId, storeId])
+  @@map("store_managers")
+}
+
+model Category {
+  id           String    @id @default(uuid()) @db.Uuid
+  name         String    @unique @db.VarChar(100)
+  description  String?   @db.Text
+  imageUrl     String?   @map("image_url") @db.Text
+  displayOrder Int       @default(0) @map("display_order")
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  products     Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id          String           @id @default(uuid()) @db.Uuid
+  name        String           @db.VarChar(100)
+  description String?          @db.Text
+  imageUrl    String?          @map("image_url") @db.Text
+  categoryId  String           @map("category_id") @db.Uuid
+  category    Category         @relation(fields: [categoryId], references: [id])
+  unit        ProductUnit      @default(KG)
+  price       Decimal          @db.Decimal(10, 2)
+  mrp         Decimal?         @db.Decimal(10, 2)
+  isActive    Boolean          @default(true) @map("is_active")
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  inventory            StoreInventory[]
+  orderItems           OrderItem[]
+  cartItems            CartItem[]
+  inventoryTransactions InventoryTransaction[]
+
+  @@map("products")
+}
+
+enum ProductUnit {
+  KG
+  GRAM
+  PIECE
+  PACK
+  DOZEN
+}
+
+model StoreInventory {
+  id                String   @id @default(uuid()) @db.Uuid
+  storeId           String   @map("store_id") @db.Uuid
+  store             Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  productId         String   @map("product_id") @db.Uuid
+  product           Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  stockQuantity     Decimal  @default(0.000) @map("stock_quantity") @db.Decimal(10, 3)
+  lowStockThreshold Decimal  @default(5.000) @map("low_stock_threshold") @db.Decimal(10, 3)
+  isAvailable       Boolean  @default(true) @map("is_available")
+  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([storeId, productId])
+  @@map("store_inventory")
+}
+
+model Order {
+  id              String          @id @default(uuid()) @db.Uuid
+  orderNumber     String          @unique @map("order_number") @db.VarChar(30)
+  userId          String          @map("user_id") @db.Uuid
+  user            User            @relation(fields: [userId], references: [id])
+  storeId         String          @map("store_id") @db.Uuid
+  store           Store           @relation(fields: [storeId], references: [id])
+  fulfillmentType FulfillmentType @map("fulfillment_type")
+  addressId       String?         @map("address_id") @db.Uuid
+  address         UserAddress?    @relation(fields: [addressId], references: [id])
+  subtotal        Decimal         @db.Decimal(10, 2)
+  deliveryFee     Decimal         @map("delivery_fee") @db.Decimal(10, 2)
+  codCharge       Decimal         @default(0.00) @map("cod_charge") @db.Decimal(10, 2)
+  discount        Decimal         @default(0.00) @db.Decimal(10, 2)
+  total           Decimal         @db.Decimal(10, 2)
+  paymentMethod   PaymentMethod   @map("payment_method")
+  paymentStatus   PaymentStatus   @default(PENDING) @map("payment_status")
+  orderStatus     OrderStatus     @default(PLACED) @map("order_status")
+  createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  items           OrderItem[]
+  payments        Payment[]
+
+  @@map("orders")
+}
+
+enum FulfillmentType {
+  DELIVERY
+  PICKUP
+}
+
+enum PaymentMethod {
+  COD
+  ONLINE
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
+enum OrderStatus {
+  PLACED
+  CONFIRMED
+  PREPARING
+  READY_FOR_PICKUP
+  PICKED_UP
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+}
+
+model OrderItem {
+  id          String      @id @default(uuid()) @db.Uuid
+  orderId     String      @map("order_id") @db.Uuid
+  order       Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String      @map("product_id") @db.Uuid
+  product     Product     @relation(fields: [productId], references: [id])
+  productName String      @default("Unknown") @map("product_name") @db.VarChar(100)
+  unit        ProductUnit @default(KG)
+  quantity    Decimal     @db.Decimal(10, 3)
+  unitPrice   Decimal     @map("unit_price") @db.Decimal(10, 2)
+  totalPrice  Decimal     @map("total_price") @db.Decimal(10, 2)
+
+  @@map("order_items")
+}
+
+model Payment {
+  id                String   @id @default(uuid()) @db.Uuid
+  orderId           String   @map("order_id") @db.Uuid
+  order             Order    @relation(fields: [orderId], references: [id])
+  razorpayOrderId   String   @unique @map("razorpay_order_id") @db.VarChar(100)
+  razorpayPaymentId String?  @map("razorpay_payment_id") @db.VarChar(100)
+  razorpaySignature String?  @map("razorpay_signature") @db.VarChar(255)
+  amount            Decimal  @db.Decimal(10, 2)
+  status            String   @db.VarChar(50)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("payments")
+}
+
+model DeviceToken {
+  id          String     @id @default(uuid()) @db.Uuid
+  userId      String?    @map("user_id") @db.Uuid
+  user        User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  adminUserId String?    @map("admin_user_id") @db.Uuid
+  adminUser   AdminUser? @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+  token       String     @unique @db.Text
+  platform    Platform
+  updatedAt   DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("device_tokens")
+}
+
+enum Platform {
+  ANDROID
+  IOS
+  WEB
+}
+
+model DeliverySettings {
+  id                    String   @id @default(uuid()) @db.Uuid
+  deliveryEnabled       Boolean  @default(true) @map("delivery_enabled")
+  deliveryFee           Decimal  @default(30.00) @map("delivery_fee") @db.Decimal(10, 2)
+  freeDeliveryThreshold Decimal  @default(499.00) @map("free_delivery_threshold") @db.Decimal(10, 2)
+  minimumOrderAmount    Decimal  @default(199.00) @map("minimum_order_amount") @db.Decimal(10, 2)
+  codEnabled            Boolean  @default(true) @map("cod_enabled")
+  codCharge             Decimal  @default(20.00) @map("cod_charge") @db.Decimal(10, 2)
+  minimumCodOrderAmount Decimal  @default(100.00) @map("minimum_cod_order_amount") @db.Decimal(10, 2)
+  maximumCodOrderAmount Decimal  @default(5000.00) @map("maximum_cod_order_amount") @db.Decimal(10, 2)
+  pickupCodEnabled      Boolean  @default(true) @map("pickup_cod_enabled")
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("delivery_settings")
+}
+
+model Banner {
+  id           String   @id @default(uuid()) @db.Uuid
+  title        String?  @db.VarChar(100)
+  imageUrl     String   @map("image_url") @db.Text
+  displayOrder Int      @default(0) @map("display_order")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("banners")
+}
+
+model AuditLog {
+  id          String     @id @default(uuid()) @db.Uuid
+  adminUserId String?    @map("admin_user_id") @db.Uuid
+  adminUser   AdminUser? @relation(fields: [adminUserId], references: [id], onDelete: SetNull)
+  action      String     @db.VarChar(100)
+  details     String?    @db.Text
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("audit_logs")
+}
+
+model CartItem {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String   @map("product_id") @db.Uuid
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity  Decimal  @db.Decimal(10, 3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([userId, productId])
+  @@map("cart_items")
+}
+
+enum InventoryTransactionType {
+  STOCK_ADDED
+  STOCK_REMOVED
+  STOCK_ADJUSTED
+  ORDER_DEDUCTION
+  ORDER_CANCELLATION_RESTORE
+}
+
+model InventoryTransaction {
+  id                  String                   @id @default(uuid()) @db.Uuid
+  storeId             String                   @map("store_id") @db.Uuid
+  store               Store                    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  productId           String                   @map("product_id") @db.Uuid
+  product             Product                  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  previousQuantity    Decimal                  @map("previous_quantity") @db.Decimal(10, 3)
+  changeQuantity      Decimal                  @map("change_quantity") @db.Decimal(10, 3)
+  newQuantity         Decimal                  @map("new_quantity") @db.Decimal(10, 3)
+  type                InventoryTransactionType
+  reason              String?                  @db.Text
+  performedByAdminId  String?                  @map("performed_by_admin_id") @db.Uuid
+  performedByAdmin    AdminUser?               @relation(fields: [performedByAdminId], references: [id])
+  createdAt           DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("inventory_transactions")
+}
