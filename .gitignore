@@ -1,0 +1,119 @@
+# =============================================================================
+# UNIQUE BASKET - Monorepo .gitignore
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# 1. Environment Variables & Secrets
+# -----------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+key.properties
+
+# -----------------------------------------------------------------------------
+# 2. Operating System Files
+# -----------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+
+# -----------------------------------------------------------------------------
+# 3. Logs, Temp Files & Test Coverage
+# -----------------------------------------------------------------------------
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+*.tmp
+*.temp
+coverage/
+
+# -----------------------------------------------------------------------------
+# 4. Node.js & Web Applications (Admin & Backend)
+# -----------------------------------------------------------------------------
+node_modules/
+dist/
+dist-ssr/
+.vite/
+*.local
+
+# -----------------------------------------------------------------------------
+# 5. Flutter & Dart (Customer App)
+# -----------------------------------------------------------------------------
+.dart_tool/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub/
+.pub-cache/
+**/doc/api/
+.widget_preview/
+
+# Symbolication / Obfuscation
+app.*.symbols
+app.*.map.json
+
+# Android Generated Files
+android/.gradle/
+android/local.properties
+**/android/.gradle/
+**/android/local.properties
+**/android/app/build/
+**/android/app/debug/
+**/android/app/profile/
+**/android/app/release/
+**/android/captures/
+**/android/.cxx/
+GeneratedPluginRegistrant.java
+
+# iOS Generated Files & Temporary Files
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/ephemeral/
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Flutter/ephemeral/
+**/ios/Flutter/Flutter.podspec
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/.last_build_id
+**/ios/DerivedData/
+*.mode1v3
+*.mode2v3
+*.moved-aside
+*.pbxuser
+*.perspectivev3
+xcuserdata/
+**/ios/*.xcworkspace/xcuserdata/
+**/ios/*.xcodeproj/xcuserdata/
+Runner/GeneratedPluginRegistrant.*
+
+# -----------------------------------------------------------------------------
+# 6. IDEs & Editors
+# -----------------------------------------------------------------------------
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Machine-specific VS Code files (preserve team configs)
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
