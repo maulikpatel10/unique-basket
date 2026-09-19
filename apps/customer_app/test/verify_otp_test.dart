@@ -59,6 +59,11 @@ class MockVerifyAuthRepository implements AuthRepository {
       },
     };
   }
+
+  @override
+  Future<String?> refreshToken(String refreshToken) async {
+    return 'mock_jwt_access_token';
+  }
 }
 
 class MockSecureStorageService implements SecureStorageService {

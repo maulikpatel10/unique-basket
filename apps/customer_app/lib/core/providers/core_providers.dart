@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../features/authentication/presentation/providers/auth_provider.dart';
 import '../network/api_client.dart';
 import '../services/startup_state_resolver.dart';
 import '../storage/local_storage_service.dart';
@@ -25,8 +26,10 @@ final apiClientProvider = Provider<ApiClient>((ref) {
 final startupStateResolverProvider = Provider<StartupStateResolver>((ref) {
   final localStorage = ref.watch(localStorageProvider);
   final secureStorage = ref.watch(secureStorageProvider);
+  final authRepository = ref.watch(authRepositoryProvider);
   return StartupStateResolver(
     localStorage: localStorage,
     secureStorage: secureStorage,
+    authRepository: authRepository,
   );
 });

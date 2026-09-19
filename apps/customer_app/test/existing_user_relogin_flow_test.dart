@@ -48,6 +48,11 @@ class MockTestAuthRepository implements AuthRepository {
       },
     };
   }
+
+  @override
+  Future<String?> refreshToken(String refreshToken) async {
+    return 'mock_new_access_token';
+  }
 }
 
 class MockTestProfileRepository implements CustomerProfileRepository {

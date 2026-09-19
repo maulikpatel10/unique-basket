@@ -4,6 +4,7 @@ import '../../../../core/network/api_client.dart';
 abstract class AuthRemoteDataSource {
   Future<void> sendOtp(String phoneNumber);
   Future<Map<String, dynamic>> verifyOtp(String phoneNumber, String otp);
+  Future<Map<String, dynamic>> refreshToken(String refreshToken);
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
@@ -27,6 +28,18 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         'phone': phoneNumber,
         'otp': otp,
       },
+    );
+    if (response is Map<String, dynamic>) {
+      return response;
+    }
+    return <String, dynamic>{};
+  }
+
+  @override
+  Future<Map<String, dynamic>> refreshToken(String refreshToken) async {
+    final response = await _apiClient.post(
+      ApiEndpoints.refreshToken,
+      data: {'refreshToken': refreshToken},
     );
     if (response is Map<String, dynamic>) {
       return response;

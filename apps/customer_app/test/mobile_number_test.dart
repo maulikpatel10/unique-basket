@@ -32,6 +32,11 @@ class MockMobileAuthRepository implements AuthRepository {
   Future<Map<String, dynamic>> verifyOtp(String phoneNumber, String otp) async {
     return {'success': true};
   }
+
+  @override
+  Future<String?> refreshToken(String refreshToken) async {
+    return 'mock_access_token';
+  }
 }
 
 class MockSecureStorageService implements SecureStorageService {

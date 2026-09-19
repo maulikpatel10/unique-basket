@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:customer_app/app/app.dart';
 import 'package:customer_app/app/config/app_config.dart';
 import 'package:customer_app/app/config/environment.dart';
@@ -16,6 +17,13 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+String _createValidMockJwt() {
+  final exp = (DateTime.now().add(const Duration(minutes: 15)).millisecondsSinceEpoch ~/ 1000);
+  final header = base64Url.encode(utf8.encode(jsonEncode({'alg': 'HS256', 'typ': 'JWT'}))).replaceAll('=', '');
+  final payload = base64Url.encode(utf8.encode(jsonEncode({'id': 'u1', 'exp': exp}))).replaceAll('=', '');
+  return '$header.$payload.mock_signature';
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -101,7 +109,7 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       final localStorage = LocalStorageService(prefs);
       final secureStorage = SecureStorageService();
-      await secureStorage.saveTokens(accessToken: 'mock_jwt_access_token');
+      await secureStorage.saveTokens(accessToken: _createValidMockJwt());
 
       await tester.pumpWidget(
         ProviderScope(
@@ -130,7 +138,7 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       final localStorage = LocalStorageService(prefs);
       final secureStorage = SecureStorageService();
-      await secureStorage.saveTokens(accessToken: 'mock_jwt_access_token');
+      await secureStorage.saveTokens(accessToken: _createValidMockJwt());
 
       await tester.pumpWidget(
         ProviderScope(
@@ -160,7 +168,7 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       final localStorage = LocalStorageService(prefs);
       final secureStorage = SecureStorageService();
-      await secureStorage.saveTokens(accessToken: 'mock_jwt_access_token');
+      await secureStorage.saveTokens(accessToken: _createValidMockJwt());
 
       await tester.pumpWidget(
         ProviderScope(
@@ -177,6 +185,10 @@ void main() {
 
       // Resolved to HomeScreen
       expect(find.byType(HomeScreen), findsOneWidget);
+      expect(find.byType(OnboardingScreen), findsNothing);
+      expect(find.byType(MobileNumberScreen), findsNothing);
+      expect(find.byType(ProfileSetupScreen), findsNothing);
+      expect(find.byType(FirstTimeAddAddressScreen), findsNothing);
     });
   });
 }

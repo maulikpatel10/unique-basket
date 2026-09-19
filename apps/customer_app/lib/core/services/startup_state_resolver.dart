@@ -1,7 +1,9 @@
 import '../../app/router/route_names.dart';
+import '../../features/authentication/data/repositories/auth_repository.dart';
 import '../constants/app_constants.dart';
 import '../storage/local_storage_service.dart';
 import '../storage/secure_storage_service.dart';
+import '../utils/jwt_utils.dart';
 
 /// Represents the startup destination of the application based on persistent state.
 enum StartupDestination {
@@ -34,12 +36,15 @@ extension StartupDestinationExtension on StartupDestination {
 class StartupStateResolver {
   final LocalStorageService _localStorage;
   final SecureStorageService _secureStorage;
+  final AuthRepository _authRepository;
 
   StartupStateResolver({
     required LocalStorageService localStorage,
     required SecureStorageService secureStorage,
+    required AuthRepository authRepository,
   })  : _localStorage = localStorage,
-        _secureStorage = secureStorage;
+        _secureStorage = secureStorage,
+        _authRepository = authRepository;
 
   Future<StartupDestination> resolve() async {
     // 1. Brand-new user: Check if onboarding has been completed
@@ -55,21 +60,49 @@ class StartupStateResolver {
       return StartupDestination.mobileAuthentication;
     }
 
-    // 3. Authenticated user: Check if profile setup is completed
+    // 3. Check access token expiration
+    final bool isExpired = JwtUtils.isExpired(accessToken);
+    if (isExpired) {
+      final String? refreshToken = await _secureStorage.getRefreshToken();
+      if (refreshToken == null || refreshToken.trim().isEmpty) {
+        await _secureStorage.clearTokens();
+        return StartupDestination.mobileAuthentication;
+      }
+
+      try {
+        final String? newAccessToken =
+            await _authRepository.refreshToken(refreshToken);
+        if (newAccessToken == null || newAccessToken.trim().isEmpty) {
+          await _secureStorage.clearTokens();
+          return StartupDestination.mobileAuthentication;
+        }
+
+        // Save new access token while preserving the existing refresh token
+        await _secureStorage.saveTokens(
+          accessToken: newAccessToken,
+          refreshToken: refreshToken,
+        );
+      } catch (_) {
+        await _secureStorage.clearTokens();
+        return StartupDestination.mobileAuthentication;
+      }
+    }
+
+    // 4. Authenticated user: Check if profile setup is completed
     final bool profileCompleted =
         _localStorage.getBool(AppConstants.keyProfileCompleted) ?? false;
     if (!profileCompleted) {
       return StartupDestination.profileSetup;
     }
 
-    // 4. Profile completed: Check if address setup is completed
+    // 5. Profile completed: Check if address setup is completed
     final bool addressCompleted =
         _localStorage.getBool(AppConstants.keyAddressCompleted) ?? false;
     if (!addressCompleted) {
       return StartupDestination.addressSetup;
     }
 
-    // 5. Fully completed returning user
+    // 6. Fully completed returning user
     return StartupDestination.home;
   }
 }

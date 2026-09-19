@@ -1,6 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:customer_app/app/config/app_config.dart';
+import 'package:customer_app/app/config/environment.dart';
 import 'package:customer_app/app/router/route_names.dart';
 import 'package:customer_app/app/theme/app_theme.dart';
 import 'package:customer_app/core/constants/app_constants.dart';
@@ -39,6 +42,10 @@ void main() {
 
   setUp(() {
     FlutterSecureStorage.setMockInitialValues({});
+    AppConfig.initialize(
+      appName: 'Unique Basket',
+      environment: Environment.development,
+    );
   });
 
   group('SplashScreen Unit & Widget Tests', () {
@@ -133,8 +140,13 @@ void main() {
       final localStorage = LocalStorageService(prefs);
 
       // Mock secure storage with valid token
+      final exp = (DateTime.now().add(const Duration(minutes: 15)).millisecondsSinceEpoch ~/ 1000);
+      final header = base64Url.encode(utf8.encode(jsonEncode({'alg': 'HS256', 'typ': 'JWT'}))).replaceAll('=', '');
+      final payload = base64Url.encode(utf8.encode(jsonEncode({'id': 'u1', 'exp': exp}))).replaceAll('=', '');
+      final validJwt = '$header.$payload.mock_signature';
+
       final secureStorage = SecureStorageService();
-      await secureStorage.saveTokens(accessToken: 'mock_jwt_token');
+      await secureStorage.saveTokens(accessToken: validJwt);
 
       StartupDestination? resolvedDest;
 
