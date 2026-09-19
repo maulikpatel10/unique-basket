@@ -1,7 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/errors/app_exception.dart';
 import '../../../../core/providers/core_providers.dart';
+import '../../../../core/services/startup_state_resolver.dart';
+import '../../../../core/storage/local_storage_service.dart';
 import '../../../../core/storage/secure_storage_service.dart';
+import '../../../address/data/repositories/customer_address_repository.dart';
+import '../../../address/presentation/providers/customer_address_provider.dart';
+import '../../../profile_setup/data/repositories/customer_profile_repository.dart';
+import '../../../profile_setup/presentation/providers/customer_profile_provider.dart';
 import '../../data/datasources/auth_remote_data_source.dart';
 import '../../data/repositories/auth_repository.dart';
 import 'auth_state.dart';
@@ -23,9 +30,15 @@ final authNotifierProvider =
     StateNotifierProvider<AuthNotifier, AuthState>((ref) {
   final repository = ref.watch(authRepositoryProvider);
   final secureStorage = ref.watch(secureStorageProvider);
+  final profileRepository = ref.watch(customerProfileRepositoryProvider);
+  final addressRepository = ref.watch(customerAddressRepositoryProvider);
+  final localStorage = ref.watch(localStorageProvider);
   return AuthNotifier(
     repository: repository,
     secureStorage: secureStorage,
+    profileRepository: profileRepository,
+    addressRepository: addressRepository,
+    localStorage: localStorage,
   );
 });
 
@@ -34,12 +47,21 @@ final authNotifierProvider =
 class AuthNotifier extends StateNotifier<AuthState> {
   final AuthRepository _repository;
   final SecureStorageService _secureStorage;
+  final CustomerProfileRepository? _profileRepository;
+  final CustomerAddressRepository? _addressRepository;
+  final LocalStorageService? _localStorage;
 
   AuthNotifier({
     required AuthRepository repository,
     required SecureStorageService secureStorage,
+    CustomerProfileRepository? profileRepository,
+    CustomerAddressRepository? addressRepository,
+    LocalStorageService? localStorage,
   })  : _repository = repository,
         _secureStorage = secureStorage,
+        _profileRepository = profileRepository,
+        _addressRepository = addressRepository,
+        _localStorage = localStorage,
         super(const AuthState());
 
   /// Clears any active error message in the authentication state.
@@ -150,11 +172,103 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final isNewUser = (data['isNewUser'] as bool?) ?? false;
       final userData = data['user'] as Map<String, dynamic>? ?? data;
 
+      StartupDestination destination = StartupDestination.profileSetup;
+
+      if (isNewUser) {
+        destination = StartupDestination.profileSetup;
+      } else {
+        // Query backend for existing customer profile and saved addresses
+        Map<String, dynamic>? userProfile;
+        if (_profileRepository != null) {
+          try {
+            final profileRes = await _profileRepository!.getProfile();
+            if (profileRes.containsKey('data') && profileRes['data'] is Map<String, dynamic>) {
+              final data = profileRes['data'] as Map<String, dynamic>;
+              userProfile = data['user'] as Map<String, dynamic>? ?? data;
+            } else if (profileRes.containsKey('user') && profileRes['user'] is Map<String, dynamic>) {
+              userProfile = profileRes['user'] as Map<String, dynamic>;
+            } else {
+              userProfile = profileRes;
+            }
+          } on AppException catch (e) {
+            state = state.copyWith(
+              status: AuthStatus.error,
+              errorMessage: e.message,
+            );
+            return false;
+          } catch (e) {
+            state = state.copyWith(
+              status: AuthStatus.error,
+              errorMessage: 'Failed to retrieve profile details. Please try again.',
+            );
+            return false;
+          }
+        }
+
+        List<dynamic>? addresses;
+        if (_addressRepository != null) {
+          try {
+            final addressRes = await _addressRepository!.getAddresses();
+            if (addressRes.containsKey('data') && addressRes['data'] is Map<String, dynamic>) {
+              final data = addressRes['data'] as Map<String, dynamic>;
+              addresses = data['addresses'] as List<dynamic>?;
+            } else if (addressRes.containsKey('addresses') && addressRes['addresses'] is List) {
+              addresses = addressRes['addresses'] as List<dynamic>;
+            }
+          } on AppException catch (e) {
+            state = state.copyWith(
+              status: AuthStatus.error,
+              errorMessage: e.message,
+            );
+            return false;
+          } catch (e) {
+            state = state.copyWith(
+              status: AuthStatus.error,
+              errorMessage: 'Failed to retrieve saved addresses. Please try again.',
+            );
+            return false;
+          }
+        }
+
+        final profileName = userProfile?['name'] as String? ?? userData['name'] as String?;
+        final isProfileComplete = profileName != null && profileName.trim().isNotEmpty;
+
+        if (!isProfileComplete) {
+          destination = StartupDestination.profileSetup;
+        } else {
+          // Cache profile details locally if available
+          if (_localStorage != null && userProfile != null) {
+            try {
+              await _localStorage!.setJson(AppConstants.keyUserData, userProfile);
+              await _localStorage!.setBool(AppConstants.keyProfileCompleted, true);
+              if (userProfile['dob'] != null) {
+                await _localStorage!.setString(AppConstants.keyUserDob, userProfile['dob'].toString());
+              }
+            } catch (_) {}
+          }
+
+          final hasAddresses = addresses != null && addresses.isNotEmpty;
+          if (!hasAddresses) {
+            destination = StartupDestination.addressSetup;
+          } else {
+            // Cache address details locally if available
+            if (_localStorage != null && addresses.first is Map<String, dynamic>) {
+              try {
+                await _localStorage!.setJson(AppConstants.keyUserAddress, addresses.first as Map<String, dynamic>);
+                await _localStorage!.setBool(AppConstants.keyAddressCompleted, true);
+              } catch (_) {}
+            }
+            destination = StartupDestination.home;
+          }
+        }
+      }
+
       state = state.copyWith(
         status: AuthStatus.verified,
         isNewUser: isNewUser,
         userData: userData,
         phoneNumber: normalizedPhone,
+        resolvedDestination: destination,
       );
       return true;
     } on AppException catch (e) {

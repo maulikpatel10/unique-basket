@@ -10,6 +10,7 @@ import '../../../../app/theme/app_responsive.dart';
 import '../../../../app/theme/app_shadows.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../core/services/startup_state_resolver.dart';
 import '../providers/auth_provider.dart';
 
 /// Screen 05 — Verify Mobile OTP for Unique Basket Customer App.
@@ -175,17 +176,20 @@ class _VerifyOtpScreenState extends ConsumerState<VerifyOtpScreen>
 
     if (success && mounted) {
       final updatedState = ref.read(authNotifierProvider);
+      final destination = updatedState.resolvedDestination ?? StartupDestination.profileSetup;
+
       if (widget.onVerified != null) {
         widget.onVerified!({
           'phone': phone,
           'isNewUser': updatedState.isNewUser,
           'userData': updatedState.userData,
+          'destination': destination.routeName,
         });
         return;
       }
 
       try {
-        GoRouter.of(context).go(RouteNames.profileSetup);
+        GoRouter.of(context).go(destination.routeName);
       } catch (_) {
         // Safe fallback for testing environments without GoRouter
       }

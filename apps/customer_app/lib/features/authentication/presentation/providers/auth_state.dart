@@ -1,3 +1,5 @@
+import '../../../../core/services/startup_state_resolver.dart';
+
 enum AuthStatus { initial, loading, otpSent, verifying, verified, error }
 
 class AuthState {
@@ -6,6 +8,7 @@ class AuthState {
   final String? errorMessage;
   final bool isNewUser;
   final Map<String, dynamic>? userData;
+  final StartupDestination? resolvedDestination;
 
   const AuthState({
     this.status = AuthStatus.initial,
@@ -13,6 +16,7 @@ class AuthState {
     this.errorMessage,
     this.isNewUser = false,
     this.userData,
+    this.resolvedDestination,
   });
 
   bool get isLoading => status == AuthStatus.loading;
@@ -27,6 +31,7 @@ class AuthState {
     String? errorMessage,
     bool? isNewUser,
     Map<String, dynamic>? userData,
+    StartupDestination? resolvedDestination,
   }) {
     return AuthState(
       status: status ?? this.status,
@@ -34,6 +39,7 @@ class AuthState {
       errorMessage: errorMessage,
       isNewUser: isNewUser ?? this.isNewUser,
       userData: userData ?? this.userData,
+      resolvedDestination: resolvedDestination ?? this.resolvedDestination,
     );
   }
 }
