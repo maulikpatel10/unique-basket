@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../app/theme/app_colors.dart';
+import '../../app/theme/app_spacing.dart';
 import '../../app/theme/app_text_styles.dart';
 
 class AppLoading extends StatelessWidget {
@@ -14,6 +15,9 @@ class AppLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     final content = Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -23,10 +27,12 @@ class AppLoading extends StatelessWidget {
             valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
           ),
           if (message != null) ...[
-            const SizedBox(height: 16.0),
+            const SizedBox(height: AppSpacing.md),
             Text(
               message!,
-              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondary,
+              ),
               textAlign: TextAlign.center,
             ),
           ],
@@ -36,7 +42,7 @@ class AppLoading extends StatelessWidget {
 
     if (isOverlay) {
       return Container(
-        color: Colors.black.withValues(alpha: 0.3),
+        color: isDark ? AppColors.overlayDark : AppColors.overlay,
         child: content,
       );
     }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../app/theme/app_colors.dart';
+import '../../app/theme/app_dimensions.dart';
 import '../../app/theme/app_spacing.dart';
 import '../../app/theme/app_text_styles.dart';
 import 'app_button.dart';
@@ -22,6 +23,9 @@ class AppErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Center(
       child: Padding(
         padding: AppSpacing.screenPadding,
@@ -29,31 +33,35 @@ class AppErrorState extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: const EdgeInsets.all(16.0),
-              decoration: const BoxDecoration(
-                color: Color(0xFFFEE2E2), // Light red
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.surfaceContainerDark : AppColors.errorContainer,
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 icon,
-                size: 40.0,
+                size: AppDimensions.iconXxl,
                 color: AppColors.error,
               ),
             ),
-            const SizedBox(height: 16.0),
+            const SizedBox(height: AppSpacing.md),
             Text(
               title,
-              style: AppTextStyles.h3,
+              style: AppTextStyles.headlineSmall.copyWith(
+                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+              ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 8.0),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               message,
-              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondary,
+              ),
               textAlign: TextAlign.center,
             ),
             if (onRetry != null) ...[
-              const SizedBox(height: 24.0),
+              const SizedBox(height: AppSpacing.lg),
               AppButton(
                 text: retryText,
                 onPressed: onRetry,

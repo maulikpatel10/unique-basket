@@ -11,6 +11,8 @@ import cartRoutes from './routes/cartRoutes';
 import orderRoutes from './routes/orderRoutes';
 import paymentRoutes from './routes/paymentRoutes';
 import notificationRoutes from './routes/notificationRoutes';
+import customerRoutes from './routes/customerRoutes';
+import bannerRoutes from './routes/bannerRoutes';
 
 dotenv.config();
 
@@ -24,10 +26,12 @@ app.use(express.urlencoded({ extended: true }));
 
 // API Routes
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/customer', customerRoutes);
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/stores', storeRoutes);
 app.use('/api/v1/categories', categoryRoutes);
 app.use('/api/v1/products', productRoutes);
+app.use('/api/v1/banners', bannerRoutes);
 app.use('/api/v1/cart', cartRoutes);
 app.use('/api/v1/orders', orderRoutes);
 app.use('/api/v1/payments', paymentRoutes);

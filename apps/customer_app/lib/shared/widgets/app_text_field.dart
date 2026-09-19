@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../app/theme/app_colors.dart';
+import '../../app/theme/app_dimensions.dart';
+import '../../app/theme/app_radius.dart';
 import '../../app/theme/app_spacing.dart';
 import '../../app/theme/app_text_styles.dart';
 
@@ -41,6 +43,9 @@ class AppTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -48,9 +53,11 @@ class AppTextField extends StatelessWidget {
         if (label != null) ...[
           Text(
             label!,
-            style: AppTextStyles.subtitle2.copyWith(color: AppColors.textSecondary),
+            style: AppTextStyles.titleSmall.copyWith(
+              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondary,
+            ),
           ),
-          const SizedBox(height: 6.0),
+          const SizedBox(height: AppSpacing.xs),
         ],
         TextField(
           controller: controller,
@@ -63,26 +70,51 @@ class AppTextField extends StatelessWidget {
           autofocus: autofocus,
           readOnly: readOnly,
           onTap: onTap,
-          style: AppTextStyles.bodyMedium,
+          style: AppTextStyles.bodyMedium.copyWith(
+            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+          ),
           decoration: InputDecoration(
             hintText: hint,
             errorText: errorText,
             prefixIcon: prefixIcon,
             suffixIcon: suffixIcon,
             filled: true,
-            fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
+            fillColor: isDark ? AppColors.surfaceDark : AppColors.surface,
+            contentPadding: AppSpacing.inputPadding,
             border: OutlineInputBorder(
-              borderRadius: AppSpacing.roundedMedium,
-              borderSide: const BorderSide(color: AppColors.cardBorder),
+              borderRadius: AppRadius.rMd,
+              borderSide: BorderSide(
+                color: isDark ? AppColors.cardBorderDark : AppColors.cardBorder,
+                width: AppDimensions.borderWidth,
+              ),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: AppSpacing.roundedMedium,
-              borderSide: const BorderSide(color: AppColors.cardBorder),
+              borderRadius: AppRadius.rMd,
+              borderSide: BorderSide(
+                color: isDark ? AppColors.cardBorderDark : AppColors.cardBorder,
+                width: AppDimensions.borderWidth,
+              ),
             ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: AppSpacing.roundedMedium,
-              borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+            focusedBorder: const OutlineInputBorder(
+              borderRadius: AppRadius.rMd,
+              borderSide: BorderSide(
+                color: AppColors.primary,
+                width: AppDimensions.focusedBorderWidth,
+              ),
+            ),
+            errorBorder: const OutlineInputBorder(
+              borderRadius: AppRadius.rMd,
+              borderSide: BorderSide(
+                color: AppColors.error,
+                width: AppDimensions.borderWidth,
+              ),
+            ),
+            focusedErrorBorder: const OutlineInputBorder(
+              borderRadius: AppRadius.rMd,
+              borderSide: BorderSide(
+                color: AppColors.error,
+                width: AppDimensions.focusedBorderWidth,
+              ),
             ),
           ),
         ),

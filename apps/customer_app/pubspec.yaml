@@ -32,6 +32,7 @@ dependencies:
   # UI & Typography
   google_fonts: ^6.2.1
   flutter_svg: ^2.0.10+1
+  image_picker: ^1.2.3
 
 dev_dependencies:
   flutter_test:
@@ -43,3 +44,4 @@ flutter:
   assets:
     - assets/images/
     - assets/icons/
+    - assets/logos/

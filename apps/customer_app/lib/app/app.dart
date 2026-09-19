@@ -14,6 +14,8 @@ class CustomerApp extends ConsumerWidget {
       title: 'Unique Basket',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: ThemeMode.system,
       routerConfig: router,
     );
   }

@@ -4,7 +4,7 @@ import { prisma } from '../src/config/db';
 
 describe('Authentication Flow Integration Tests', () => {
   const testPhone = '+919999999999';
-  const testOtp = '123456'; // Default in development environment
+  const testOtp = '1234'; // Temporary static OTP for development/testing
 
   beforeAll(async () => {
     // Ensure any pre-existing test user is removed to assert new user flows
@@ -22,7 +22,7 @@ describe('Authentication Flow Integration Tests', () => {
   });
 
   describe('Customer OTP Flow', () => {
-    it('should successfully send an OTP to a valid mobile number', async () => {
+    it('should successfully send an OTP and include temporary OTP 1234 in test environment', async () => {
       const res = await request(app)
         .post('/api/v1/auth/send-otp')
         .send({ phone: testPhone });
@@ -30,6 +30,23 @@ describe('Authentication Flow Integration Tests', () => {
       expect(res.statusCode).toEqual(200);
       expect(res.body).toHaveProperty('success', true);
       expect(res.body).toHaveProperty('message');
+      expect(res.body).toHaveProperty('otp', '1234');
+    });
+
+    it('should NOT expose OTP in production environment', async () => {
+      const originalEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'production';
+      try {
+        const res = await request(app)
+          .post('/api/v1/auth/send-otp')
+          .send({ phone: '+919999999998' });
+
+        expect(res.statusCode).toEqual(200);
+        expect(res.body).toHaveProperty('success', true);
+        expect(res.body).not.toHaveProperty('otp');
+      } finally {
+        process.env.NODE_ENV = originalEnv;
+      }
     });
 
     it('should fail to send an OTP to an invalid mobile format', async () => {
@@ -42,7 +59,7 @@ describe('Authentication Flow Integration Tests', () => {
       expect(res.body).toHaveProperty('errorCode', 'INVALID_PHONE_FORMAT');
     });
 
-    it('should successfully verify a correct OTP and register a new user', async () => {
+    it('should successfully verify a correct OTP (1234) and register a new user', async () => {
       const res = await request(app)
         .post('/api/v1/auth/verify-otp')
         .send({ phone: testPhone, otp: testOtp });
@@ -55,10 +72,15 @@ describe('Authentication Flow Integration Tests', () => {
       expect(res.body.data.user).toHaveProperty('phone', testPhone);
     });
 
-    it('should fail when verifying with an incorrect OTP code', async () => {
+    it('should fail when verifying with an incorrect OTP code (0000, 9999, 1111)', async () => {
+      // Re-send OTP to have an active record
+      await request(app)
+        .post('/api/v1/auth/send-otp')
+        .send({ phone: testPhone });
+
       const res = await request(app)
         .post('/api/v1/auth/verify-otp')
-        .send({ phone: testPhone, otp: '999999' });
+        .send({ phone: testPhone, otp: '9999' });
 
       expect(res.statusCode).toEqual(400);
       expect(res.body).toHaveProperty('success', false);

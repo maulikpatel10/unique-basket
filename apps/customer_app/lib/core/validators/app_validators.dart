@@ -29,8 +29,92 @@ class AppValidators {
       return 'Please enter OTP';
     }
     final cleaned = value.replaceAll(RegExp(r'\D'), '');
+    if (cleaned.length != 4 && cleaned.length != 6) {
+      return 'OTP must be 4 digits';
+    }
+    return null;
+  }
+
+  static String? validateFullName(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Please enter your full name';
+    }
+    final trimmed = value.trim();
+    if (trimmed.length < 2) {
+      return 'Full name must be at least 2 characters';
+    }
+    if (!RegExp(r"^[a-zA-Z\s.'-]+$").hasMatch(trimmed)) {
+      return 'Please enter a valid name';
+    }
+    return null;
+  }
+
+  static String? validateFullAddress(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Please enter full address';
+    }
+    final trimmed = value.trim();
+    if (trimmed.length < 4) {
+      return 'Address must be at least 4 characters';
+    }
+    return null;
+  }
+
+  static String? validateAreaLocality(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Please enter area / locality';
+    }
+    final trimmed = value.trim();
+    if (trimmed.length < 3) {
+      return 'Area must be at least 3 characters';
+    }
+    return null;
+  }
+
+  static String? validateCity(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Please enter city';
+    }
+    final trimmed = value.trim();
+    if (trimmed.length < 2) {
+      return 'City must be at least 2 characters';
+    }
+    return null;
+  }
+
+  static String? validateState(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Please enter state';
+    }
+    return null;
+  }
+
+  static const Set<String> allowedPincodes = {
+    '360001',
+    '360002',
+    '360003',
+    '360004',
+    '360005',
+    '360006',
+    '360007',
+  };
+
+  static bool isDeliverablePinCode(String? value) {
+    if (value == null) return false;
+    final cleaned = value.replaceAll(RegExp(r'\D'), '');
+    return allowedPincodes.contains(cleaned);
+  }
+
+  static String? validatePinCode(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Please enter PIN code';
+    }
+    final cleaned = value.replaceAll(RegExp(r'\D'), '');
     if (cleaned.length != 6) {
-      return 'OTP must be 6 digits';
+      return 'PIN code must be 6 digits';
+    }
+    if (!allowedPincodes.contains(cleaned)) {
+      return "Sorry, we currently don't deliver to this pincode.";
     }
     return null;
   }

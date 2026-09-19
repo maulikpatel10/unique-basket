@@ -31,9 +31,12 @@ export class AuthController {
         return;
       }
 
+      const isDevOrTest = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test' || !process.env.NODE_ENV;
+
       res.status(200).json({
         success: true,
         message: result.message,
+        ...(isDevOrTest && result.otp ? { otp: result.otp } : {}),
       });
     } catch (error) {
       next(error);

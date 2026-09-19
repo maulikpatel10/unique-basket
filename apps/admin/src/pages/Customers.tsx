@@ -20,6 +20,7 @@ interface CustomerSummary {
   phone: string;
   name: string;
   email: string | null;
+  dob?: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;

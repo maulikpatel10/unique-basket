@@ -11,42 +11,75 @@ class SecureStorageService {
               iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
             );
 
+  static final Map<String, String> _memoryFallback = {};
+
   Future<void> saveTokens({
     required String accessToken,
     String? refreshToken,
   }) async {
-    await _storage.write(key: AppConstants.keyAccessToken, value: accessToken);
+    _memoryFallback[AppConstants.keyAccessToken] = accessToken;
+    try {
+      await _storage.write(key: AppConstants.keyAccessToken, value: accessToken);
+    } catch (_) {}
     if (refreshToken != null) {
-      await _storage.write(key: AppConstants.keyRefreshToken, value: refreshToken);
+      _memoryFallback[AppConstants.keyRefreshToken] = refreshToken;
+      try {
+        await _storage.write(key: AppConstants.keyRefreshToken, value: refreshToken);
+      } catch (_) {}
     }
   }
 
   Future<String?> getAccessToken() async {
-    return await _storage.read(key: AppConstants.keyAccessToken);
+    try {
+      final token = await _storage.read(key: AppConstants.keyAccessToken);
+      if (token != null && token.isNotEmpty) return token;
+    } catch (_) {}
+    return _memoryFallback[AppConstants.keyAccessToken];
   }
 
   Future<String?> getRefreshToken() async {
-    return await _storage.read(key: AppConstants.keyRefreshToken);
+    try {
+      final token = await _storage.read(key: AppConstants.keyRefreshToken);
+      if (token != null && token.isNotEmpty) return token;
+    } catch (_) {}
+    return _memoryFallback[AppConstants.keyRefreshToken];
   }
 
   Future<void> clearTokens() async {
-    await _storage.delete(key: AppConstants.keyAccessToken);
-    await _storage.delete(key: AppConstants.keyRefreshToken);
+    _memoryFallback.remove(AppConstants.keyAccessToken);
+    _memoryFallback.remove(AppConstants.keyRefreshToken);
+    try {
+      await _storage.delete(key: AppConstants.keyAccessToken);
+      await _storage.delete(key: AppConstants.keyRefreshToken);
+    } catch (_) {}
   }
 
   Future<void> write(String key, String value) async {
-    await _storage.write(key: key, value: value);
+    _memoryFallback[key] = value;
+    try {
+      await _storage.write(key: key, value: value);
+    } catch (_) {}
   }
 
   Future<String?> read(String key) async {
-    return await _storage.read(key: key);
+    try {
+      final val = await _storage.read(key: key);
+      if (val != null) return val;
+    } catch (_) {}
+    return _memoryFallback[key];
   }
 
   Future<void> delete(String key) async {
-    await _storage.delete(key: key);
+    _memoryFallback.remove(key);
+    try {
+      await _storage.delete(key: key);
+    } catch (_) {}
   }
 
   Future<void> clearAll() async {
-    await _storage.deleteAll();
+    _memoryFallback.clear();
+    try {
+      await _storage.deleteAll();
+    } catch (_) {}
   }
 }

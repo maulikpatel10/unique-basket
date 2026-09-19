@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../app/theme/app_colors.dart';
+import '../../app/theme/app_dimensions.dart';
+import '../../app/theme/app_radius.dart';
 import '../../app/theme/app_spacing.dart';
 import '../../app/theme/app_text_styles.dart';
 
@@ -24,7 +26,7 @@ class AppButton extends StatelessWidget {
     this.variant = ButtonVariant.primary,
     this.icon,
     this.prefix,
-    this.height = 50.0,
+    this.height = AppDimensions.buttonHeight,
   });
 
   @override
@@ -36,22 +38,25 @@ class AppButton extends StatelessWidget {
     switch (variant) {
       case ButtonVariant.primary:
         backgroundColor = AppColors.primary;
-        textColor = Colors.white;
+        textColor = AppColors.onPrimary;
         borderSide = BorderSide.none;
         break;
       case ButtonVariant.secondary:
         backgroundColor = AppColors.secondary;
-        textColor = Colors.white;
+        textColor = AppColors.onSecondary;
         borderSide = BorderSide.none;
         break;
       case ButtonVariant.outline:
         backgroundColor = Colors.transparent;
         textColor = AppColors.primary;
-        borderSide = const BorderSide(color: AppColors.primary, width: 1.5);
+        borderSide = const BorderSide(
+          color: AppColors.primary,
+          width: AppDimensions.focusedBorderWidth,
+        );
         break;
       case ButtonVariant.danger:
         backgroundColor = AppColors.error;
-        textColor = Colors.white;
+        textColor = AppColors.onError;
         borderSide = BorderSide.none;
         break;
     }
@@ -68,18 +73,18 @@ class AppButton extends StatelessWidget {
           foregroundColor: isEnabled ? textColor : AppColors.textMuted,
           elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: AppSpacing.roundedMedium,
+            borderRadius: AppRadius.rMd,
             side: isEnabled ? borderSide : BorderSide.none,
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 20.0),
+          padding: AppSpacing.buttonPadding,
         ),
         child: isLoading
-            ? const SizedBox(
-                height: 22.0,
-                width: 22.0,
+            ? SizedBox(
+                height: AppDimensions.iconMd,
+                width: AppDimensions.iconMd,
                 child: CircularProgressIndicator(
                   strokeWidth: 2.5,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  valueColor: AlwaysStoppedAnimation<Color>(textColor),
                 ),
               )
             : Row(
@@ -88,10 +93,10 @@ class AppButton extends StatelessWidget {
                 children: [
                   if (prefix != null) ...[
                     prefix!,
-                    const SizedBox(width: 8.0),
+                    const SizedBox(width: AppSpacing.sm),
                   ] else if (icon != null) ...[
-                    Icon(icon, size: 20.0, color: textColor),
-                    const SizedBox(width: 8.0),
+                    Icon(icon, size: AppDimensions.iconMd, color: textColor),
+                    const SizedBox(width: AppSpacing.sm),
                   ],
                   Text(
                     text,

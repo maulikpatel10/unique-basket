@@ -19,6 +19,7 @@ interface CustomerProfile {
   phone: string;
   name: string;
   email: string | null;
+  dob?: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -229,6 +230,12 @@ export const CustomerDetails: React.FC = () => {
                 <Calendar className="h-3.5 w-3.5 text-slate-500" />
                 <span>Joined {new Date(customer.createdAt).toLocaleDateString('en-IN')}</span>
               </span>
+              {customer.dob && (
+                <span className="flex items-center gap-1.5">
+                  <Calendar className="h-3.5 w-3.5 text-brand-400" />
+                  <span>DOB: {new Date(customer.dob).toLocaleDateString('en-IN', { timeZone: 'UTC', day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                </span>
+              )}
             </div>
           </div>
         </div>
