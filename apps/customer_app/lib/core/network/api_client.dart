@@ -7,16 +7,19 @@ import 'auth_interceptor.dart';
 
 class ApiClient {
   final Dio _dio;
+  final Dio _tokenDio;
   final SecureStorageService _secureStorage;
 
   ApiClient({
     required SecureStorageService secureStorage,
     Dio? dio,
+    Dio? tokenDio,
   })  : _secureStorage = secureStorage,
-        _dio = dio ?? Dio() {
+        _dio = dio ?? Dio(),
+        _tokenDio = tokenDio ?? Dio() {
     final config = AppConfig.instance;
 
-    _dio.options = BaseOptions(
+    final baseOptions = BaseOptions(
       baseUrl: config.baseUrl,
       connectTimeout: config.connectTimeout,
       receiveTimeout: config.receiveTimeout,
@@ -26,14 +29,19 @@ class ApiClient {
       },
     );
 
+    _dio.options = baseOptions;
+    _tokenDio.options = baseOptions;
+
     _dio.interceptors.add(
       AuthInterceptor(
         secureStorage: _secureStorage,
+        tokenDio: _tokenDio,
       ),
     );
   }
 
   Dio get dio => _dio;
+  Dio get tokenDio => _tokenDio;
 
   Future<dynamic> get(
     String path, {
