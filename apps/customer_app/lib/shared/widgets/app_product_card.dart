@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_responsive.dart';
 import '../../app/theme/app_text_styles.dart';
+import '../../core/utils/currency_formatter.dart';
 import 'product_quantity_control.dart';
 
 /// Presentation-only reusable Product Card for Unique Basket.
@@ -103,50 +104,85 @@ class AppProductCard extends StatelessWidget {
                   ),
                   child: Stack(
                     children: [
-                      // Centered visual icon / network image
-                      Center(
-                        child: imageUrl != null && imageUrl!.isNotEmpty
-                            ? ClipRRect(
-                                borderRadius: BorderRadius.circular(10.0),
-                                child: Image.network(
-                                  imageUrl!,
-                                  width: context.r(80),
-                                  height: context.r(80),
-                                  fit: BoxFit.contain,
-                                  errorBuilder: (_, __, ___) => Container(
-                                    width: context.r(60),
-                                    height: context.r(60),
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: resolvedVisualColor
-                                          .withValues(alpha: 0.15),
-                                    ),
-                                    child: Icon(
-                                      resolvedVisualIcon,
-                                      size: context.r(36),
-                                      color: resolvedVisualColor,
+                      // Centered visual icon / network image (dimmed when out of stock)
+                      Opacity(
+                        opacity: isPurchasable ? 1.0 : 0.45,
+                        child: Center(
+                          child: imageUrl != null && imageUrl!.isNotEmpty
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(10.0),
+                                  child: Image.network(
+                                    imageUrl!,
+                                    width: context.r(80),
+                                    height: context.r(80),
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (_, __, ___) => Container(
+                                      width: context.r(60),
+                                      height: context.r(60),
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: resolvedVisualColor
+                                            .withValues(alpha: 0.15),
+                                      ),
+                                      child: Icon(
+                                        resolvedVisualIcon,
+                                        size: context.r(36),
+                                        color: resolvedVisualColor,
+                                      ),
                                     ),
                                   ),
+                                )
+                              : Container(
+                                  width: context.r(60),
+                                  height: context.r(60),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: resolvedVisualColor
+                                        .withValues(alpha: 0.15),
+                                  ),
+                                  child: Icon(
+                                    resolvedVisualIcon,
+                                    size: context.r(36),
+                                    color: resolvedVisualColor,
+                                  ),
                                 ),
-                              )
-                            : Container(
-                                width: context.r(60),
-                                height: context.r(60),
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: resolvedVisualColor
-                                      .withValues(alpha: 0.15),
-                                ),
-                                child: Icon(
-                                  resolvedVisualIcon,
-                                  size: context.r(36),
-                                  color: resolvedVisualColor,
-                                ),
-                              ),
+                        ),
                       ),
 
-                      // Top-Left Badge (e.g. "16% OFF" or "Local")
-                      if (badge != null && badge!.isNotEmpty)
+                      // Centered "OUT OF STOCK" pill badge over image
+                      if (!isPurchasable)
+                        Center(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12.0,
+                              vertical: 5.5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF014D40),
+                              borderRadius: BorderRadius.circular(999),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.18),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: const Text(
+                              'OUT OF STOCK',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10.0,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.5,
+                                fontFamily: AppTextStyles.fontFamily,
+                              ),
+                            ),
+                          ),
+                        ),
+
+                      // Top-Left Badge (e.g. "16% OFF" or "Local") - shown only when purchasable
+                      if (isPurchasable && badge != null && badge!.isNotEmpty)
                         Positioned(
                           top: 8.0,
                           left: 8.0,
@@ -196,9 +232,11 @@ class AppProductCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: context.sp(13.5),
                       fontWeight: FontWeight.w700,
-                      color: isDark
-                          ? AppColors.textPrimaryDark
-                          : const Color(0xFF0F172A),
+                      color: !isPurchasable
+                          ? (isDark ? AppColors.textSecondaryDark : const Color(0xFF64748B))
+                          : (isDark
+                              ? AppColors.textPrimaryDark
+                              : const Color(0xFF0F172A)),
                       fontFamily: AppTextStyles.fontFamily,
                     ),
                     maxLines: 1,
@@ -236,13 +274,15 @@ class AppProductCard extends StatelessWidget {
                       // Price
                       Expanded(
                         child: Text(
-                          '\$${price.toStringAsFixed(2)}',
+                          CurrencyFormatter.format(price),
                           style: TextStyle(
                             fontSize: context.sp(15.5),
                             fontWeight: FontWeight.w800,
-                            color: isDark
-                                ? AppColors.textPrimaryDark
-                                : const Color(0xFF014D40),
+                            color: !isPurchasable
+                                ? (isDark ? AppColors.textMutedDark : const Color(0xFF739B93))
+                                : (isDark
+                                    ? AppColors.textPrimaryDark
+                                    : const Color(0xFF014D40)),
                             fontFamily: AppTextStyles.fontFamily,
                           ),
                           maxLines: 1,
@@ -261,36 +301,20 @@ class AppProductCard extends StatelessWidget {
                           onDecrement: onDecrement,
                         )
                       else
-                        Flexible(
-                          child: Container(
-                            height: 32.0,
-                            padding: const EdgeInsets.symmetric(horizontal: 6.0),
-                            decoration: BoxDecoration(
-                              color: isDark
-                                  ? AppColors.surfaceContainerDark
-                                  : const Color(0xFFF1F5F9),
-                              borderRadius: BorderRadius.circular(16.0),
-                              border: Border.all(
-                                color: isDark
-                                    ? AppColors.cardBorderDark
-                                    : const Color(0xFFCBD5E1),
-                                width: 1.0,
-                              ),
-                            ),
-                            alignment: Alignment.center,
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Text(
-                                'Out of Stock',
-                                style: TextStyle(
-                                  fontSize: context.sp(10.0),
-                                  fontWeight: FontWeight.w600,
-                                  color: isDark
-                                      ? const Color(0xFF94A3B8)
-                                      : const Color(0xFF64748B),
-                                  fontFamily: AppTextStyles.fontFamily,
-                                ),
-                              ),
+                        Container(
+                          width: 32.0,
+                          height: 32.0,
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? const Color(0xFF334155)
+                                : const Color(0xFF7BA19A),
+                            borderRadius: BorderRadius.circular(16.0),
+                          ),
+                          child: const Center(
+                            child: Icon(
+                              Icons.add_rounded,
+                              size: 20.0,
+                              color: Colors.white,
                             ),
                           ),
                         ),

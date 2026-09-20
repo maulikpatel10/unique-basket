@@ -115,59 +115,62 @@ class _ProductQuantityControlState extends State<ProductQuantityControl> {
                       onTap: _handleMinusTap,
                       behavior: HitTestBehavior.opaque,
                       child: SizedBox(
-                        width: 26.0,
+                        width: 24.0,
                         height: widget.height,
                         child: Center(
                           child: AnimatedScale(
                             scale: _isMinusPressed ? 0.93 : 1.0,
                             duration: const Duration(milliseconds: 120),
                             curve: Curves.easeOut,
-                            child: const Icon(
+                            child: Icon(
                               Icons.remove_rounded,
                               size: 14.0,
-                              color: Color(0xFF014D40),
+                              color: isDark ? AppColors.textPrimaryDark : const Color(0xFF014D40),
                             ),
                           ),
                         ),
                       ),
                     ),
 
-                    // Centered Quantity digit with smooth vertical slide + fade
+                    // Centered Quantity digit shifted slightly left to maintain visual balance
                     Expanded(
-                      child: Center(
-                        child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 180),
-                          transitionBuilder: (child, animation) => FadeTransition(
-                            opacity: CurvedAnimation(
-                              parent: animation,
-                              curve: Curves.easeOutCubic,
-                            ),
-                            child: SlideTransition(
-                              position: Tween<Offset>(
-                                begin: const Offset(0.0, 0.18),
-                                end: Offset.zero,
-                              ).animate(
-                                CurvedAnimation(
-                                  parent: animation,
-                                  curve: Curves.easeOutCubic,
-                                ),
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 6.0),
+                        child: Center(
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 180),
+                            transitionBuilder: (child, animation) => FadeTransition(
+                              opacity: CurvedAnimation(
+                                parent: animation,
+                                curve: Curves.easeOutCubic,
                               ),
-                              child: child,
+                              child: SlideTransition(
+                                position: Tween<Offset>(
+                                  begin: const Offset(0.0, 0.18),
+                                  end: Offset.zero,
+                                ).animate(
+                                  CurvedAnimation(
+                                    parent: animation,
+                                    curve: Curves.easeOutCubic,
+                                  ),
+                                ),
+                                child: child,
+                              ),
                             ),
-                          ),
-                          child: Text(
-                            '$quantity',
-                            key: ValueKey('qty_$quantity'),
-                            style: TextStyle(
-                              fontSize: context.sp(12),
-                              fontWeight: FontWeight.w800,
-                              color: const Color(0xFF014D40),
-                              fontFamily: AppTextStyles.fontFamily,
+                            child: Text(
+                              '$quantity',
+                              key: ValueKey('qty_$quantity'),
+                              style: TextStyle(
+                                fontSize: context.sp(12),
+                                fontWeight: FontWeight.w800,
+                                color: isDark ? AppColors.textPrimaryDark : const Color(0xFF014D40),
+                                fontFamily: AppTextStyles.fontFamily,
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
+                    )
                   ],
                 ),
               ),

@@ -297,7 +297,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Out of Stock'), findsOneWidget);
+      expect(find.text('OUT OF STOCK'), findsOneWidget);
     });
 
     testWidgets('11. ProductQuantityControl maintains layout stability across quantity changes', (tester) async {

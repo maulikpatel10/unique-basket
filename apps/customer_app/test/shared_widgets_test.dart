@@ -36,7 +36,7 @@ void main() {
 
         expect(find.text('Organic Hass Avocado'), findsOneWidget);
         expect(find.text('Pack of 2'), findsOneWidget);
-        expect(find.text('\$4.99'), findsOneWidget);
+        expect(find.text('₹5'), findsOneWidget);
         expect(find.text('16% OFF'), findsOneWidget);
         expect(find.byIcon(Icons.add_rounded), findsOneWidget);
       });
@@ -258,7 +258,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('3 Products'), findsOneWidget);
-        expect(find.text('\$14.97'), findsOneWidget);
+        expect(find.text('₹15'), findsOneWidget);
         expect(find.text('Checkout'), findsOneWidget);
 
         await tester.tap(find.text('Checkout'));
@@ -391,6 +391,37 @@ void main() {
         expect(find.byType(Image), findsNothing);
         expect(find.text('20% Off Seasonal Greens'), findsOneWidget);
         expect(find.text('Shop Now'), findsOneWidget);
+      });
+    });
+
+    // 10. AppPrice Tests
+    group('AppPrice', () {
+      testWidgets('renders single price correctly with INR symbol and rounding', (tester) async {
+        await tester.pumpWidget(_wrapWidget(
+          const AppPrice(price: 149.50),
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.text('₹150'), findsOneWidget);
+      });
+
+      testWidgets('renders price with strikethrough MRP when oldPrice > price', (tester) async {
+        await tester.pumpWidget(_wrapWidget(
+          const AppPrice(price: 99, oldPrice: 150),
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.text('₹99'), findsOneWidget);
+        expect(find.text('₹150'), findsOneWidget);
+      });
+
+      testWidgets('renders large price with Indian numbering grouping', (tester) async {
+        await tester.pumpWidget(_wrapWidget(
+          const AppPrice(price: 125000),
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.text('₹1,25,000'), findsOneWidget);
       });
     });
   });

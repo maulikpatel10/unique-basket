@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../app/theme/app_responsive.dart';
 import '../../app/theme/app_text_styles.dart';
+import '../../core/utils/currency_formatter.dart';
 
 /// Reusable Floating Checkout Pill Bar for Unique Basket.
 ///
@@ -14,7 +15,7 @@ class CheckoutBar extends StatelessWidget {
   final int itemCount;
   final double totalPrice;
   final VoidCallback? onCheckoutTap;
-  final String currencySymbol;
+  final String? currencySymbol;
   final String? customLabel;
 
   const CheckoutBar({
@@ -22,7 +23,7 @@ class CheckoutBar extends StatelessWidget {
     required this.itemCount,
     required this.totalPrice,
     this.onCheckoutTap,
-    this.currencySymbol = '\$',
+    this.currencySymbol,
     this.customLabel,
   });
 
@@ -81,7 +82,9 @@ class CheckoutBar extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  '$currencySymbol${totalPrice.toStringAsFixed(2)}',
+                  currencySymbol != null
+                      ? '$currencySymbol${CurrencyFormatter.formatAmountOnly(totalPrice)}'
+                      : CurrencyFormatter.format(totalPrice),
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: context.sp(15.5),

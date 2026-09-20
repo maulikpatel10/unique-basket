@@ -1,6 +1,8 @@
 class AppConstants {
   static const String appName = 'Unique Basket';
   static const String currencySymbol = '₹';
+  static const String currencyCode = 'INR';
+  static const String currencyLocale = 'en_IN';
   static const String defaultCountryCode = '+91';
 
   // Storage Keys

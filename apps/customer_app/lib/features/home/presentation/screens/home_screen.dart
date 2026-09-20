@@ -421,7 +421,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   ignoring: totalCartCount == 0,
                   child: HomeCartFloatingBar(
                     itemCount: totalCartCount,
-                    totalPrice: totalCartPrice > 0 ? totalCartPrice : 4.99,
+                    totalPrice: totalCartPrice,
                     onCheckoutTap: _handleCheckoutTap,
                   ),
                 ),
