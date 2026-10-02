@@ -19,10 +19,14 @@
 - Quantities: PIECE must be whole numbers (D-007); max 3 decimals and DB maximum for all units.
 - Cart and checkout share fare rules (`services/pricingService.ts`).
 - Seed refuses to run outside development/test.
-- Tests: 33 suites / 339 tests pass on a fresh migrated+seeded DB.
+- Money: cart/checkout totals use exact integer-paise arithmetic (`utils/money.ts`).
+- HTTP: `CORS_ORIGINS` allow-list, security headers, `TRUST_PROXY`, body limit (413); structured request log; `/health` checks the DB (503 when down); graceful SIGTERM/SIGINT shutdown.
+- Admin dashboard metrics come from `GET /admin/dashboard/summary` (DB aggregates, store-isolated).
+- Tests: 37 suites / 354 tests pass on a fresh migrated+seeded DB.
 
 **Customer app (Flutter)**
-- `flutter analyze` clean; 598 tests pass.
+- `flutter analyze` clean; 603 tests pass.
+- Environment from `--dart-define=APP_ENV`; release/staging require `--dart-define=API_BASE_URL` (no hard-coded production or LAN URL). iOS only declares camera/photo permissions.
 - Route guard redirects protected routes to login without a token; session expiry (refresh rejected) redirects to login; dev routes debug-only.
 - Logout revokes the backend session (fire-and-forget).
 - Cart write failures are surfaced (SnackBar) and reconciled with the server cart; checkout never shows placeholder items/fake contact data and has no client-only discount.
@@ -31,6 +35,7 @@
 **Admin panel**
 - Refreshes expired access tokens (single-flight) and revokes the session on logout; no token logging.
 - "Verify Pickup" opens pickup verification; unpaid ONLINE orders show "Awaiting Payment".
+- Dashboard uses the server-side summary; pages are lazy-loaded (main chunk ~303 kB).
 - Vitest suite (12 tests); `npm run lint` → 0 errors; build passes.
 
 ---
