@@ -169,7 +169,7 @@
 - **Verification:** After logout or deactivation, refresh returns 401; tests cover rotation and revocation.
 
 ### P1-09 — Admin panel has no token refresh (forced logout every 15 minutes)
-- **Priority:** P1 · **Area:** Admin / Auth · **Status:** TODO
+- **Priority:** P1 · **Area:** Admin / Auth · **Status:** DONE (`apps/admin/src/services/api.ts`: single-flight refresh on 401 + one retry; session cleared and redirected only when refresh fails; logout revokes the backend session (P1-08); removed console logging of login tokens; tests in `apps/admin/src/services/api.test.ts`. Tokens remain in localStorage — moving to httpOnly cookies would need backend changes.)
 - **Problem:** Access tokens last 15 minutes; the admin panel discards the refresh token and hard-redirects to `/login` on any 401, losing unsaved work.
 - **Evidence:** `AuthContext.tsx` stores only `ub_admin_token`/`ub_admin_user`; `services/api.ts` 401 interceptor sets `window.location.href = '/login'`.
 - **Required fix:** Store the refresh token appropriately and refresh single-flight on 401, then retry; only log out when refresh fails.
@@ -259,7 +259,7 @@
 - **Verification:** Tests present and green.
 
 ### P1-19 — Admin panel has no tests
-- **Priority:** P1 · **Area:** Testing / Admin · **Status:** TODO
+- **Priority:** P1 · **Area:** Testing / Admin · **Status:** DONE (Vitest 5 + jsdom dev dependencies, `npm test`; 12 tests: `orderWorkflow.test.ts`, `services/api.test.ts`, `components/PrivateRoute.test.tsx`)
 - **Problem:** There's no test runner or tests for the admin panel (auth guard, role routes, order workflow actions, inventory adjust).
 - **Evidence:** `apps/admin/package.json` has no test script or test files.
 - **Required fix:** Add a test setup and cover `PrivateRoute`, `orderWorkflow.ts`, api 401/refresh handling.

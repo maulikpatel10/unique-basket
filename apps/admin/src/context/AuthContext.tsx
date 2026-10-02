@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { api } from '../services/api';
+import { api, clearAdminSession, revokeAdminSession } from '../services/api';
 import type { AdminUser } from '../types';
 
 interface AuthContextType {
@@ -141,8 +141,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       password,
     });
 
-    console.log('FULL ADMIN LOGIN RESPONSE:', response.data);
-
     const data = response.data?.data;
 
     if (!data?.admin || !data?.token) {
@@ -171,7 +169,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setToken(accessToken);
     setUser(adminProfile);
 
-    console.log('Admin logged in successfully:', adminProfile);
 
   } catch (err: any) {
     console.error('Admin login failed:', err);
@@ -193,9 +190,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   //   setUser(null);
   // };
   const logout = (): void => {
-  localStorage.removeItem('ub_admin_token');
-  localStorage.removeItem('ub_admin_user');
-  localStorage.removeItem('ub_admin_refresh_token');
+  // Revoke the server-side refresh session first (best effort), then clear local state
+  revokeAdminSession();
+  clearAdminSession();
 
   setToken(null);
   setUser(null);

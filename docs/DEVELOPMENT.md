@@ -34,7 +34,7 @@
 - UI changes: verify responsive viewports per `apps/customer_app/CLAUDE.md`
 
 **Admin** (`apps/admin/`)
-- `npm run lint` and `npm run build`
+- `npm test` (Vitest), `npm run lint` and `npm run build`
 
 Never delete, skip, or weaken tests to get green.
 
