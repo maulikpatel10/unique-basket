@@ -552,6 +552,8 @@ void main() {
       expect(mockRepo.lastPayload, isNotNull);
       expect(mockRepo.lastPayload?['fulfillmentType'], 'DELIVERY');
       expect(mockRepo.lastPayload?['addressId'], 'addr_101');
+      // CURRENT BEHAVIOUR, NOT A DECISION (P1-16): 'UPI' maps to ONLINE with no payment step;
+      // provider/flow undecided (P4-01). Unpaid ONLINE orders are cancel-only (D-005).
       expect(mockRepo.lastPayload?['paymentMethod'], 'ONLINE');
       expect((mockRepo.lastPayload?['items'] as List).length, 1);
 

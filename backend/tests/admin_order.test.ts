@@ -483,6 +483,8 @@ describe('Admin Order Operations & Payment Verification Integration Tests', () =
       expect(invTx).toBeDefined();
     });
 
+    // CURRENT BEHAVIOUR, NOT A DECISION (P1-16): refund handling is undecided (P4-09).
+    // Update this test when the cancellation/refund policy is confirmed.
     it('should cancel a paid online order without creating a refund workflow', async () => {
       const order = await prisma.order.create({
         data: {

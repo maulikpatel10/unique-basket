@@ -223,7 +223,7 @@
 - **Verification:** `npm test` green on a fresh DB with only the documented test env, twice in a row.
 
 ### P1-15 — Missing critical backend tests
-- **Priority:** P1 · **Area:** Testing / Backend · **Status:** TODO
+- **Priority:** P1 · **Area:** Testing / Backend · **Status:** DONE (covered by tests added in P0-01…P1-11/P1-02: `otp_bypass`, `env_validation`, `session_revocation`, `inventory_concurrency`, `order_status_rules`, `pickup_verify_status`, `quantity_rules`, `error_handling`, `manager_store_resolution`, `order_address_snapshot`, `rate_limit`, `cart_totals`)
 - **Problem:** No coverage for: refresh-token flow and logout (0 tests mention logout; refresh in 1 file), OTP production behavior (P0-01), concurrent checkout vs adjustment/cancel (only order-number concurrency is tested), fulfillment-aware transitions, pickup-verify status guard, quantity/unit validation, invalid UUID handling, manager reassignment isolation, address-deletion integrity.
 - **Evidence:** `grep` over `backend/tests` (see audit summary).
 - **Required fix:** Add tests alongside P0/P1 fixes.
@@ -232,7 +232,7 @@
 - **Verification:** New tests exist and fail before the corresponding fix.
 
 ### P1-16 — Tests that encode outdated or undecided behavior
-- **Priority:** P1 · **Area:** Testing · **Status:** TODO
+- **Priority:** P1 · **Area:** Testing · **Status:** DONE (annotated as current behaviour with their pending decision IDs: `admin_order.test.ts` refund case → P4-09; `admin_payment.test.ts` webhook signing → P4-01; Flutter `checkout_screen_test.dart` ONLINE/UPI → P4-01/D-005. The 4-digit `1234` OTP in `verify_otp_test.dart` is now decided (D-004).)
 - **Problem:** Some tests lock in behavior that is undecided or wrong: `admin_order.test.ts:480` "cancel a paid online order without creating a refund workflow" (refund policy P4-09); Flutter `checkout_screen_test.dart` asserts `ONLINE` orders go straight to success with no payment step (P4-01); `verify_otp_test.dart` hard-codes a 4-digit `1234` (P4-02); webhook tests compute the signature over `JSON.stringify(body)`, matching the implementation, not the provider's raw-body contract (P4-01).
 - **Evidence:** Files cited above.
 - **Required fix:** Mark them as "current behavior" and update them when the related decision lands. Do not delete them.

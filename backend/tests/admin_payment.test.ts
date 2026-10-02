@@ -390,6 +390,9 @@ describe('Admin Payment & COD Management Integration Tests', () => {
       expect([200, 404]).toContain(res.status);
     });
 
+    // CURRENT BEHAVIOUR, NOT A DECISION (P1-16): payment provider is undecided (D-002 / P4-01).
+    // These webhook tests sign JSON.stringify(body), matching the current implementation,
+    // not a provider's raw-body signature contract. Revisit when P4-01 is decided.
     it('should handle Razorpay payment.captured webhook and mark payment PAID', async () => {
       const webhookRpOrderId = `order_webhook_capture_${Date.now()}`;
       const webhookOrder = await prisma.order.create({
