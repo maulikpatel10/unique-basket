@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { Prisma } from '@prisma/client';
 import { AppError } from './utils/errors';
+import { corsOptions, securityHeaders, configureProxyTrust, BODY_LIMIT } from './config/http';
 import authRoutes from './routes/authRoutes';
 import adminRoutes from './routes/adminRoutes';
 import storeRoutes from './routes/storeRoutes';
@@ -20,10 +21,13 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-// Middlewares
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Middlewares (P3-03: restricted CORS, security headers, proxy trust, body limits)
+app.disable('x-powered-by');
+configureProxyTrust(app);
+app.use(securityHeaders);
+app.use(cors(corsOptions));
+app.use(express.json({ limit: BODY_LIMIT }));
+app.use(express.urlencoded({ extended: true, limit: BODY_LIMIT }));
 
 // API Routes
 app.use('/api/v1/auth', authRoutes);
@@ -62,6 +66,10 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 function mapClientError(err: any): { status: number; errorCode: string; message: string } | null {
   if (err instanceof AppError) {
     return { status: err.status, errorCode: err.errorCode, message: err.message };
+  }
+
+  if (err?.type === 'entity.too.large') {
+    return { status: 413, errorCode: 'PAYLOAD_TOO_LARGE', message: 'Request body is too large.' };
   }
 
   // Malformed JSON body (express.json / body-parser)

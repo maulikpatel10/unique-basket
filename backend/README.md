@@ -144,6 +144,9 @@ The application reads configuration from `backend/.env`. Below are the required 
 | `RAZORPAY_KEY_SECRET` | Optional | Razorpay Secret Key for HMAC signature verification | `razorpay_secret_placeholder` |
 | `RAZORPAY_WEBHOOK_SECRET` | Optional | Razorpay Webhook Secret for signature validation | `webhook_secret_placeholder` |
 | `FIREBASE_SERVICE_ACCOUNT` | Optional | Stringified JSON of Firebase Admin Service Account | `{"type":"service_account",...}` |
+| `CORS_ORIGINS` | **Required in production for the admin panel** | Comma-separated browser origins allowed to call the API. Unset: any origin in development/test, none in production. | `https://admin.example.com` |
+| `TRUST_PROXY` | Optional | Reverse-proxy hops in front of the API (`1`, `true`, …) so client IPs are correct for rate limiting/logs | `1` |
+| `BODY_LIMIT` | Optional | Max JSON/form body size (default `100kb`) | `100kb` |
 | `SEED_SUPER_ADMIN_PASSWORD` / `SEED_MANAGER_PASSWORD` | Optional | Passwords for the dev/test seed admin accounts (defaults are well-known dev values) | `choose_a_local_password` |
 
 > Payment and Firebase variables belong to integrations whose providers are still undecided (see `docs/DECISIONS.md`). No maps/geocoding key is used by the code.

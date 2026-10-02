@@ -366,7 +366,7 @@
 - **Verification:** A fresh clone can configure from the examples; missing vars fail fast.
 
 ### P3-03 — HTTP hardening: open CORS, no security headers, no proxy config
-- **Priority:** P3 · **Area:** Backend / Security · **Status:** TODO
+- **Priority:** P3 · **Area:** Backend / Security · **Status:** DONE (`backend/src/config/http.ts`: `CORS_ORIGINS` allow-list (any origin only in development/test; none in production when unset; requests without Origin unaffected), security headers incl. HSTS in production, `X-Powered-By` off, `TRUST_PROXY`, `BODY_LIMIT` with 413 `PAYLOAD_TOO_LARGE`; startup warning when CORS_ORIGINS is missing in production; tests in `backend/tests/http_hardening.test.ts`. Actual origin/proxy values depend on hosting (P4-13).)
 - **Problem:** `cors()` allows every origin; no security headers; no `trust proxy` (needed for correct IPs behind a host, and for P1-11); default body limits; the global handler logs full errors.
 - **Evidence:** `backend/src/app.ts`.
 - **Required fix:** Restrict CORS to the admin origin(s), add security headers, configure proxy trust and body limits.
