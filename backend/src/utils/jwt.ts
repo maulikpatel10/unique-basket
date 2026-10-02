@@ -1,7 +1,9 @@
 import jwt from 'jsonwebtoken';
+import { requireEnv } from '../config/validateEnv';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback_access_secret';
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'fallback_refresh_secret';
+// Secrets are read at call time and have no default values (P0-02).
+const accessSecret = (): string => requireEnv('JWT_SECRET');
+const refreshSecret = (): string => requireEnv('JWT_REFRESH_SECRET');
 
 export interface TokenPayload {
   id: string;
@@ -12,17 +14,17 @@ export interface TokenPayload {
 }
 
 export function generateAccessToken(payload: TokenPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: '15m' });
+  return jwt.sign(payload, accessSecret(), { expiresIn: '15m' });
 }
 
 export function generateRefreshToken(payload: { id: string; role: string }): string {
-  return jwt.sign(payload, JWT_REFRESH_SECRET, { expiresIn: '7d' });
+  return jwt.sign(payload, refreshSecret(), { expiresIn: '7d' });
 }
 
 export function verifyAccessToken(token: string): TokenPayload {
-  return jwt.verify(token, JWT_SECRET) as TokenPayload;
+  return jwt.verify(token, accessSecret()) as TokenPayload;
 }
 
 export function verifyRefreshToken(token: string): { id: string; role: string } {
-  return jwt.verify(token, JWT_REFRESH_SECRET) as { id: string; role: string };
+  return jwt.verify(token, refreshSecret()) as { id: string; role: string };
 }

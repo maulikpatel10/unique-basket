@@ -4,6 +4,7 @@ module.exports = {
     '^.+\\.(t|j)s$': '@swc/jest',
   },
   testMatch: ['**/tests/**/*.test.ts'],
+  setupFiles: ['<rootDir>/tests/setup/env.ts'],
   verbose: true,
   forceExit: true,
   clearMocks: true,

@@ -39,7 +39,7 @@
 - **Verification:** Unit tests: with `NODE_ENV` unset and `=production`, `send-otp` response has no `otp`, generated OTP ≠ `1234`, no OTP in logs; dev/test behavior unchanged.
 
 ### P0-02 — Hard-coded fallback secrets allow forged tokens
-- **Priority:** P0 · **Area:** Backend / Security · **Status:** TODO
+- **Priority:** P0 · **Area:** Backend / Security · **Status:** DONE (JWT fallbacks removed; startup validation in `backend/src/config/validateEnv.ts`; test secrets via `backend/tests/setup/env.ts`; tests in `backend/tests/env_validation.test.ts`. Payment fallbacks remain under P4-01.)
 - **Problem:** If env vars are missing, the server silently signs/verifies JWTs with public strings, so anyone can mint admin tokens.
 - **Evidence:** `utils/jwt.ts`: `JWT_SECRET || 'fallback_access_secret'`, `JWT_REFRESH_SECRET || 'fallback_refresh_secret'`. (Payment fallbacks `mock_key_secret`, `mock_webhook_secret`, `mock_key_id` are tracked in P4-01 because payment code is frozen.)
 - **Required fix:** Central env validation at startup; refuse to start (outside `test`) when `JWT_SECRET`/`JWT_REFRESH_SECRET`/`DATABASE_URL` are missing or weak. Remove fallbacks.
