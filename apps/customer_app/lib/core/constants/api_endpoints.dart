@@ -9,9 +9,14 @@ class ApiEndpoints {
   static const String refreshToken = '/auth/refresh';
   static const String logout = '/auth/logout';
 
-  // Customer / Profile
+  // Customer / Profile / Favorites / Settings / Serviceability
   static const String profile = '/customer/profile';
   static const String addresses = '/customer/addresses';
+  static const String favorites = '/customer/favorites';
+  static const String deliverySettings = '/customer/delivery-settings';
+  static const String supportedPincodes = '/customer/pincodes';
+  static const String serviceabilityCheck = '/customer/serviceability/check';
+  static String favoriteProduct(String productId) => '/customer/favorites/$productId';
 
   // Stores & Catalog
   static const String stores = '/stores';
@@ -24,6 +29,11 @@ class ApiEndpoints {
   // Cart & Orders
   static const String cart = '/cart';
   static const String orders = '/orders';
-  static const String payments = '/payments';
+  static String orderById(String id) => '/orders/$id';
+  // Notifications
   static const String notifications = '/notifications';
+  static const String notificationUnreadCount = '/notifications/unread-count';
+  static const String notificationReadAll = '/notifications/read-all';
+  static String notificationMarkRead(String id) => '/notifications/$id/read';
 }
+

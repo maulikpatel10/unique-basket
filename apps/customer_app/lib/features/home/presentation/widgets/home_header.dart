@@ -159,34 +159,22 @@ class HomeHeaderSliverDelegate extends SliverPersistentHeaderDelegate {
                                       ),
                                     ),
                                     const SizedBox(height: 2.0),
-                                    Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Flexible(
-                                          child: Text(
-                                            deliveryAddress.isNotEmpty
-                                                ? '$deliveryTitle - $deliveryAddress'
-                                                : deliveryTitle,
-                                            style: TextStyle(
-                                              fontSize: context.sp(16),
-                                              fontWeight: FontWeight.w700,
-                                              color: Colors.white,
-                                              fontFamily:
-                                                  AppTextStyles.fontFamily,
-                                              letterSpacing: -0.2,
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 4.0),
-                                        const Icon(
-                                          Icons.keyboard_arrow_down_rounded,
-                                          color: Colors.white,
-                                          size: 18.0,
-                                        ),
-                                      ],
+                                    Text(
+                                      deliveryAddress.isNotEmpty
+                                          ? '$deliveryTitle - $deliveryAddress'
+                                          : deliveryTitle,
+                                      style: TextStyle(
+                                        fontSize: context.sp(16),
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                        fontFamily:
+                                            AppTextStyles.fontFamily,
+                                        letterSpacing: -0.2,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
+
                                     if (distanceText != null &&
                                         distanceText!.isNotEmpty) ...[
                                       const SizedBox(height: 6.0),
@@ -374,25 +362,16 @@ class HomeHeader extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              Text(
-                                'Delivering to',
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.8),
-                                  fontSize: context.sp(11.5),
-                                  fontWeight: FontWeight.w500,
-                                  fontFamily: AppTextStyles.fontFamily,
-                                ),
-                              ),
-                              const SizedBox(width: 4.0),
-                              const Icon(
-                                Icons.keyboard_arrow_down_rounded,
-                                color: Colors.white,
-                                size: 16.0,
-                              ),
-                            ],
+                          Text(
+                            'Delivering to',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.8),
+                              fontSize: context.sp(11.5),
+                              fontWeight: FontWeight.w500,
+                              fontFamily: AppTextStyles.fontFamily,
+                            ),
                           ),
+
                           const SizedBox(height: 2.0),
                           Row(
                             children: [

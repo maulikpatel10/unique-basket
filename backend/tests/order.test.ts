@@ -16,9 +16,9 @@ describe('Cart & Order Placement Integration Tests', () => {
   beforeAll(async () => {
     // 1. Create or load test customer
     const user = await prisma.user.upsert({
-      where: { phone: '+919999999999' },
+      where: { phone: '+919999912345' },
       update: {},
-      create: { phone: '+919999999999', name: 'Test Order Customer' },
+      create: { phone: '+919999912345', name: 'Test Order Customer' },
     });
     customerId = user.id;
 
@@ -54,13 +54,13 @@ describe('Cart & Order Placement Integration Tests', () => {
     const nearAddr = await prisma.userAddress.create({
       data: {
         userId: customerId,
-        title: 'Near Central Store',
-        addressLine: '101 MG Road',
-        city: 'Bangalore',
-        state: 'Karnataka',
-        pincode: '560001',
-        latitude: 12.971598,
-        longitude: 77.594562, // 0 km distance
+        title: 'Near Store One',
+        addressLine: 'Nana Mava Road',
+        city: 'Rajkot',
+        state: 'Gujarat',
+        pincode: '360005',
+        latitude: 22.308155,
+        longitude: 70.800705, // 0 km distance
       },
     });
     nearAddressId = nearAddr.id;
@@ -192,6 +192,58 @@ describe('Cart & Order Placement Integration Tests', () => {
       expect(res.statusCode).toEqual(400);
       expect(res.body).toHaveProperty('success', false);
       expect(res.body).toHaveProperty('errorCode', 'INSUFFICIENT_STOCK');
+    });
+
+    it('should fetch order details by id and include product imageUrl, name, and unit', async () => {
+      const createRes = await request(app)
+        .post('/api/v1/orders')
+        .set('Authorization', `Bearer ${customerToken}`)
+        .send({
+          fulfillmentType: 'DELIVERY',
+          addressId: nearAddressId,
+          paymentMethod: 'COD',
+          items: [{ productId: appleProductId, quantity: 2.0 }],
+        });
+
+      expect(createRes.statusCode).toEqual(201);
+      const orderId = createRes.body.data.order.id;
+
+      const getRes = await request(app)
+        .get(`/api/v1/orders/${orderId}`)
+        .set('Authorization', `Bearer ${customerToken}`);
+
+      expect(getRes.statusCode).toEqual(200);
+      expect(getRes.body).toHaveProperty('success', true);
+      expect(getRes.body.data).toHaveProperty('id', orderId);
+      expect(getRes.body.data.items.length).toBeGreaterThan(0);
+
+      const firstItem = getRes.body.data.items[0];
+      expect(firstItem).toHaveProperty('product');
+      expect(firstItem.product).toHaveProperty('name', 'Apple (Shimla)');
+      expect(firstItem.product).toHaveProperty('unit', 'KG');
+      expect(firstItem.product).toHaveProperty('imageUrl');
+      expect(typeof firstItem.product.imageUrl).toBe('string');
+    });
+
+    it('should fetch customer orders list via GET /api/v1/orders with items and products included', async () => {
+      const listRes = await request(app)
+        .get('/api/v1/orders')
+        .set('Authorization', `Bearer ${customerToken}`);
+
+      expect(listRes.statusCode).toEqual(200);
+      expect(listRes.body).toHaveProperty('success', true);
+      expect(Array.isArray(listRes.body.data)).toBe(true);
+      expect(listRes.body.data.length).toBeGreaterThan(0);
+
+      const firstOrder = listRes.body.data[0];
+      expect(firstOrder).toHaveProperty('orderNumber');
+      expect(firstOrder).toHaveProperty('orderStatus');
+      expect(firstOrder).toHaveProperty('total');
+      expect(firstOrder).toHaveProperty('items');
+      expect(Array.isArray(firstOrder.items)).toBe(true);
+      expect(firstOrder.items.length).toBeGreaterThan(0);
+      expect(firstOrder.items[0]).toHaveProperty('product');
+      expect(firstOrder.items[0].product).toHaveProperty('name');
     });
   });
 });

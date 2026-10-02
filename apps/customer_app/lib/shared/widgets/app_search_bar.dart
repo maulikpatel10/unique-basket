@@ -61,7 +61,7 @@ class AppSearchBar extends StatelessWidget {
 
     final bgColor = isDark
         ? AppColors.surfaceDark.withValues(alpha: 0.75)
-        : Colors.white.withValues(alpha: 0.88);
+        : Colors.white;
 
     final borderColor = isDark
         ? AppColors.cardBorderDark.withValues(alpha: 0.6)
@@ -112,9 +112,13 @@ class AppSearchBar extends StatelessWidget {
                     controller: controller,
                     focusNode: focusNode,
                     autofocus: autofocus,
-                    enabled: enabled,
-                    onChanged: onChanged,
+                    textInputAction: TextInputAction.search,
                     onSubmitted: onSubmitted,
+                    onEditingComplete: () {
+                      if (onSubmitted != null && controller != null) {
+                        onSubmitted!(controller!.text);
+                      }
+                    },
                     style: TextStyle(
                       fontSize: context.sp(14),
                       color: isDark ? AppColors.textPrimaryDark : const Color(0xFF0F172A),
@@ -128,10 +132,9 @@ class AppSearchBar extends StatelessWidget {
                         color: const Color(0xFF94A3B8),
                         fontFamily: AppTextStyles.fontFamily,
                         fontWeight: FontWeight.w400,
+                        
                       ),
-                      border: InputBorder.none,
-                      isDense: true,
-                      contentPadding: EdgeInsets.zero,
+                      
                     ),
                   ),
           ),

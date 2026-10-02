@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../app/theme/app_colors.dart';
+import '../../app/theme/app_radius.dart';
 import '../../app/theme/app_responsive.dart';
 import '../../app/theme/app_text_styles.dart';
 import '../../core/utils/currency_formatter.dart';
+import 'app_badge.dart';
+import 'app_icon_button.dart';
 import 'product_quantity_control.dart';
 
 /// Presentation-only reusable Product Card for Unique Basket.
@@ -63,7 +66,7 @@ class AppProductCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : Colors.white,
-        borderRadius: BorderRadius.circular(16.0),
+        borderRadius: AppRadius.rLg,
         border: Border.all(
           color: isDark ? AppColors.cardBorderDark : const Color(0xFFE2E8F0),
           width: 1.0,
@@ -83,10 +86,10 @@ class AppProductCard extends StatelessWidget {
       ),
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(16.0),
+        borderRadius: AppRadius.rLg,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(16.0),
+          borderRadius: AppRadius.rLg,
           child: Padding(
             padding: const EdgeInsets.all(10.0),
             child: Column(
@@ -100,7 +103,7 @@ class AppProductCard extends StatelessWidget {
                     color: isDark
                         ? AppColors.surfaceContainerDark
                         : const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(12.0),
+                    borderRadius: AppRadius.rMd,
                   ),
                   child: Stack(
                     children: [
@@ -110,7 +113,7 @@ class AppProductCard extends StatelessWidget {
                         child: Center(
                           child: imageUrl != null && imageUrl!.isNotEmpty
                               ? ClipRRect(
-                                  borderRadius: BorderRadius.circular(10.0),
+                                  borderRadius: AppRadius.rSm,
                                   child: Image.network(
                                     imageUrl!,
                                     width: context.r(80),
@@ -151,33 +154,10 @@ class AppProductCard extends StatelessWidget {
 
                       // Centered "OUT OF STOCK" pill badge over image
                       if (!isPurchasable)
-                        Center(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12.0,
-                              vertical: 5.5,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF014D40),
-                              borderRadius: BorderRadius.circular(999),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.18),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: const Text(
-                              'OUT OF STOCK',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10.0,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0.5,
-                                fontFamily: AppTextStyles.fontFamily,
-                              ),
-                            ),
+                        const Center(
+                          child: AppBadge(
+                            text: 'OUT OF STOCK',
+                            variant: BadgeVariant.stock,
                           ),
                         ),
 
@@ -186,26 +166,9 @@ class AppProductCard extends StatelessWidget {
                         Positioned(
                           top: 8.0,
                           left: 8.0,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6.0,
-                              vertical: 2.5,
-                            ),
-                            decoration: BoxDecoration(
-                              color: badge == 'Local'
-                                  ? const Color(0xFF854D0E)
-                                  : const Color(0xFF9E4B00),
-                              borderRadius: BorderRadius.circular(5.0),
-                            ),
-                            child: Text(
-                              badge!,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.2,
-                              ),
-                            ),
+                          child: AppBadge(
+                            text: badge!,
+                            variant: BadgeVariant.discount,
                           ),
                         ),
 
@@ -213,9 +176,23 @@ class AppProductCard extends StatelessWidget {
                       Positioned(
                         top: 0.0,
                         right: 0.0,
-                        child: _CardFavoriteButton(
-                          isFavorite: isFavorite,
-                          onToggle: onToggleFavorite,
+                        child: Container(
+                          width: 40.0,
+                          height: 40.0,
+                          alignment: Alignment.center,
+                          child: AppIconButton(
+                            icon: isFavorite
+                                ? Icons.favorite_rounded
+                                : Icons.favorite_border_rounded,
+                            variant: IconButtonVariant.surface,
+                            size: 28.0,
+                            iconSize: 15.0,
+                            color: isFavorite
+                                ? const Color(0xFF014D40)
+                                : const Color(0xFF94A3B8),
+                            animateTap: true,
+                            onPressed: onToggleFavorite,
+                          ),
                         ),
                       ),
                     ],
@@ -359,72 +336,3 @@ class AppProductCard extends StatelessWidget {
   }
 }
 
-class _CardFavoriteButton extends StatefulWidget {
-  final bool isFavorite;
-  final VoidCallback? onToggle;
-
-  const _CardFavoriteButton({
-    required this.isFavorite,
-    this.onToggle,
-  });
-
-  @override
-  State<_CardFavoriteButton> createState() => _CardFavoriteButtonState();
-}
-
-class _CardFavoriteButtonState extends State<_CardFavoriteButton> {
-  bool _isTapped = false;
-
-  void _handleTap() {
-    setState(() => _isTapped = true);
-    widget.onToggle?.call();
-    Future.delayed(const Duration(milliseconds: 160), () {
-      if (mounted) setState(() => _isTapped = false);
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: _handleTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        width: 40.0,
-        height: 40.0,
-        alignment: Alignment.center,
-        color: Colors.transparent,
-        child: AnimatedScale(
-          scale: _isTapped ? 1.08 : 1.0,
-          duration: const Duration(milliseconds: 160),
-          curve: Curves.easeOut,
-          child: Container(
-            width: 28.0,
-            height: 28.0,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 4,
-                  offset: const Offset(0, 1),
-                ),
-              ],
-            ),
-            child: Center(
-              child: Icon(
-                widget.isFavorite
-                    ? Icons.favorite_rounded
-                    : Icons.favorite_border_rounded,
-                size: 15.0,
-                color: widget.isFavorite
-                    ? const Color(0xFF014D40)
-                    : const Color(0xFF94A3B8),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}

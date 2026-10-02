@@ -38,6 +38,7 @@ class MockCustomerProfileRepository implements CustomerProfileRepository {
     required String name,
     String? email,
     DateTime? dob,
+    String? gender,
   }) async {
     updatedName = name;
     updatedEmail = email;

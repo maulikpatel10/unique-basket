@@ -100,4 +100,116 @@ describe('Device Token Registration & Push Notifications Integration Tests', () 
       expect(res.body).toHaveProperty('errorCode', 'MISSING_PARAMETERS');
     });
   });
+
+  describe('Customer In-App Notifications Inbox', () => {
+    let createdNotificationId: string;
+    let otherCustomerToken: string;
+
+    beforeAll(async () => {
+      // Create another customer for ownership isolation tests
+      const otherUser = await prisma.user.upsert({
+        where: { phone: '+918888888888' },
+        update: {},
+        create: { phone: '+918888888888', name: 'Other Customer' },
+      });
+
+      otherCustomerToken = generateAccessToken({
+        id: otherUser.id,
+        role: 'customer',
+        phone: otherUser.phone,
+      });
+
+      // Clear notifications for test user
+      await prisma.notification.deleteMany({
+        where: { userId: customerId },
+      });
+    });
+
+    it('should persist notification and retrieve it via GET /api/v1/notifications', async () => {
+      // 1. Create notification via NotificationService (simulating order update)
+      await prisma.notification.create({
+        data: {
+          userId: customerId,
+          title: 'Your order is being prepared',
+          body: "We're packing your fresh avocados, kale & sourdough bread at Nana Mova Road store.",
+          type: 'ORDER_STATUS',
+          orderNumber: '#UB-20260908-015',
+          tag: '#UB-20260908-015',
+          actionText: 'Track Live Order →',
+          isRead: false,
+        },
+      });
+
+      const res = await request(app)
+        .get('/api/v1/notifications')
+        .set('Authorization', `Bearer ${customerToken}`);
+
+      expect(res.statusCode).toEqual(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.length).toBeGreaterThanOrEqual(1);
+      expect(res.body.data[0].title).toBe('Your order is being prepared');
+      expect(res.body.data[0].isRead).toBe(false);
+      expect(res.body.meta.unreadCount).toBeGreaterThanOrEqual(1);
+
+      createdNotificationId = res.body.data[0].id;
+    });
+
+    it('should return correct unread count via GET /api/v1/notifications/unread-count', async () => {
+      const res = await request(app)
+        .get('/api/v1/notifications/unread-count')
+        .set('Authorization', `Bearer ${customerToken}`);
+
+      expect(res.statusCode).toEqual(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.unreadCount).toBeGreaterThanOrEqual(1);
+    });
+
+    it('should mark a single notification as read via PATCH /api/v1/notifications/:id/read', async () => {
+      const res = await request(app)
+        .patch(`/api/v1/notifications/${createdNotificationId}/read`)
+        .set('Authorization', `Bearer ${customerToken}`);
+
+      expect(res.statusCode).toEqual(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.isRead).toBe(true);
+    });
+
+    it('should prevent another customer from marking foreign notification as read (Ownership Enforcement)', async () => {
+      const res = await request(app)
+        .patch(`/api/v1/notifications/${createdNotificationId}/read`)
+        .set('Authorization', `Bearer ${otherCustomerToken}`);
+
+      expect(res.statusCode).toEqual(403);
+      expect(res.body.success).toBe(false);
+      expect(res.body.errorCode).toBe('FORBIDDEN');
+    });
+
+    it('should mark all customer notifications as read via PATCH /api/v1/notifications/read-all', async () => {
+      // Add another unread notification
+      await prisma.notification.create({
+        data: {
+          userId: customerId,
+          title: 'Fresh deals are waiting for you',
+          body: 'Save up to ₹100 on farm-fresh organic produce.',
+          type: 'PROMOTION',
+          promoCode: 'FRESH100',
+          isRead: false,
+        },
+      });
+
+      const markAllRes = await request(app)
+        .patch('/api/v1/notifications/read-all')
+        .set('Authorization', `Bearer ${customerToken}`);
+
+      expect(markAllRes.statusCode).toEqual(200);
+      expect(markAllRes.body.success).toBe(true);
+
+      // Verify unread count is now 0
+      const countRes = await request(app)
+        .get('/api/v1/notifications/unread-count')
+        .set('Authorization', `Bearer ${customerToken}`);
+
+      expect(countRes.body.data.unreadCount).toBe(0);
+    });
+  });
 });

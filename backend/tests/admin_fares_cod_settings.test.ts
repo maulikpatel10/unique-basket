@@ -31,17 +31,17 @@ describe('Fares & COD Settings Integration Tests', () => {
     });
     customerId = user.id;
 
-    // Create a delivery address close to Central Store (MG Road lat: 12.971598, lng: 77.594562)
+    // Create a delivery address close to Store One (Rajkot lat: 22.308155, lng: 70.800705)
     const address = await prisma.userAddress.create({
       data: {
         userId: customerId,
         title: 'Home',
-        addressLine: '12 Residency Road',
-        city: 'Bangalore',
-        state: 'Karnataka',
-        pincode: '560025',
-        latitude: 12.972000,
-        longitude: 77.595000,
+        addressLine: 'Nana Mava Road',
+        city: 'Rajkot',
+        state: 'Gujarat',
+        pincode: '360005',
+        latitude: 22.308000,
+        longitude: 70.800000,
       },
     });
     customerAddressId = address.id;
@@ -506,6 +506,59 @@ describe('Fares & COD Settings Integration Tests', () => {
       expect(Number(storedOrder?.deliveryFee)).toBe(30);
       expect(Number(storedOrder?.codCharge)).toBe(20);
       expect(Number(storedOrder?.total)).toBe(410);
+    });
+
+    it('20. GET /api/v1/customer/delivery-settings returns current active backend configuration', async () => {
+      // Set delivery fee to 50
+      await request(app)
+        .put('/api/v1/admin/settings/fare-cod')
+        .set('Authorization', `Bearer ${superAdminToken}`)
+        .send({
+          deliveryFee: 50,
+          freeDeliveryThreshold: 499,
+          minimumOrderAmount: 199,
+          deliveryEnabled: true,
+        });
+
+      const res = await request(app).get('/api/v1/customer/delivery-settings');
+
+      expect(res.statusCode).toEqual(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.deliveryFee).toBe(50);
+      expect(res.body.data.freeDeliveryThreshold).toBe(499);
+      expect(res.body.data.deliveryEnabled).toBe(true);
+    });
+
+    it('21. Cart API returns server-calculated subtotal, deliveryFee, and total from backend settings', async () => {
+      // Configure delivery fee = 50
+      await request(app)
+        .put('/api/v1/admin/settings/fare-cod')
+        .set('Authorization', `Bearer ${superAdminToken}`)
+        .send({
+          deliveryFee: 50,
+          freeDeliveryThreshold: 499,
+          minimumOrderAmount: 199,
+        });
+
+      // Clear existing cart and add 1 apple (180.00)
+      await prisma.cartItem.deleteMany({ where: { userId: customerId } });
+      await prisma.cartItem.create({
+        data: {
+          userId: customerId,
+          productId: appleProductId,
+          quantity: 1,
+        },
+      });
+
+      const res = await request(app)
+        .get('/api/v1/cart')
+        .set('Authorization', `Bearer ${customerToken}`);
+
+      expect(res.statusCode).toEqual(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.subtotal).toBe(180);
+      expect(res.body.data.deliveryFee).toBe(50);
+      expect(res.body.data.total).toBe(230); // 180 + 50
     });
   });
 });

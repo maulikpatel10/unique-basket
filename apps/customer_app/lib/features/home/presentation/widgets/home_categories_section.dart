@@ -44,10 +44,17 @@ class HomeCategoriesSection extends StatelessWidget {
             separatorBuilder: (_, __) => const SizedBox(width: 14.0),
             itemBuilder: (context, index) {
               final category = categories[index];
+              const categoryColors = [
+                Color(0xFFEA580C), // Warm Orange / Red
+                Color(0xFF16A34A), // Fresh Green
+                Color(0xFF0284C7), // Sky Blue
+              ];
+              final itemColor = categoryColors[index % categoryColors.length];
               return CategoryItem(
                 id: category.id,
                 name: category.name,
                 imageUrl: category.imageUrl,
+                color: itemColor,
                 onTap: () => onCategoryTap?.call(category),
               );
             },

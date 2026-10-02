@@ -67,11 +67,12 @@ describe('Customer Profile & Address API Integration Tests', () => {
       expect(res.body.data.user.id).toBe(testUserId);
       expect(res.body.data.user.phone).toBe(testPhone);
       expect(res.body.data.user.dob).toBeNull();
+      expect(res.body.data.user.gender).toBeNull();
     });
   });
 
   describe('PUT /api/v1/customer/profile', () => {
-    it('should update customer profile name and date of birth', async () => {
+    it('should update customer profile name, date of birth, and gender', async () => {
       const targetDob = '2000-08-15T00:00:00.000Z';
       const res = await request(app)
         .put('/api/v1/customer/profile')
@@ -79,12 +80,14 @@ describe('Customer Profile & Address API Integration Tests', () => {
         .send({
           name: 'Aarav Sharma',
           dob: targetDob,
+          gender: 'Female',
         });
 
       expect(res.statusCode).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.body.data.user.name).toBe('Aarav Sharma');
       expect(new Date(res.body.data.user.dob).toISOString()).toBe(targetDob);
+      expect(res.body.data.user.gender).toBe('Female');
 
       // Verify in PostgreSQL database directly
       const dbUser = await prisma.user.findUnique({
@@ -93,9 +96,10 @@ describe('Customer Profile & Address API Integration Tests', () => {
       expect(dbUser?.name).toBe('Aarav Sharma');
       expect(dbUser?.dob).not.toBeNull();
       expect(dbUser?.dob?.toISOString()).toBe(targetDob);
+      expect(dbUser?.gender).toBe('Female');
     });
 
-    it('should return saved DOB on subsequent GET /api/v1/customer/profile', async () => {
+    it('should return saved DOB and gender on subsequent GET /api/v1/customer/profile', async () => {
       const res = await request(app)
         .get('/api/v1/customer/profile')
         .set('Authorization', `Bearer ${customerToken}`);
@@ -104,6 +108,36 @@ describe('Customer Profile & Address API Integration Tests', () => {
       expect(res.body.success).toBe(true);
       expect(res.body.data.user.name).toBe('Aarav Sharma');
       expect(res.body.data.user.dob).toBe('2000-08-15T00:00:00.000Z');
+      expect(res.body.data.user.gender).toBe('Female');
+    });
+
+    it('should update gender to Male and normalize case', async () => {
+      const res = await request(app)
+        .put('/api/v1/customer/profile')
+        .set('Authorization', `Bearer ${customerToken}`)
+        .send({
+          gender: 'male',
+        });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.user.gender).toBe('Male');
+
+      const dbUser = await prisma.user.findUnique({
+        where: { id: testUserId },
+      });
+      expect(dbUser?.gender).toBe('Male');
+    });
+
+    it('should reject invalid gender value', async () => {
+      const res = await request(app)
+        .put('/api/v1/customer/profile')
+        .set('Authorization', `Bearer ${customerToken}`)
+        .send({ gender: 'Alien' });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body.success).toBe(false);
+      expect(res.body.errorCode).toBe('INVALID_GENDER');
     });
 
     it('should preserve calendar day without timezone shifting (15 Aug 2000)', async () => {
@@ -151,8 +185,8 @@ describe('Customer Profile & Address API Integration Tests', () => {
     });
   });
 
-  describe('Admin Customer API DOB Verification', () => {
-    it('should return DOB in admin customer list and details', async () => {
+  describe('Admin Customer API DOB & Gender Verification', () => {
+    it('should return DOB and Gender in admin customer list and details', async () => {
       const detailRes = await request(app)
         .get(`/api/v1/admin/customers/${testUserId}`)
         .set('Authorization', `Bearer ${adminToken}`);
@@ -161,6 +195,7 @@ describe('Customer Profile & Address API Integration Tests', () => {
       expect(detailRes.body.success).toBe(true);
       expect(detailRes.body.data.customer.id).toBe(testUserId);
       expect(detailRes.body.data.customer.dob).toBe('2000-08-15T00:00:00.000Z');
+      expect(detailRes.body.data.customer.gender).toBe('Male');
     });
   });
 

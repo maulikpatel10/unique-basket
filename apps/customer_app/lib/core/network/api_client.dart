@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import '../../app/config/app_config.dart';
 import '../errors/app_exception.dart';
+import '../storage/local_storage_service.dart';
 import '../storage/secure_storage_service.dart';
 import 'auth_interceptor.dart';
 
@@ -9,12 +10,15 @@ class ApiClient {
   final Dio _dio;
   final Dio _tokenDio;
   final SecureStorageService _secureStorage;
+  final LocalStorageService? _localStorage;
 
   ApiClient({
     required SecureStorageService secureStorage,
+    LocalStorageService? localStorage,
     Dio? dio,
     Dio? tokenDio,
   })  : _secureStorage = secureStorage,
+        _localStorage = localStorage,
         _dio = dio ?? Dio(),
         _tokenDio = tokenDio ?? Dio() {
     final config = AppConfig.instance;
@@ -36,6 +40,7 @@ class ApiClient {
       AuthInterceptor(
         secureStorage: _secureStorage,
         tokenDio: _tokenDio,
+        localStorage: _localStorage,
       ),
     );
   }
@@ -104,7 +109,29 @@ class ApiClient {
     }
   }
 
+  Future<dynamic> patch(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+  }) async {
+    try {
+      final response = await _dio.patch(
+        path,
+        data: data,
+        queryParameters: queryParameters,
+        options: options,
+      );
+      return _handleResponse(response);
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    } catch (e) {
+      throw AppException(message: e.toString());
+    }
+  }
+
   Future<dynamic> delete(
+
     String path, {
     dynamic data,
     Map<String, dynamic>? queryParameters,

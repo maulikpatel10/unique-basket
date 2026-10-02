@@ -59,17 +59,33 @@ export class CartController {
         };
       });
 
+      // Fetch delivery settings for authoritative pricing calculations
+      const deliverySettings = await prisma.deliverySettings.findFirst();
+      const configDeliveryFee = deliverySettings && deliverySettings.deliveryEnabled ? Number(deliverySettings.deliveryFee) : 30.00;
+      const configFreeThreshold = deliverySettings ? Number(deliverySettings.freeDeliveryThreshold) : 499.00;
+
+      // Delivery fee is 0 if cart is empty or if subtotal meets free delivery threshold
+      const deliveryFee = activeItems.length > 0
+        ? (subtotal >= configFreeThreshold ? 0.00 : configDeliveryFee)
+        : 0.00;
+
+      const total = parseFloat((subtotal + deliveryFee).toFixed(2));
+
       res.status(200).json({
         success: true,
         data: {
           items: formattedItems,
           subtotal,
+          deliveryFee,
+          total,
+          freeDeliveryThreshold: configFreeThreshold,
         },
       });
     } catch (error) {
       next(error);
     }
   }
+
 
   /**
    * Add item to cart (supports decimal quantity).

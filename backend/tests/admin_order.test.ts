@@ -261,19 +261,33 @@ describe('Admin Order Operations & Payment Verification Integration Tests', () =
     let store2OrderId: string;
 
     beforeAll(async () => {
-      // Place a PICKUP order for STORE-002 (East Store)
-      const res = await request(app)
-        .post('/api/v1/orders')
-        .set('Authorization', `Bearer ${customerToken}`)
-        .send({
-          fulfillmentType: 'PICKUP',
+      // Create an order for STORE-002 (East Store) in database directly to test manager isolation
+      const order2 = await prisma.order.create({
+        data: {
+          orderNumber: `UB-TEST-SM2-${Date.now()}`,
+          userId: customerId,
           storeId: eastStoreId,
+          fulfillmentType: 'PICKUP',
           paymentMethod: 'COD',
-          items: [{ productId: appleProductId, quantity: 1.0 }],
-        });
+          subtotal: 250.0,
+          deliveryFee: 0.0,
+          total: 250.0,
+          orderStatus: 'PLACED',
+          items: {
+            create: [
+              {
+                productId: appleProductId,
+                quantity: 1.0,
+                unitPrice: 250.0,
+                totalPrice: 250.0,
+              },
+            ],
+          },
+        },
+      });
 
-      secondOrderNo = res.body.data.order.orderNumber;
-      store2OrderId = res.body.data.order.id;
+      secondOrderNo = order2.orderNumber;
+      store2OrderId = order2.id;
     });
 
     it('should reject Store Manager 1 attempting to view order details for STORE-002', async () => {
@@ -296,10 +310,20 @@ describe('Admin Order Operations & Payment Verification Integration Tests', () =
       expect(res.body).toHaveProperty('errorCode', 'STORE_ACCESS_FORBIDDEN');
     });
 
-    it('should allow customer to read inventory list for STORE-002', async () => {
+    it('should reject customer attempting to read inventory list for inactive STORE-002', async () => {
       const res = await request(app)
         .get(`/api/v1/products/store/${eastStoreId}`)
         .set('Authorization', `Bearer ${customerToken}`);
+
+      expect(res.statusCode).toEqual(404);
+      expect(res.body).toHaveProperty('success', false);
+      expect(res.body).toHaveProperty('errorCode', 'STORE_NOT_FOUND');
+    });
+
+    it('should allow Store Manager 2 or Super Admin to read inventory list for STORE-002', async () => {
+      const res = await request(app)
+        .get(`/api/v1/products/store/${eastStoreId}`)
+        .set('Authorization', `Bearer ${superAdminToken}`);
 
       expect(res.statusCode).toEqual(200);
       expect(res.body).toHaveProperty('success', true);

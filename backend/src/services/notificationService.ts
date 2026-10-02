@@ -25,17 +25,45 @@ try {
 
 export class NotificationService {
   /**
-   * Send notification to a specific customer's registered devices.
+   * Persist in-app notification and send push notification to customer devices.
    */
-  static async sendToUser(userId: string, title: string, body: string, dataPayload?: Record<string, string>): Promise<void> {
+  static async sendToUser(
+    userId: string,
+    title: string,
+    body: string,
+    dataPayload?: Record<string, string>
+  ): Promise<any> {
+    let savedNotification = null;
+
+    // 1. Always persist the in-app notification record
+    try {
+      savedNotification = await prisma.notification.create({
+        data: {
+          userId,
+          title,
+          body,
+          type: dataPayload?.type || 'ORDER_STATUS',
+          orderId: dataPayload?.orderId || null,
+          orderNumber: dataPayload?.orderNumber || null,
+          tag: dataPayload?.tag || dataPayload?.orderNumber || null,
+          actionText: dataPayload?.actionText || null,
+          promoCode: dataPayload?.promoCode || null,
+          isRead: false,
+        },
+      });
+    } catch (dbErr) {
+      console.error('[NOTIFICATION-DB] Error saving in-app notification:', dbErr);
+    }
+
+    // 2. Attempt FCM push dispatch
     try {
       const tokens = await prisma.deviceToken.findMany({
         where: { userId },
       });
 
       if (tokens.length === 0) {
-        console.log(`[FCM-MOCK] No registered tokens for user ID: ${userId}. Notifying console: "${title}: ${body}"`);
-        return;
+        console.log(`[FCM-MOCK] No registered tokens for user ID: ${userId}. In-app notification saved: "${title}: ${body}"`);
+        return savedNotification;
       }
 
       const tokenStrings = tokens.map((t) => t.token);

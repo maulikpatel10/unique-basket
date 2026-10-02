@@ -22,6 +22,7 @@ import { PickupVerification } from './pages/PickupVerification';
 import { Payments } from './pages/Payments';
 import { PaymentDetails } from './pages/PaymentDetails';
 import { Settings } from './pages/Settings';
+import { Pincodes } from './pages/Pincodes';
 import { Banners } from './pages/Banners';
 import { AuditLogs } from './pages/AuditLogs';
 
@@ -165,6 +166,14 @@ export const App: React.FC = () => {
               element={
                 <PrivateRoute allowedRoles={['SUPER_ADMIN']}>
                   <Settings />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="pincodes"
+              element={
+                <PrivateRoute allowedRoles={['SUPER_ADMIN']}>
+                  <Pincodes />
                 </PrivateRoute>
               }
             />

@@ -41,9 +41,6 @@ class ProductQuantityControl extends StatefulWidget {
 }
 
 class _ProductQuantityControlState extends State<ProductQuantityControl> {
-  bool _isPlusPressed = false;
-  bool _isMinusPressed = false;
-
   void _handlePlusTap() {
     HapticFeedback.lightImpact();
     if (widget.quantity == 0) {
@@ -65,6 +62,11 @@ class _ProductQuantityControlState extends State<ProductQuantityControl> {
     final quantity = widget.quantity;
     final isExpanded = quantity > 0;
 
+    final circleSize = widget.height;
+    final iconSize = (widget.height * 0.45).clamp(14.0, 20.0);
+    final collapsedIconSize = (widget.height * 0.56).clamp(18.0, 22.0);
+    final fontSize = (widget.height * 0.38).clamp(12.0, 16.0);
+
     return AnimatedContainer(
       duration: const Duration(milliseconds: 380),
       curve: Curves.easeOutCubic,
@@ -78,7 +80,7 @@ class _ProductQuantityControlState extends State<ProductQuantityControl> {
         borderRadius: BorderRadius.circular(widget.height / 2),
         border: Border.all(
           color: const Color(0xFF014D40),
-          width: isExpanded ? 1.2 : 0.0,
+          width: isExpanded ? 1.0 : 0.0,
         ),
         boxShadow: isExpanded
             ? null
@@ -93,12 +95,12 @@ class _ProductQuantityControlState extends State<ProductQuantityControl> {
       child: Stack(
         alignment: Alignment.centerRight,
         children: [
-          // Left side: Decrement button + Centered Quantity (Fades and slides in on expand)
+          // Left side: Decrement button + Perfectly Centered Quantity (Fades and slides in on expand)
           Positioned(
             left: 0,
             top: 0,
             bottom: 0,
-            width: widget.expandedWidth - 28.0, // Remaining width left of the 28.0 right cap
+            width: widget.expandedWidth - circleSize,
             child: IgnorePointer(
               ignoring: !isExpanded,
               child: AnimatedOpacity(
@@ -107,35 +109,27 @@ class _ProductQuantityControlState extends State<ProductQuantityControl> {
                 curve: Curves.easeOutCubic,
                 child: Row(
                   children: [
-                    // Decrement Button with tactile press feedback
+                    // Decrement Button with centered icon
                     GestureDetector(
-                      onTapDown: (_) => setState(() => _isMinusPressed = true),
-                      onTapUp: (_) => setState(() => _isMinusPressed = false),
-                      onTapCancel: () => setState(() => _isMinusPressed = false),
                       onTap: _handleMinusTap,
                       behavior: HitTestBehavior.opaque,
                       child: SizedBox(
-                        width: 24.0,
+                        width: circleSize,
                         height: widget.height,
                         child: Center(
-                          child: AnimatedScale(
-                            scale: _isMinusPressed ? 0.93 : 1.0,
-                            duration: const Duration(milliseconds: 120),
-                            curve: Curves.easeOut,
-                            child: Icon(
-                              Icons.remove_rounded,
-                              size: 14.0,
-                              color: isDark ? AppColors.textPrimaryDark : const Color(0xFF014D40),
-                            ),
+                          child: Icon(
+                            Icons.remove_rounded,
+                            size: iconSize,
+                            color: isDark ? AppColors.textPrimaryDark : const Color(0xFF014D40),
                           ),
                         ),
                       ),
                     ),
 
-                    // Centered Quantity digit shifted slightly left to maintain visual balance
+                    // Optically Centered Quantity digit (shifted slightly left away from solid green plus cap)
                     Expanded(
                       child: Padding(
-                        padding: const EdgeInsets.only(right: 6.0),
+                        padding: const EdgeInsets.only(right: 8.0),
                         child: Center(
                           child: AnimatedSwitcher(
                             duration: const Duration(milliseconds: 180),
@@ -161,7 +155,7 @@ class _ProductQuantityControlState extends State<ProductQuantityControl> {
                               '$quantity',
                               key: ValueKey('qty_$quantity'),
                               style: TextStyle(
-                                fontSize: context.sp(12),
+                                fontSize: context.sp(fontSize),
                                 fontWeight: FontWeight.w800,
                                 color: isDark ? AppColors.textPrimaryDark : const Color(0xFF014D40),
                                 fontFamily: AppTextStyles.fontFamily,
@@ -170,48 +164,35 @@ class _ProductQuantityControlState extends State<ProductQuantityControl> {
                           ),
                         ),
                       ),
-                    )
+                    ),
                   ],
                 ),
               ),
             ),
           ),
 
-          // Right side: '+' Button (Anchored to the right)
+          // Right side: '+' Button (Seamless circular cap anchored to the right with zero white space gap)
           Positioned(
-            right: 0,
+            right: -1.0,
             top: 0,
-            bottom: 0,
+            bottom: -1.0,
             child: GestureDetector(
-              onTapDown: (_) => setState(() => _isPlusPressed = true),
-              onTapUp: (_) => setState(() => _isPlusPressed = false),
-              onTapCancel: () => setState(() => _isPlusPressed = false),
               onTap: _handlePlusTap,
               behavior: HitTestBehavior.opaque,
-              child: AnimatedScale(
-                scale: _isPlusPressed ? 0.94 : 1.0,
-                duration: const Duration(milliseconds: 120),
-                curve: Curves.easeOut,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 380),
-                  curve: Curves.easeOutCubic,
-                  width: isExpanded ? 28.0 : widget.collapsedWidth,
-                  height: widget.height,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF014D40),
-                    borderRadius: isExpanded
-                        ? const BorderRadius.horizontal(
-                            right: Radius.circular(14.0),
-                            left: Radius.circular(14.0),
-                          )
-                        : BorderRadius.circular(widget.height / 2),
-                  ),
-                  child: Center(
-                    child: Icon(
-                      Icons.add_rounded,
-                      size: isExpanded ? 16.0 : 20.0,
-                      color: Colors.white,
-                    ),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 380),
+                curve: Curves.easeOutCubic,
+                width: isExpanded ? circleSize + 1.0 : widget.collapsedWidth + 2.0,
+                height: widget.height + 2.0,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF014D40),
+                  borderRadius: BorderRadius.circular(widget.height / 2),
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.add_rounded,
+                    size: isExpanded ? iconSize : collapsedIconSize,
+                    color: Colors.white,
                   ),
                 ),
               ),

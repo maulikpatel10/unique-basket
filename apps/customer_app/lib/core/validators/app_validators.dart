@@ -89,20 +89,10 @@ class AppValidators {
     return null;
   }
 
-  static const Set<String> allowedPincodes = {
-    '360001',
-    '360002',
-    '360003',
-    '360004',
-    '360005',
-    '360006',
-    '360007',
-  };
-
-  static bool isDeliverablePinCode(String? value) {
+  static bool isValidPinCodeFormat(String? value) {
     if (value == null) return false;
     final cleaned = value.replaceAll(RegExp(r'\D'), '');
-    return allowedPincodes.contains(cleaned);
+    return cleaned.length == 6;
   }
 
   static String? validatePinCode(String? value) {
@@ -112,9 +102,6 @@ class AppValidators {
     final cleaned = value.replaceAll(RegExp(r'\D'), '');
     if (cleaned.length != 6) {
       return 'PIN code must be 6 digits';
-    }
-    if (!allowedPincodes.contains(cleaned)) {
-      return "Sorry, we currently don't deliver to this pincode.";
     }
     return null;
   }

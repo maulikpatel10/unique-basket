@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/errors/app_exception.dart';
@@ -7,8 +8,14 @@ import '../../../../core/storage/local_storage_service.dart';
 import '../../../../core/storage/secure_storage_service.dart';
 import '../../../address/data/repositories/customer_address_repository.dart';
 import '../../../address/presentation/providers/customer_address_provider.dart';
+import '../../../checkout/presentation/providers/order_provider.dart';
+import '../../../home/presentation/providers/home_provider.dart';
+import '../../../notifications/presentation/providers/notification_provider.dart';
+import '../../../payment/presentation/providers/payment_methods_provider.dart';
 import '../../../profile_setup/data/repositories/customer_profile_repository.dart';
 import '../../../profile_setup/presentation/providers/customer_profile_provider.dart';
+import '../../../search/presentation/providers/search_provider.dart';
+import '../../../store/presentation/providers/store_provider.dart';
 import '../../data/datasources/auth_remote_data_source.dart';
 import '../../data/repositories/auth_repository.dart';
 import 'auth_state.dart';
@@ -39,17 +46,19 @@ final authNotifierProvider =
     profileRepository: profileRepository,
     addressRepository: addressRepository,
     localStorage: localStorage,
+    ref: ref,
   );
 });
 
 /// StateNotifier responsible for managing authentication flow, OTP sending,
-/// OTP verification, token persistence, and error handling.
+/// OTP verification, token persistence, error handling, and session teardown.
 class AuthNotifier extends StateNotifier<AuthState> {
   final AuthRepository _repository;
   final SecureStorageService _secureStorage;
   final CustomerProfileRepository? _profileRepository;
   final CustomerAddressRepository? _addressRepository;
   final LocalStorageService? _localStorage;
+  final Ref? _ref;
 
   AuthNotifier({
     required AuthRepository repository,
@@ -57,11 +66,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
     CustomerProfileRepository? profileRepository,
     CustomerAddressRepository? addressRepository,
     LocalStorageService? localStorage,
+    Ref? ref,
   })  : _repository = repository,
         _secureStorage = secureStorage,
         _profileRepository = profileRepository,
         _addressRepository = addressRepository,
         _localStorage = localStorage,
+        _ref = ref,
         super(const AuthState());
 
   /// Clears any active error message in the authentication state.
@@ -158,6 +169,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
       if (result.containsKey('data') && result['data'] is Map<String, dynamic>) {
         data = result['data'] as Map<String, dynamic>;
       }
+
+      // Clean stale user session cache and in-memory providers before hydrating the new session
+      if (_localStorage != null) {
+        await _localStorage!.clearUserSessionData();
+      }
+      _resetUserScopedProviders();
 
       final token = (data['token'] ?? data['accessToken']) as String?;
       final refreshToken = data['refreshToken'] as String?;
@@ -263,6 +280,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
         }
       }
 
+      // Hydrate user cart and favorites for the authenticated session
+      if (kDebugMode) {
+        debugPrint('[UB-PERSISTENCE] AUTH VERIFY SUCCESS -> Loading Cart & Favorites');
+      }
+      _ref?.read(cartNotifierProvider.notifier).loadCart();
+      _ref?.read(favoritesNotifierProvider.notifier).loadFavorites();
+
       state = state.copyWith(
         status: AuthStatus.verified,
         isNewUser: isNewUser,
@@ -286,9 +310,40 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  /// Logs out the user by clearing secure tokens and resetting state.
+  /// Invalidates and resets all Riverpod providers that contain authenticated user data.
+  void _resetUserScopedProviders() {
+    if (_ref == null) return;
+    if (kDebugMode) {
+      debugPrint('[UB-PERSISTENCE] USER SCOPED PROVIDERS RESET');
+    }
+    try {
+      _ref!.invalidate(customerProfileProvider);
+      _ref!.invalidate(customerAddressesProvider);
+      _ref!.invalidate(customerOrdersProvider);
+      _ref!.invalidate(paymentMethodsProvider);
+      _ref!.invalidate(servingStoreProvider);
+      _ref!.invalidate(nearbyStoresProvider);
+      _ref!.invalidate(homeProductsProvider);
+      _ref!.invalidate(categoryProductsProvider);
+
+      _ref!.read(cartNotifierProvider.notifier).clearCart();
+      _ref!.read(favoritesNotifierProvider.notifier).clearFavorites();
+      _ref!.read(recentSearchesProvider.notifier).clearAll();
+      _ref!.read(notificationNotifierProvider.notifier).reset();
+    } catch (_) {}
+  }
+
+  /// Logs out the user by clearing secure tokens, purging user-scoped local storage,
+  /// resetting user-bound Riverpod providers, and clearing authentication state.
   Future<void> logout() async {
+    if (kDebugMode) {
+      debugPrint('[UB-PERSISTENCE] LOGOUT CLEANUP');
+    }
     await _secureStorage.clearTokens();
+    if (_localStorage != null) {
+      await _localStorage!.clearUserSessionData();
+    }
+    _resetUserScopedProviders();
     state = const AuthState();
   }
 }

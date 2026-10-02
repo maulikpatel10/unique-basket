@@ -14,6 +14,7 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/providers/core_providers.dart';
 import '../../../../core/validators/app_validators.dart';
+import '../../../../shared/widgets/widgets.dart';
 import '../../../authentication/presentation/providers/auth_provider.dart';
 import '../providers/customer_profile_provider.dart';
 
@@ -1051,80 +1052,14 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                                       const SizedBox(height: AppSpacing.md),
 
                                       // Primary "Continue →" CTA
-                                      Container(
-                                        width: double.infinity,
-                                        height: 54.0,
-                                        decoration: BoxDecoration(
-                                          borderRadius:
-                                              BorderRadius.circular(27.0),
-                                          boxShadow: !_isSubmitting && !isDark
-                                              ? AppShadows.primary
-                                              : AppShadows.none,
-                                        ),
-                                        child: ElevatedButton(
-                                          onPressed: _isSubmitting
-                                              ? null
-                                              : _handleSubmit,
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: AppColors.primary,
-                                            foregroundColor: AppColors.onPrimary,
-                                            disabledBackgroundColor: isDark
-                                                ? AppColors
-                                                    .surfaceContainerDark
-                                                : const Color(0xFF7D9E98),
-                                            disabledForegroundColor: Colors
-                                                .white
-                                                .withValues(alpha: 0.8),
-                                            elevation: 0,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(27.0),
-                                            ),
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: AppSpacing.xl,
-                                            ),
-                                          ),
-                                          child: _isSubmitting
-                                              ? const SizedBox(
-                                                  width: 22.0,
-                                                  height: 22.0,
-                                                  child:
-                                                      CircularProgressIndicator(
-                                                    strokeWidth: 2.5,
-                                                    valueColor:
-                                                        AlwaysStoppedAnimation<
-                                                            Color>(
-                                                      Colors.white,
-                                                    ),
-                                                  ),
-                                                )
-                                              : Row(
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment.center,
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    Text(
-                                                      'Continue',
-                                                      style: AppTextStyles
-                                                          .button
-                                                          .copyWith(
-                                                        fontSize: 16.0,
-                                                        fontWeight:
-                                                            FontWeight.w700,
-                                                        letterSpacing: 0.2,
-                                                      ),
-                                                    ),
-                                                    const SizedBox(width: 8.0),
-                                                    const Icon(
-                                                      Icons
-                                                          .arrow_forward_rounded,
-                                                      size: 20.0,
-                                                      color: Colors.white,
-                                                    ),
-                                                  ],
-                                                ),
-                                        ),
+                                      AppButton(
+                                        label: 'Continue',
+                                        variant: ButtonVariant.primary,
+                                        size: ButtonSize.large,
+                                        isLoading: _isSubmitting,
+                                        icon: Icons.arrow_forward_rounded,
+                                        iconPosition: IconPosition.trailing,
+                                        onPressed: _isSubmitting ? null : _handleSubmit,
                                       ),
                                       const SizedBox(height: AppSpacing.sm),
 

@@ -12,6 +12,7 @@ import '../../../../app/theme/app_shadows.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/validators/app_validators.dart';
+import '../../../../shared/widgets/widgets.dart';
 import '../providers/auth_provider.dart';
 
 /// Screen 04 — Mobile Number Authentication for Unique Basket Customer App.
@@ -52,6 +53,7 @@ class _MobileNumberScreenState extends ConsumerState<MobileNumberScreen> {
   late final TapGestureRecognizer _privacyRecognizer;
   String? _clientValidationError;
   bool _isFocused = false;
+  bool _isSubmitting = false;
 
   @override
   void initState() {
@@ -129,12 +131,9 @@ class _MobileNumberScreenState extends ConsumerState<MobileNumberScreen> {
     super.dispose();
   }
 
-  bool get _isPhoneValid {
-    final text = _phoneController.text.trim();
-    return AppValidators.isValidIndianPhone(text);
-  }
-
   Future<void> _handleSubmit() async {
+    if (_isSubmitting) return;
+
     final authState = ref.read(authNotifierProvider);
     if (authState.isLoading) return;
 
@@ -148,25 +147,34 @@ class _MobileNumberScreenState extends ConsumerState<MobileNumberScreen> {
       return;
     }
 
+    _isSubmitting = true;
     _focusNode.unfocus();
 
-    if (widget.onOtpRequested != null) {
-      widget.onOtpRequested!('+91$text');
-      return;
-    }
+    try {
+      if (widget.onOtpRequested != null) {
+        widget.onOtpRequested!('+91$text');
+        return;
+      }
 
-    final success = await ref
-        .read(authNotifierProvider.notifier)
-        .requestOtp(text);
+      final success = await ref
+          .read(authNotifierProvider.notifier)
+          .requestOtp(text);
 
-    if (success && mounted) {
-      try {
-        GoRouter.of(context).go(
-          RouteNames.verifyOtp,
-          extra: {'phone': '+91$text'},
-        );
-      } catch (_) {
-        // Safe fallback if router not present in test harness
+      if (success && mounted) {
+        try {
+          GoRouter.of(context).go(
+            RouteNames.verifyOtp,
+            extra: {'phone': '+91$text'},
+          );
+        } catch (_) {
+          // Safe fallback if router not present in test harness
+        }
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
       }
     }
   }
@@ -475,71 +483,14 @@ class _MobileNumberScreenState extends ConsumerState<MobileNumberScreen> {
                                   const SizedBox(height: AppSpacing.sm),
 
                                   // Primary "Continue →" CTA
-                                  Container(
-                                    width: double.infinity,
-                                    height: 54.0,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(27.0),
-                                      boxShadow: _isPhoneValid && !isLoading && !isDark
-                                          ? AppShadows.primary
-                                          : AppShadows.none,
-                                    ),
-                                    child: ElevatedButton(
-                                      onPressed: isLoading ? null : _handleSubmit,
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: _isPhoneValid
-                                            ? AppColors.primary
-                                            : (isDark
-                                                ? AppColors.surfaceContainerDark
-                                                : const Color(0xFF7D9E98)),
-                                        foregroundColor: AppColors.onPrimary,
-                                        disabledBackgroundColor: isDark
-                                            ? AppColors.surfaceContainerDark
-                                            : const Color(0xFF7D9E98),
-                                        disabledForegroundColor:
-                                            Colors.white.withValues(alpha: 0.8),
-                                        elevation: 0,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(27.0),
-                                        ),
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: AppSpacing.xl,
-                                        ),
-                                      ),
-                                      child: isLoading
-                                          ? const SizedBox(
-                                              width: 22.0,
-                                              height: 22.0,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2.5,
-                                                valueColor:
-                                                    AlwaysStoppedAnimation<Color>(
-                                                  Colors.white,
-                                                ),
-                                              ),
-                                            )
-                                          : Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                Text(
-                                                  'Continue',
-                                                  style:
-                                                      AppTextStyles.button.copyWith(
-                                                    fontSize: 16.0,
-                                                    fontWeight: FontWeight.w700,
-                                                    letterSpacing: 0.2,
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 8.0),
-                                                const Icon(
-                                                  Icons.arrow_forward_rounded,
-                                                  size: 20.0,
-                                                  color: Colors.white,
-                                                ),
-                                              ],
-                                            ),
-                                    ),
+                                  AppButton(
+                                    label: 'Continue',
+                                    variant: ButtonVariant.primary,
+                                    size: ButtonSize.large,
+                                    isLoading: isLoading,
+                                    icon: Icons.arrow_forward_rounded,
+                                    iconPosition: IconPosition.trailing,
+                                    onPressed: isLoading ? null : _handleSubmit,
                                   ),
                                   const SizedBox(height: AppSpacing.sm),
 

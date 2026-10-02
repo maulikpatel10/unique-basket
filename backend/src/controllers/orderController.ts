@@ -5,6 +5,7 @@ import { calculateHaversineDistance } from '../utils/distance';
 import { razorpay } from '../config/razorpay';
 import { FulfillmentType, PaymentMethod, PaymentStatus, OrderStatus } from '@prisma/client';
 import { NotificationService } from '../services/notificationService';
+import { generateNextOrderNumber } from '../utils/orderNumber';
 
 export class OrderController {
   /**
@@ -238,17 +239,8 @@ export class OrderController {
 
         const grandTotal = parseFloat((subtotal + calculatedDeliveryFee + calculatedCodCharge).toFixed(2));
 
-        // 6. Generate human-readable Order Number (Format: UB-YYYYMMDD-001)
-        const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-        const count = await tx.order.count({
-          where: {
-            orderNumber: {
-              startsWith: `UB-${todayStr}`,
-            },
-          },
-        });
-        const sequence = String(count + 1).padStart(3, '0');
-        const orderNumber = `UB-${todayStr}-${sequence}`;
+        // 6. Generate standardized Order Number (Format: #UB-DDMMYY-XXX)
+        const orderNumber = await generateNextOrderNumber(tx);
 
         // 7. Create Order record
         const order = await tx.order.create({
@@ -455,6 +447,13 @@ export class OrderController {
           store: {
             select: { name: true, storeId: true },
           },
+          items: {
+            include: {
+              product: {
+                select: { name: true, unit: true, imageUrl: true },
+              },
+            },
+          },
         },
         orderBy: { createdAt: 'desc' },
       });
@@ -485,7 +484,7 @@ export class OrderController {
           items: {
             include: {
               product: {
-                select: { name: true, unit: true },
+                select: { name: true, unit: true, imageUrl: true },
               },
             },
           },

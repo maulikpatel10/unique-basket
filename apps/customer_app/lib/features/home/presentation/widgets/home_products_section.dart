@@ -54,10 +54,13 @@ class HomeProductsSection extends StatelessWidget {
             builder: (context, constraints) {
               final double cardWidth = (constraints.maxWidth - 12.0) / 2;
 
+              final purchasableProducts =
+                  products.where((p) => p.isPurchasable).toList();
+
               return Wrap(
                 spacing: 12.0,
                 runSpacing: 14.0,
-                children: products.map((product) {
+                children: purchasableProducts.map((product) {
                   final quantity = cartQuantities[product.id] ?? 0;
                   final isFav = favoriteIds.contains(product.id);
 

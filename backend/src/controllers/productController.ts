@@ -280,15 +280,18 @@ export class ProductController {
       const { storeId } = req.params;
       const { categoryId } = req.query;
 
-      // Ensure store exists
+      // Ensure store exists and is active for customers
       const store = await prisma.store.findUnique({
         where: { id: storeId },
       });
 
-      if (!store) {
+      const role = (req as AuthenticatedRequest).user?.role;
+      const isStaff = role === 'SUPER_ADMIN' || role === 'STORE_MANAGER';
+
+      if (!store || (!isStaff && !store.isActive)) {
         res.status(404).json({
           success: false,
-          message: 'Store not found.',
+          message: 'Store not found or currently inactive.',
           errorCode: 'STORE_NOT_FOUND',
         });
         return;
@@ -311,7 +314,7 @@ export class ProductController {
         orderBy: { name: 'asc' },
       });
 
-      const result = products.map((prod) => {
+      let result = products.map((prod) => {
         const inv = prod.inventory[0];
         return {
           id: prod.id,
@@ -328,6 +331,10 @@ export class ProductController {
           isAvailable: inv ? inv.isAvailable : false,
         };
       });
+
+      if (!isStaff) {
+        result = result.filter((p) => p.isAvailable && p.stockQuantity > 0);
+      }
 
       res.status(200).json({
         success: true,

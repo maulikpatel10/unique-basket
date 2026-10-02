@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_responsive.dart';
 import '../../../../core/providers/core_providers.dart';
 import '../../../../core/services/startup_state_resolver.dart';
+import '../../../home/presentation/providers/home_provider.dart';
 
 /// Production Splash Screen for Unique Basket Customer App.
 ///
@@ -109,11 +111,26 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     try {
       final resolver = ref.read(startupStateResolverProvider);
       final destination = await resolver.resolve();
+      if (kDebugMode) {
+        debugPrint('[UB-PERSISTENCE] SPLASH DESTINATION RESOLVED: $destination');
+      }
+      if (destination == StartupDestination.home) {
+        try {
+          if (kDebugMode) {
+            debugPrint('[UB-PERSISTENCE] SPLASH -> Triggering Cart and Favorites hydration');
+          }
+          ref.read(cartNotifierProvider.notifier).loadCart();
+          ref.read(favoritesNotifierProvider.notifier).loadFavorites();
+        } catch (_) {}
+      }
       if (mounted) {
         _resolvedDestination = destination;
         _attemptNavigation();
       }
-    } catch (_) {
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[UB-PERSISTENCE] SPLASH DESTINATION ERROR: $e');
+      }
       if (mounted) {
         _resolvedDestination = StartupDestination.onboarding;
         _attemptNavigation();

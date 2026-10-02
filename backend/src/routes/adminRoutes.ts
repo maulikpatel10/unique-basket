@@ -9,6 +9,7 @@ import { AdminStoreController } from '../controllers/adminStoreController';
 import { AdminAuditController } from '../controllers/adminAuditController';
 import { AdminBannerController } from '../controllers/adminBannerController';
 import { AdminSettingsController } from '../controllers/adminSettingsController';
+import { AdminPincodeController } from '../controllers/adminPincodeController';
 import { authenticate, requireRole } from '../middlewares/authMiddleware';
 
 const router = Router();
@@ -163,5 +164,13 @@ router.post('/banners', authenticate, requireRole(['SUPER_ADMIN']), AdminBannerC
 router.get('/banners/:id', authenticate, requireRole(['SUPER_ADMIN']), AdminBannerController.getBannerById);
 router.put('/banners/:id', authenticate, requireRole(['SUPER_ADMIN']), AdminBannerController.updateBanner);
 router.delete('/banners/:id', authenticate, requireRole(['SUPER_ADMIN']), AdminBannerController.deleteBanner);
+
+// Supported Pincodes / Delivery Areas (Super Admin only)
+router.get('/pincodes', authenticate, requireRole(['SUPER_ADMIN']), AdminPincodeController.listPincodes);
+router.post('/pincodes', authenticate, requireRole(['SUPER_ADMIN']), AdminPincodeController.createPincode);
+router.get('/pincodes/:id', authenticate, requireRole(['SUPER_ADMIN']), AdminPincodeController.getPincodeById);
+router.put('/pincodes/:id', authenticate, requireRole(['SUPER_ADMIN']), AdminPincodeController.updatePincode);
+router.patch('/pincodes/:id/status', authenticate, requireRole(['SUPER_ADMIN']), AdminPincodeController.togglePincodeStatus);
+router.put('/pincodes/:id/status', authenticate, requireRole(['SUPER_ADMIN']), AdminPincodeController.togglePincodeStatus);
 
 export default router;

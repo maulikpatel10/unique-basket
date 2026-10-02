@@ -19,7 +19,11 @@ final secureStorageProvider = Provider<SecureStorageService>((ref) {
 /// Provider for the centralized ApiClient.
 final apiClientProvider = Provider<ApiClient>((ref) {
   final secureStorage = ref.watch(secureStorageProvider);
-  return ApiClient(secureStorage: secureStorage);
+  final localStorage = ref.watch(localStorageProvider);
+  return ApiClient(
+    secureStorage: secureStorage,
+    localStorage: localStorage,
+  );
 });
 
 /// Provider for the StartupStateResolver.

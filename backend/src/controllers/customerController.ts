@@ -26,6 +26,7 @@ export class CustomerController {
           name: true,
           email: true,
           dob: true,
+          gender: true,
           isActive: true,
           createdAt: true,
           updatedAt: true,
@@ -53,7 +54,7 @@ export class CustomerController {
   }
 
   /**
-   * Update authenticated customer profile (e.g. name, email, dob)
+   * Update authenticated customer profile (e.g. name, email, dob, gender)
    */
   static async updateProfile(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
@@ -67,7 +68,7 @@ export class CustomerController {
         return;
       }
 
-      const { name, email, dob } = req.body;
+      const { name, email, dob, gender } = req.body;
 
       // Validate name if provided
       if (name !== undefined) {
@@ -159,12 +160,47 @@ export class CustomerController {
         }
       }
 
+      // Validate and parse gender if provided
+      let parsedGender: string | null | undefined = undefined;
+      if (gender !== undefined) {
+        if (gender === null || gender === '') {
+          parsedGender = null;
+        } else if (typeof gender === 'string') {
+          const normalized = gender.trim();
+          const upper = normalized.toUpperCase();
+          if (upper === 'MALE' || normalized === 'Male') {
+            parsedGender = 'Male';
+          } else if (upper === 'FEMALE' || normalized === 'Female') {
+            parsedGender = 'Female';
+          } else if (upper === 'OTHER' || normalized === 'Other') {
+            parsedGender = 'Other';
+          } else if (upper === 'PREFER_NOT_TO_SAY' || normalized === 'Prefer not to say') {
+            parsedGender = 'Prefer not to say';
+          } else {
+            res.status(400).json({
+              success: false,
+              message: 'Invalid gender value. Allowed values: Male, Female, Other, Prefer not to say.',
+              errorCode: 'INVALID_GENDER',
+            });
+            return;
+          }
+        } else {
+          res.status(400).json({
+            success: false,
+            message: 'Gender must be a string or null.',
+            errorCode: 'INVALID_GENDER',
+          });
+          return;
+        }
+      }
+
       const updatedUser = await prisma.user.update({
         where: { id: userId },
         data: {
           ...(name !== undefined ? { name: name.trim() } : {}),
           ...(email !== undefined ? { email: email === '' ? null : email.trim() } : {}),
           ...(parsedDob !== undefined ? { dob: parsedDob } : {}),
+          ...(parsedGender !== undefined ? { gender: parsedGender } : {}),
         },
         select: {
           id: true,
@@ -172,6 +208,7 @@ export class CustomerController {
           name: true,
           email: true,
           dob: true,
+          gender: true,
           isActive: true,
           createdAt: true,
           updatedAt: true,
@@ -256,6 +293,20 @@ export class CustomerController {
         return;
       }
 
+      const normalizedPincode = pincode.trim();
+      const supportedPincode = await prisma.supportedPincode.findFirst({
+        where: { pincode: normalizedPincode, isActive: true },
+      });
+
+      if (!supportedPincode) {
+        res.status(400).json({
+          success: false,
+          message: 'Delivery is currently not available for this pincode.',
+          errorCode: 'PINCODE_NOT_SERVICEABLE',
+        });
+        return;
+      }
+
       // Check if customer already has any address; if not, default to true
       const existingAddressCount = await prisma.userAddress.count({ where: { userId } });
       const makeDefault = isDefault ?? (existingAddressCount === 0);
@@ -277,9 +328,9 @@ export class CustomerController {
           userId,
           title: (title && typeof title === 'string') ? title.trim() : 'Home',
           addressLine: addressLine.trim(),
-          city: (city && typeof city === 'string') ? city.trim() : 'Rajkot',
-          state: (state && typeof state === 'string') ? state.trim() : 'Gujarat',
-          pincode: pincode.trim(),
+          city: (city && typeof city === 'string') ? city.trim() : supportedPincode.city,
+          state: (state && typeof state === 'string') ? state.trim() : supportedPincode.state,
+          pincode: normalizedPincode,
           latitude: lat,
           longitude: lng,
           isDefault: makeDefault,
@@ -297,4 +348,453 @@ export class CustomerController {
       next(error);
     }
   }
+
+  /**
+   * Update an existing address for authenticated customer
+   */
+  static async updateAddress(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: 'Authentication required.',
+          errorCode: 'UNAUTHORIZED',
+        });
+        return;
+      }
+
+      const { id } = req.params;
+      const { title, addressLine, city, state, pincode, latitude, longitude, isDefault } = req.body;
+
+      const existing = await prisma.userAddress.findFirst({
+        where: { id, userId },
+      });
+
+      if (!existing) {
+        res.status(404).json({
+          success: false,
+          message: 'Address not found.',
+          errorCode: 'ADDRESS_NOT_FOUND',
+        });
+        return;
+      }
+
+      if (addressLine !== undefined && (typeof addressLine !== 'string' || addressLine.trim().length === 0)) {
+        res.status(400).json({
+          success: false,
+          message: 'Address line cannot be empty.',
+          errorCode: 'MISSING_ADDRESS_LINE',
+        });
+        return;
+      }
+
+      let validatedPincode: string | undefined = undefined;
+      if (pincode !== undefined) {
+        if (typeof pincode !== 'string' || !/^\d{6}$/.test(pincode.trim())) {
+          res.status(400).json({
+            success: false,
+            message: 'A valid 6-digit pincode is required.',
+            errorCode: 'INVALID_PINCODE',
+          });
+          return;
+        }
+
+        const normalizedPincode = pincode.trim();
+        const supportedPincode = await prisma.supportedPincode.findFirst({
+          where: { pincode: normalizedPincode, isActive: true },
+        });
+
+        if (!supportedPincode) {
+          res.status(400).json({
+            success: false,
+            message: 'Delivery is currently not available for this pincode.',
+            errorCode: 'PINCODE_NOT_SERVICEABLE',
+          });
+          return;
+        }
+        validatedPincode = normalizedPincode;
+      }
+
+      // If updating to default, unset other defaults
+      if (isDefault === true) {
+        await prisma.userAddress.updateMany({
+          where: { userId, NOT: { id } },
+          data: { isDefault: false },
+        });
+      }
+
+      const updated = await prisma.userAddress.update({
+        where: { id },
+        data: {
+          ...(title !== undefined ? { title: title.trim() } : {}),
+          ...(addressLine !== undefined ? { addressLine: addressLine.trim() } : {}),
+          ...(city !== undefined ? { city: city.trim() } : {}),
+          ...(state !== undefined ? { state: state.trim() } : {}),
+          ...(pincode !== undefined ? { pincode: pincode.trim() } : {}),
+          ...(latitude !== undefined ? { latitude: Number(latitude) } : {}),
+          ...(longitude !== undefined ? { longitude: Number(longitude) } : {}),
+          ...(isDefault !== undefined ? { isDefault } : {}),
+        },
+      });
+
+      res.status(200).json({
+        success: true,
+        message: 'Address updated successfully.',
+        data: {
+          address: updated,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Set address as default for authenticated customer
+   */
+  static async setDefaultAddress(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: 'Authentication required.',
+          errorCode: 'UNAUTHORIZED',
+        });
+        return;
+      }
+
+      const { id } = req.params;
+      const existing = await prisma.userAddress.findFirst({
+        where: { id, userId },
+      });
+
+      if (!existing) {
+        res.status(404).json({
+          success: false,
+          message: 'Address not found.',
+          errorCode: 'ADDRESS_NOT_FOUND',
+        });
+        return;
+      }
+
+      await prisma.userAddress.updateMany({
+        where: { userId, NOT: { id } },
+        data: { isDefault: false },
+      });
+
+      const updated = await prisma.userAddress.update({
+        where: { id },
+        data: { isDefault: true },
+      });
+
+      res.status(200).json({
+        success: true,
+        message: 'Default address updated successfully.',
+        data: {
+          address: updated,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Delete address for authenticated customer
+   */
+  static async deleteAddress(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: 'Authentication required.',
+          errorCode: 'UNAUTHORIZED',
+        });
+        return;
+      }
+
+      const { id } = req.params;
+      const existing = await prisma.userAddress.findFirst({
+        where: { id, userId },
+      });
+
+      if (!existing) {
+        res.status(404).json({
+          success: false,
+          message: 'Address not found.',
+          errorCode: 'ADDRESS_NOT_FOUND',
+        });
+        return;
+      }
+
+      const wasDefault = existing.isDefault;
+
+      await prisma.userAddress.delete({
+        where: { id },
+      });
+
+      // If the deleted address was default, choose the first remaining address deterministically
+      if (wasDefault) {
+        const remaining = await prisma.userAddress.findMany({
+          where: { userId },
+          orderBy: { createdAt: 'desc' },
+        });
+
+        if (remaining.length > 0) {
+          const hasDefault = remaining.some((a) => a.isDefault);
+          if (!hasDefault) {
+            await prisma.userAddress.update({
+              where: { id: remaining[0].id },
+              data: { isDefault: true },
+            });
+          }
+        }
+      }
+
+      res.status(200).json({
+        success: true,
+        message: 'Address deleted successfully.',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get authenticated customer favorites list of product IDs and objects
+   */
+  static async getFavorites(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: 'Authentication required.',
+          errorCode: 'UNAUTHORIZED',
+        });
+        return;
+      }
+
+      const favorites = await prisma.favorite.findMany({
+        where: { userId },
+        include: {
+          product: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+              price: true,
+              mrp: true,
+              unit: true,
+              imageUrl: true,
+              categoryId: true,
+              isActive: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      const activeFavorites = favorites.filter((f) => f.product.isActive);
+      const productIds = activeFavorites.map((f) => f.productId);
+
+      res.status(200).json({
+        success: true,
+        data: {
+          productIds,
+          favorites: activeFavorites.map((f) => ({
+            id: f.id,
+            productId: f.productId,
+            product: f.product,
+          })),
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Add a product to authenticated customer's favorites
+   */
+  static async addFavorite(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user?.id;
+      const productId = req.params.productId || req.body.productId;
+
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: 'Authentication required.',
+          errorCode: 'UNAUTHORIZED',
+        });
+        return;
+      }
+
+      if (!productId) {
+        res.status(400).json({
+          success: false,
+          message: 'Product ID is required.',
+          errorCode: 'MISSING_PRODUCT_ID',
+        });
+        return;
+      }
+
+      const product = await prisma.product.findUnique({
+        where: { id: productId },
+      });
+
+      if (!product || !product.isActive) {
+        res.status(404).json({
+          success: false,
+          message: 'Product not found or currently unavailable.',
+          errorCode: 'PRODUCT_NOT_FOUND',
+        });
+        return;
+      }
+
+      const favorite = await prisma.favorite.upsert({
+        where: {
+          userId_productId: { userId, productId },
+        },
+        create: {
+          userId,
+          productId,
+        },
+        update: {},
+      });
+
+      res.status(201).json({
+        success: true,
+        message: 'Product added to favourites successfully.',
+        data: {
+          id: favorite.id,
+          productId: favorite.productId,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Remove a product from authenticated customer's favorites
+   */
+  static async removeFavorite(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user?.id;
+      const productId = req.params.productId || req.body.productId;
+
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: 'Authentication required.',
+          errorCode: 'UNAUTHORIZED',
+        });
+        return;
+      }
+
+      if (!productId) {
+        res.status(400).json({
+          success: false,
+          message: 'Product ID is required.',
+          errorCode: 'MISSING_PRODUCT_ID',
+        });
+        return;
+      }
+
+      await prisma.favorite.deleteMany({
+        where: {
+          userId,
+          productId,
+        },
+      });
+
+      res.status(200).json({
+        success: true,
+        message: 'Product removed from favourites successfully.',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get public/customer delivery charge and threshold settings
+   */
+  static async getDeliverySettings(req: any, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const settings = await prisma.deliverySettings.findFirst();
+      res.status(200).json({
+        success: true,
+        data: {
+          deliveryEnabled: settings ? settings.deliveryEnabled : true,
+          deliveryFee: settings ? Number(settings.deliveryFee) : 30.00,
+          freeDeliveryThreshold: settings ? Number(settings.freeDeliveryThreshold) : 499.00,
+          minimumOrderAmount: settings ? Number(settings.minimumOrderAmount) : 199.00,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get active supported pincodes for delivery serviceability
+   */
+  static async getSupportedPincodes(req: any, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const pincodes = await prisma.supportedPincode.findMany({
+        where: { isActive: true },
+        orderBy: { pincode: 'asc' },
+      });
+
+      res.status(200).json({
+        success: true,
+        data: pincodes,
+        pincodes,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Check serviceability for a specific pincode
+   */
+  static async checkPincodeServiceability(req: any, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { pincode } = req.query;
+      if (!pincode || typeof pincode !== 'string' || !/^\d{6}$/.test(pincode.trim())) {
+        res.status(400).json({
+          success: false,
+          message: 'A valid 6-digit pincode is required.',
+          errorCode: 'INVALID_PINCODE',
+        });
+        return;
+      }
+
+      const normalized = pincode.trim();
+      const supported = await prisma.supportedPincode.findFirst({
+        where: { pincode: normalized, isActive: true },
+      });
+
+      res.status(200).json({
+        success: true,
+        data: {
+          isServiceable: !!supported,
+          pincode: normalized,
+          city: supported?.city || 'Rajkot',
+          state: supported?.state || 'Gujarat',
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
+
+

@@ -1,3 +1,6 @@
+export '../../../cart/presentation/providers/cart_provider.dart';
+export '../../../favorites/presentation/providers/favorites_provider.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/providers/core_providers.dart';
 import '../../../store/presentation/providers/store_provider.dart';
@@ -39,75 +42,24 @@ final homeProductsProvider = FutureProvider<List<ProductModel>>((ref) async {
   return ref.watch(storeProductsProvider(servingStore.id).future);
 });
 
+/// Category products provider that dynamically queries the customer's resolved serving store
+/// filtered by category ID.
+final categoryProductsProvider =
+    FutureProvider.family<List<ProductModel>, String>((ref, categoryId) async {
+  final servingStore = await ref.watch(servingStoreProvider.future);
+  if (servingStore == null || servingStore.id.isEmpty) {
+    return [];
+  }
+  final repository = ref.watch(homeRepositoryProvider);
+  return repository.getStoreProducts(
+    servingStore.id,
+    categoryId: categoryId.isNotEmpty ? categoryId : null,
+  );
+});
+
 final homeBannersProvider = FutureProvider<List<BannerModel>>((ref) async {
   final repository = ref.watch(homeRepositoryProvider);
   return repository.getBanners();
 });
 
-/// State for active quantities in cart mapped by productId.
-class CartStateNotifier extends StateNotifier<Map<String, int>> {
-  CartStateNotifier() : super({});
 
-  void increment(String productId) {
-    state = {
-      ...state,
-      productId: (state[productId] ?? 0) + 1,
-    };
-  }
-
-  void decrement(String productId) {
-    final current = state[productId] ?? 0;
-    if (current <= 1) {
-      final updated = Map<String, int>.from(state)..remove(productId);
-      state = updated;
-    } else {
-      state = {
-        ...state,
-        productId: current - 1,
-      };
-    }
-  }
-
-  int getQuantity(String productId) => state[productId] ?? 0;
-
-  int get totalItemCount => state.values.fold(0, (sum, q) => sum + q);
-
-  double calculateTotal(List<ProductModel> products) {
-    double total = 0.0;
-    for (final entry in state.entries) {
-      final product = products.cast<ProductModel?>().firstWhere(
-            (p) => p?.id == entry.key,
-            orElse: () => null,
-          );
-      if (product != null) {
-        total += product.price * entry.value;
-      }
-    }
-    return total;
-  }
-}
-
-final cartNotifierProvider =
-    StateNotifierProvider<CartStateNotifier, Map<String, int>>((ref) {
-  return CartStateNotifier();
-});
-
-/// State for wishlist/favorite product IDs.
-class FavoritesNotifier extends StateNotifier<Set<String>> {
-  FavoritesNotifier() : super({});
-
-  void toggleFavorite(String productId) {
-    if (state.contains(productId)) {
-      state = Set.from(state)..remove(productId);
-    } else {
-      state = Set.from(state)..add(productId);
-    }
-  }
-
-  bool isFavorite(String productId) => state.contains(productId);
-}
-
-final favoritesNotifierProvider =
-    StateNotifierProvider<FavoritesNotifier, Set<String>>((ref) {
-  return FavoritesNotifier();
-});

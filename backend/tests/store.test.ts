@@ -63,7 +63,7 @@ describe('Store & Location Management Integration Tests', () => {
   });
 
   describe('GET /api/v1/stores', () => {
-    it('should list all stores for an authenticated customer', async () => {
+    it('should list only active stores (Store One) for an authenticated customer', async () => {
       const res = await request(app)
         .get('/api/v1/stores')
         .set('Authorization', `Bearer ${customerToken}`);
@@ -71,38 +71,74 @@ describe('Store & Location Management Integration Tests', () => {
       expect(res.statusCode).toEqual(200);
       expect(res.body).toHaveProperty('success', true);
       expect(Array.isArray(res.body.data)).toBe(true);
-      expect(res.body.data.length).toBeGreaterThanOrEqual(3); // At least 3 seeded stores
+      expect(res.body.data.length).toBeGreaterThanOrEqual(1);
+      
+      // Store One is active
+      const storeOne = res.body.data.find((s: any) => s.storeId === 'STORE-001');
+      expect(storeOne).toBeDefined();
+      expect(storeOne.isActive).toBe(true);
+      expect(storeOne.name).toBe('Store One');
+
+      // Inactive stores must NOT be returned to customers
+      const inactiveStores = res.body.data.filter((s: any) => !s.isActive);
+      expect(inactiveStores.length).toBe(0);
     });
 
-    it('should calculate distance and eligibility if lat/lng are provided', async () => {
-      // Coordinate right at STORE-001 (Unique Basket - Central Store)
-      // Lat: 12.971598, Lng: 77.594562
+    it('should calculate distance and eligibility if lat/lng are provided for Store One', async () => {
+      // Coordinate right at Store One (Nana Mava, Rajkot)
+      // Lat: 22.308155, Lng: 70.800705
       const res = await request(app)
-        .get('/api/v1/stores?lat=12.971598&lng=77.594562&fulfillment=DELIVERY')
+        .get('/api/v1/stores?lat=22.308155&lng=70.800705&fulfillment=DELIVERY')
         .set('Authorization', `Bearer ${customerToken}`);
 
       expect(res.statusCode).toEqual(200);
       expect(res.body).toHaveProperty('success', true);
       
-      const centralStore = res.body.data.find((s: any) => s.storeId === 'STORE-001');
-      expect(centralStore).toBeDefined();
-      expect(centralStore.distanceKm).toBeCloseTo(0, 1);
-      expect(centralStore.isEligible).toBe(true); // Distance 0 is <= 10km delivery radius
+      const storeOne = res.body.data.find((s: any) => s.storeId === 'STORE-001');
+      expect(storeOne).toBeDefined();
+      expect(storeOne.distanceKm).toBeCloseTo(0, 1);
+      expect(storeOne.isEligible).toBe(true); // Distance 0 is <= 15km delivery radius
     });
 
-    it('should show isEligible = false if customer coordinates are outside store delivery radius', async () => {
-      // Coordinate far away from stores (e.g. Silk Board area, around 12.9176, 77.6244)
-      // Hebbal store (STORE-003) is at 13.035356, 77.598789 (~13.4 km away), delivery radius 12.0km.
-      // So STORE-003 should be marked as isEligible = false.
+    it('should show isEligible = false if customer coordinates are outside Store One delivery radius', async () => {
+      // Coordinate far away from Store One (e.g. Bangalore area: 12.9176, 77.6244)
       const res = await request(app)
         .get('/api/v1/stores?lat=12.9176&lng=77.6244&fulfillment=DELIVERY')
         .set('Authorization', `Bearer ${customerToken}`);
 
       expect(res.statusCode).toEqual(200);
       
-      const northStore = res.body.data.find((s: any) => s.storeId === 'STORE-003');
-      expect(northStore).toBeDefined();
-      expect(northStore.isEligible).toBe(false); // 13.4 km is > 12 km radius
+      const storeOne = res.body.data.find((s: any) => s.storeId === 'STORE-001');
+      expect(storeOne).toBeDefined();
+      expect(storeOne.isEligible).toBe(false); // ~1200 km is > 15 km radius
+    });
+
+    it('should reject customer trying to access an inactive store by ID', async () => {
+      const inactiveStore = await prisma.store.findFirst({
+        where: { isActive: false },
+      });
+      if (inactiveStore) {
+        const res = await request(app)
+          .get(`/api/v1/stores/${inactiveStore.id}`)
+          .set('Authorization', `Bearer ${customerToken}`);
+
+        expect(res.statusCode).toEqual(404);
+        expect(res.body).toHaveProperty('success', false);
+      }
+    });
+
+    it('should reject customer trying to query products for an inactive store', async () => {
+      const inactiveStore = await prisma.store.findFirst({
+        where: { isActive: false },
+      });
+      if (inactiveStore) {
+        const res = await request(app)
+          .get(`/api/v1/products/store/${inactiveStore.id}`)
+          .set('Authorization', `Bearer ${customerToken}`);
+
+        expect(res.statusCode).toEqual(404);
+        expect(res.body).toHaveProperty('success', false);
+      }
     });
   });
 

@@ -11,6 +11,7 @@ import {
   IndianRupee,
   Calendar,
   Truck,
+  User,
   Store as StoreIcon
 } from 'lucide-react';
 
@@ -20,6 +21,7 @@ interface CustomerProfile {
   name: string;
   email: string | null;
   dob?: string | null;
+  gender?: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -234,6 +236,12 @@ export const CustomerDetails: React.FC = () => {
                 <span className="flex items-center gap-1.5">
                   <Calendar className="h-3.5 w-3.5 text-brand-400" />
                   <span>DOB: {new Date(customer.dob).toLocaleDateString('en-IN', { timeZone: 'UTC', day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                </span>
+              )}
+              {customer.gender && (
+                <span className="flex items-center gap-1.5 bg-slate-900/60 px-2.5 py-1 rounded-lg border border-slate-700/50">
+                  <User className="h-3.5 w-3.5 text-brand-400" />
+                  <span>Gender: <strong className="text-white">{customer.gender}</strong></span>
                 </span>
               )}
             </div>

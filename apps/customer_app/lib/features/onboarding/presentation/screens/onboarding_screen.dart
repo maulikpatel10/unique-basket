@@ -8,6 +8,7 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/providers/core_providers.dart';
+import '../../../../shared/widgets/widgets.dart';
 import '../widgets/onboarding_page.dart';
 import '../widgets/onboarding_pagination.dart';
 
@@ -249,47 +250,18 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     ),
 
                     // B. Right Pill CTA Button matched to AppColors.primary ("Next →" / "Get Started")
-                    SizedBox(
-                      height: 44.0,
-                      child: ElevatedButton(
-                        onPressed: _handleNext,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: AppColors.onPrimary,
-                          elevation: 3,
-                          shadowColor: AppColors.primary.withValues(alpha: 0.35),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(24.0),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.lg,
-                            vertical: 10.0,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              currentItem.buttonText,
-                              style: const TextStyle(
-                                fontFamily: AppTextStyles.fontFamily,
-                                fontSize: 15.0,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.1,
-                                color: AppColors.onPrimary,
-                              ),
-                            ),
-                            if (currentItem.showArrow) ...[
-                              const SizedBox(width: 6.0),
-                              const Icon(
-                                Icons.arrow_forward_rounded,
-                                size: 16.0,
-                                color: AppColors.onPrimary,
-                              ),
-                            ],
-                          ],
-                        ),
+                    AppButton(
+                      label: currentItem.buttonText,
+                      variant: ButtonVariant.primary,
+                      size: ButtonSize.medium,
+                      isFullWidth: false,
+                      icon: currentItem.showArrow ? Icons.arrow_forward_rounded : null,
+                      iconPosition: IconPosition.trailing,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.lg,
+                        vertical: 10.0,
                       ),
+                      onPressed: _handleNext,
                     ),
                   ],
                 ),

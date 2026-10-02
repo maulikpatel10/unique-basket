@@ -2,6 +2,7 @@ import 'package:customer_app/app/config/app_config.dart';
 import 'package:customer_app/app/config/environment.dart';
 import 'package:customer_app/app/router/route_names.dart';
 import 'package:customer_app/app/theme/app_theme.dart';
+import 'package:go_router/go_router.dart';
 import 'package:customer_app/core/constants/app_constants.dart';
 import 'package:customer_app/core/providers/core_providers.dart';
 import 'package:customer_app/core/storage/local_storage_service.dart';
@@ -107,6 +108,46 @@ class MockCustomerAddressRepository implements CustomerAddressRepository {
   }) async {
     return {};
   }
+
+  @override
+  Future<Map<String, dynamic>> updateAddress({
+    required String id,
+    String? title,
+    String? addressLine,
+    String? city,
+    String? state,
+    String? pincode,
+    double? latitude,
+    double? longitude,
+    bool? isDefault,
+  }) async {
+    return {};
+  }
+
+  @override
+  Future<Map<String, dynamic>> setDefaultAddress(String id) async => {};
+
+  @override
+  Future<Map<String, dynamic>> deleteAddress(String id) async => {};
+
+  @override
+  Future<List<SupportedPincodeModel>> getSupportedPincodes() async => const [
+        SupportedPincodeModel(id: '1', pincode: '360001', city: 'Rajkot', state: 'Gujarat', isActive: true),
+        SupportedPincodeModel(id: '2', pincode: '360002', city: 'Rajkot', state: 'Gujarat', isActive: true),
+        SupportedPincodeModel(id: '3', pincode: '360003', city: 'Rajkot', state: 'Gujarat', isActive: true),
+        SupportedPincodeModel(id: '4', pincode: '360004', city: 'Rajkot', state: 'Gujarat', isActive: true),
+        SupportedPincodeModel(id: '5', pincode: '360005', city: 'Rajkot', state: 'Gujarat', isActive: true),
+        SupportedPincodeModel(id: '6', pincode: '360006', city: 'Rajkot', state: 'Gujarat', isActive: true),
+        SupportedPincodeModel(id: '7', pincode: '360007', city: 'Rajkot', state: 'Gujarat', isActive: true),
+      ];
+
+  @override
+  Future<Map<String, dynamic>> checkPincodeServiceability(String pincode) async => {
+        'isServiceable': ['360001', '360002', '360003', '360004', '360005', '360006', '360007'].contains(pincode),
+        'pincode': pincode,
+        'city': 'Rajkot',
+        'state': 'Gujarat',
+      };
 }
 
 class MockCustomerProfileRepository implements CustomerProfileRepository {
@@ -133,6 +174,7 @@ class MockCustomerProfileRepository implements CustomerProfileRepository {
     required String name,
     String? email,
     DateTime? dob,
+    String? gender,
   }) async {
     return {};
   }
@@ -692,5 +734,225 @@ void main() {
       expect(find.text('850 m away'), findsOneWidget);
       expect(find.text('930 m away'), findsNothing);
     });
+
+    testWidgets('19. Out of stock products are not visible in Home Fresh Arrivals section',
+        (tester) async {
+      final prefs = await SharedPreferences.getInstance();
+      final localStorage = LocalStorageService(prefs);
+
+      const inStockProduct = ProductModel(
+        id: 'p_instock',
+        categoryId: '1',
+        name: 'Fresh Fuji Apples',
+        price: 9.99,
+        unit: '500g',
+        stockQuantity: 10.0,
+        isAvailable: true,
+        isActive: true,
+      );
+
+      const outOfStockProduct = ProductModel(
+        id: 'p_oos',
+        categoryId: '1',
+        name: 'Out of Stock Berries',
+        price: 9.99,
+        unit: '250g',
+        stockQuantity: 0.0,
+        isAvailable: true,
+        isActive: true,
+      );
+
+      final customHomeRepo = _MockCustomProductHomeRepository(
+        products: [inStockProduct, outOfStockProduct],
+      );
+
+      tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+      tester.view.devicePixelRatio = 3.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      await tester.pumpWidget(_createHomeTestWidget(
+        localStorage: localStorage,
+        repository: customHomeRepo,
+      ));
+      await tester.pumpAndSettle();
+
+      // Verify out of stock product is not rendered
+      expect(find.text('Out of Stock Berries'), findsNothing);
+
+      // Verify in stock product is rendered
+      expect(find.text('Fresh Fuji Apples'), findsOneWidget);
+
+      // Verify still on Home screen
+      expect(find.byType(HomeScreen), findsOneWidget);
+    });
+
+    testWidgets(
+        '20. Tapping categories (Fruits, Vegetables, Leafy Vegetables) navigates to Screen 10 with correct parameters',
+        (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final localStorage = LocalStorageService(prefs);
+
+      const categories = [
+        CategoryModel(id: 'cat_fruits', name: 'Fruits', displayOrder: 1),
+        CategoryModel(id: 'cat_veggies', name: 'Vegetables', displayOrder: 2),
+        CategoryModel(id: 'cat_leafy', name: 'Leafy Vegetables', displayOrder: 3),
+      ];
+
+      final customRepo = _MockCustomCategoryHomeRepository(categories: categories);
+
+      final container = ProviderContainer(
+        overrides: [
+          localStorageProvider.overrideWithValue(localStorage),
+          homeRepositoryProvider.overrideWithValue(customRepo),
+          customerAddressRepositoryProvider.overrideWithValue(
+            MockCustomerAddressRepository(
+              addressesResponse: {
+                'addresses': [
+                  {
+                    'id': 'addr_1',
+                    'title': 'Home',
+                    'addressLine': '123 Fresh Lane',
+                    'city': 'Rajkot',
+                    'latitude': 22.3039,
+                    'longitude': 70.8022,
+                    'isDefault': true,
+                  }
+                ]
+              },
+            ),
+          ),
+          storeRepositoryProvider.overrideWithValue(
+            MockStoreRepository(
+              servingStore: const StoreModel(
+                id: 'store_1',
+                storeId: 'RAJ-01',
+                name: 'Store 1',
+                address: 'Kalawad Road',
+                city: 'Rajkot',
+                state: 'Gujarat',
+                pincode: '360005',
+                latitude: 22.3039,
+                longitude: 70.8022,
+                phone: '+919876543210',
+                openingTime: '07:00',
+                closingTime: '22:00',
+                isActive: true,
+                isEligible: true,
+                deliveryRadiusKm: 5.0,
+              ),
+            ),
+          ),
+        ],
+      );
+
+      String? capturedCategoryId;
+      String? capturedCategoryName;
+
+      final router = GoRouter(
+        initialLocation: RouteNames.home,
+        routes: [
+          GoRoute(
+            path: RouteNames.home,
+            builder: (context, state) => const HomeScreen(),
+          ),
+          GoRoute(
+            path: RouteNames.categoryProducts,
+            builder: (context, state) {
+              capturedCategoryId = state.uri.queryParameters['categoryId'];
+              capturedCategoryName = state.uri.queryParameters['categoryName'];
+              return Scaffold(
+                body: Center(
+                  child: Text('Screen 10: $capturedCategoryName ($capturedCategoryId)'),
+                ),
+              );
+            },
+          ),
+        ],
+      );
+
+      tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+      tester.view.devicePixelRatio = 3.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(
+            routerConfig: router,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Tap Fruits
+      expect(find.text('Fruits'), findsOneWidget);
+      await tester.tap(find.text('Fruits'));
+      await tester.pumpAndSettle();
+      expect(capturedCategoryId, equals('cat_fruits'));
+      expect(capturedCategoryName, equals('Fruits'));
+      expect(find.text('Screen 10: Fruits (cat_fruits)'), findsOneWidget);
+
+      // Navigate back to Home
+      router.go(RouteNames.home);
+      await tester.pumpAndSettle();
+
+      // Tap Vegetables
+      expect(find.text('Vegetables'), findsOneWidget);
+      await tester.tap(find.text('Vegetables'));
+      await tester.pumpAndSettle();
+      expect(capturedCategoryId, equals('cat_veggies'));
+      expect(capturedCategoryName, equals('Vegetables'));
+      expect(find.text('Screen 10: Vegetables (cat_veggies)'), findsOneWidget);
+
+      // Navigate back to Home
+      router.go(RouteNames.home);
+      await tester.pumpAndSettle();
+
+      // Tap Leafy Vegetables
+      expect(find.text('Leafy Vegetables'), findsOneWidget);
+      await tester.tap(find.text('Leafy Vegetables'));
+      await tester.pumpAndSettle();
+      expect(capturedCategoryId, equals('cat_leafy'));
+      expect(capturedCategoryName, equals('Leafy Vegetables'));
+      expect(find.text('Screen 10: Leafy Vegetables (cat_leafy)'), findsOneWidget);
+    });
   });
+}
+
+class _MockCustomProductHomeRepository implements HomeRepository {
+  final List<ProductModel> products;
+  _MockCustomProductHomeRepository({required this.products});
+
+  @override
+  Future<List<CategoryModel>> getCategories() async => [
+        const CategoryModel(id: '1', name: 'Fruits', displayOrder: 1),
+      ];
+
+  @override
+  Future<List<ProductModel>> getFeaturedProducts() async => products;
+
+  @override
+  Future<List<ProductModel>> getStoreProducts(String storeId, {String? categoryId}) async =>
+      products;
+
+  @override
+  Future<List<BannerModel>> getBanners() async => [];
+}
+
+class _MockCustomCategoryHomeRepository implements HomeRepository {
+  final List<CategoryModel> categories;
+  _MockCustomCategoryHomeRepository({required this.categories});
+
+  @override
+  Future<List<CategoryModel>> getCategories() async => categories;
+
+  @override
+  Future<List<ProductModel>> getFeaturedProducts() async => [];
+
+  @override
+  Future<List<ProductModel>> getStoreProducts(String storeId, {String? categoryId}) async => [];
+
+  @override
+  Future<List<BannerModel>> getBanners() async => [];
 }

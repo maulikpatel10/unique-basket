@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../constants/api_endpoints.dart';
+import '../storage/local_storage_service.dart';
 import '../storage/secure_storage_service.dart';
 
 /// Interceptor responsible for:
@@ -12,6 +13,7 @@ import '../storage/secure_storage_service.dart';
 ///    preserving credentials on transient network/server failures).
 class AuthInterceptor extends Interceptor {
   final SecureStorageService _secureStorage;
+  final LocalStorageService? _localStorage;
   final Dio _tokenDio;
 
   static const String retryExtraKey = 'authRetry';
@@ -21,8 +23,10 @@ class AuthInterceptor extends Interceptor {
   AuthInterceptor({
     required SecureStorageService secureStorage,
     required Dio tokenDio,
+    LocalStorageService? localStorage,
   })  : _secureStorage = secureStorage,
-        _tokenDio = tokenDio;
+        _tokenDio = tokenDio,
+        _localStorage = localStorage;
 
   @override
   Future<void> onRequest(
@@ -125,6 +129,7 @@ class AuthInterceptor extends Interceptor {
       if (refreshToken == null || refreshToken.trim().isEmpty) {
         // Missing refresh token is an authentication failure -> clear session
         await _secureStorage.clearTokens();
+        await _localStorage?.clearUserSessionData();
         return null;
       }
 
@@ -148,6 +153,7 @@ class AuthInterceptor extends Interceptor {
       if (newAccessToken == null || newAccessToken.trim().isEmpty) {
         // Response missing usable access token -> authentication failure -> clear session
         await _secureStorage.clearTokens();
+        await _localStorage?.clearUserSessionData();
         return null;
       }
 
@@ -163,6 +169,7 @@ class AuthInterceptor extends Interceptor {
       if (statusCode == 401 || statusCode == 403) {
         // Explicit auth rejection -> credentials revoked/expired -> clear session
         await _secureStorage.clearTokens();
+        await _localStorage?.clearUserSessionData();
       }
       // Note: For transient network errors (connection timeout, 5xx, SocketException),
       // we do NOT destroy local credentials.

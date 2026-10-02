@@ -41,11 +41,13 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
     if (response is List) {
       return response
           .map((item) => ProductModel.fromJson(item as Map<String, dynamic>))
+          .where((p) => p.isPurchasable)
           .toList();
     } else if (response is Map<String, dynamic> && response['data'] is List) {
       final list = response['data'] as List;
       return list
           .map((item) => ProductModel.fromJson(item as Map<String, dynamic>))
+          .where((p) => p.isPurchasable)
           .toList();
     }
     return [];
@@ -57,11 +59,13 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
     if (response is List) {
       return response
           .map((item) => ProductModel.fromJson(item as Map<String, dynamic>))
+          .where((p) => p.isPurchasable)
           .toList();
     } else if (response is Map<String, dynamic> && response['data'] is List) {
       final list = response['data'] as List;
       return list
           .map((item) => ProductModel.fromJson(item as Map<String, dynamic>))
+          .where((p) => p.isPurchasable)
           .toList();
     }
     return [];

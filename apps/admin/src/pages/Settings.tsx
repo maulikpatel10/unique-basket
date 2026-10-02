@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import type { DeliverySettings } from '../types';
@@ -13,7 +14,8 @@ import {
   Sliders,
   ShieldCheck,
   ShieldAlert,
-  Info
+  Info,
+  MapPin
 } from 'lucide-react';
 
 export const Settings: React.FC = () => {
@@ -512,6 +514,27 @@ export const Settings: React.FC = () => {
                 </button>
               </div>
             </div>
+          </div>
+
+          {/* Delivery Pincodes Card */}
+          <div className="bg-darkbg-800 border border-slate-700/50 rounded-2xl p-6 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <MapPin className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white uppercase tracking-wide">Supported Delivery Pincodes</h3>
+                <p className="text-xs text-slate-400 mt-0.5">Manage serviceable postal codes, activate or deactivate delivery areas in real-time.</p>
+              </div>
+            </div>
+
+            <Link
+              to="/admin/pincodes"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold transition-colors"
+            >
+              <span>Manage Pincodes</span>
+              <span className="text-brand-400 font-bold">→</span>
+            </Link>
           </div>
 
           {/* Info Note Banner */}

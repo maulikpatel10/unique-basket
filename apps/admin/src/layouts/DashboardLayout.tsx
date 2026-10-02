@@ -17,7 +17,8 @@ import {
   Menu,
   X,
   User as UserIcon,
-  Sliders
+  Sliders,
+  MapPin
 } from 'lucide-react';
 
 export const DashboardLayout: React.FC = () => {
@@ -99,6 +100,12 @@ export const DashboardLayout: React.FC = () => {
       title: 'Fares & COD Settings',
       path: '/admin/settings',
       icon: Coins,
+      roles: ['SUPER_ADMIN'],
+    },
+    {
+      title: 'Delivery Pincodes',
+      path: '/admin/pincodes',
+      icon: MapPin,
       roles: ['SUPER_ADMIN'],
     },
     {

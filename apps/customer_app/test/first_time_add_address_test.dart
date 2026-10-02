@@ -1,4 +1,5 @@
 import 'package:customer_app/app/theme/app_theme.dart';
+import 'package:customer_app/features/address/presentation/providers/customer_address_provider.dart';
 import 'package:customer_app/features/address/presentation/screens/first_time_add_address_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,8 +8,22 @@ import 'package:flutter_test/flutter_test.dart';
 Widget _createTestWidget({
   ValueChanged<Map<String, dynamic>>? onAddressSaved,
   ThemeMode themeMode = ThemeMode.light,
+  List<SupportedPincodeModel>? supportedPincodes,
 }) {
   return ProviderScope(
+    overrides: [
+      supportedPincodesProvider.overrideWith((ref) async =>
+          supportedPincodes ??
+          const [
+            SupportedPincodeModel(id: '1', pincode: '360001', city: 'Rajkot', state: 'Gujarat', isActive: true),
+            SupportedPincodeModel(id: '2', pincode: '360002', city: 'Rajkot', state: 'Gujarat', isActive: true),
+            SupportedPincodeModel(id: '3', pincode: '360003', city: 'Rajkot', state: 'Gujarat', isActive: true),
+            SupportedPincodeModel(id: '4', pincode: '360004', city: 'Rajkot', state: 'Gujarat', isActive: true),
+            SupportedPincodeModel(id: '5', pincode: '360005', city: 'Rajkot', state: 'Gujarat', isActive: true),
+            SupportedPincodeModel(id: '6', pincode: '360006', city: 'Rajkot', state: 'Gujarat', isActive: true),
+            SupportedPincodeModel(id: '7', pincode: '360007', city: 'Rajkot', state: 'Gujarat', isActive: true),
+          ]),
+    ],
     child: MaterialApp(
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,

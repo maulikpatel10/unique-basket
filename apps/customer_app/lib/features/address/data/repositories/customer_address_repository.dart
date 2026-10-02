@@ -1,3 +1,4 @@
+import '../models/supported_pincode_model.dart';
 import '../datasources/customer_address_remote_data_source.dart';
 
 abstract class CustomerAddressRepository {
@@ -12,6 +13,21 @@ abstract class CustomerAddressRepository {
     double? longitude,
     bool? isDefault,
   });
+  Future<Map<String, dynamic>> updateAddress({
+    required String id,
+    String? title,
+    String? addressLine,
+    String? city,
+    String? state,
+    String? pincode,
+    double? latitude,
+    double? longitude,
+    bool? isDefault,
+  });
+  Future<Map<String, dynamic>> setDefaultAddress(String id);
+  Future<Map<String, dynamic>> deleteAddress(String id);
+  Future<List<SupportedPincodeModel>> getSupportedPincodes();
+  Future<Map<String, dynamic>> checkPincodeServiceability(String pincode);
 }
 
 class CustomerAddressRepositoryImpl implements CustomerAddressRepository {
@@ -45,5 +61,50 @@ class CustomerAddressRepositoryImpl implements CustomerAddressRepository {
       longitude: longitude,
       isDefault: isDefault,
     );
+  }
+
+  @override
+  Future<Map<String, dynamic>> updateAddress({
+    required String id,
+    String? title,
+    String? addressLine,
+    String? city,
+    String? state,
+    String? pincode,
+    double? latitude,
+    double? longitude,
+    bool? isDefault,
+  }) {
+    return _remoteDataSource.updateAddress(
+      id: id,
+      title: title,
+      addressLine: addressLine,
+      city: city,
+      state: state,
+      pincode: pincode,
+      latitude: latitude,
+      longitude: longitude,
+      isDefault: isDefault,
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> setDefaultAddress(String id) {
+    return _remoteDataSource.setDefaultAddress(id);
+  }
+
+  @override
+  Future<Map<String, dynamic>> deleteAddress(String id) {
+    return _remoteDataSource.deleteAddress(id);
+  }
+
+  @override
+  Future<List<SupportedPincodeModel>> getSupportedPincodes() {
+    return _remoteDataSource.getSupportedPincodes();
+  }
+
+  @override
+  Future<Map<String, dynamic>> checkPincodeServiceability(String pincode) {
+    return _remoteDataSource.checkPincodeServiceability(pincode);
   }
 }

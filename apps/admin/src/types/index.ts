@@ -144,3 +144,14 @@ export interface AuditLog {
     email: string;
   };
 }
+
+export interface SupportedPincode {
+  id: string;
+  pincode: string;
+  city: string;
+  state: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+

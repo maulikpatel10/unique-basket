@@ -20,11 +20,16 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
   final String? subtitle;
   final bool showBackButton;
   final VoidCallback? onBackTap;
+  final IconData backIcon;
   final Widget? leading;
   final List<Widget>? actions;
   final Widget? bottom;
   final double bottomHeight;
   final Color? backgroundColor;
+  final Color? foregroundColor;
+  final BorderRadiusGeometry? borderRadius;
+  final List<BoxShadow>? boxShadow;
+  final TextStyle? titleStyle;
   final bool? isDark;
   final bool isGlass;
   final bool centerTitle;
@@ -36,11 +41,16 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
     this.subtitle,
     this.showBackButton = true,
     this.onBackTap,
+    this.backIcon = Icons.arrow_back_ios_new_rounded,
     this.leading,
     this.actions,
     this.bottom,
     this.bottomHeight = 0.0,
     this.backgroundColor,
+    this.foregroundColor,
+    this.borderRadius,
+    this.boxShadow,
+    this.titleStyle,
     this.isDark,
     this.isGlass = false,
     this.centerTitle = true,
@@ -65,13 +75,16 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
             ? defaultBgColor.withValues(alpha: 0.75)
             : defaultBgColor);
 
-    final titleColor = isDarkMode
-        ? AppColors.textPrimaryDark
-        : const Color(0xFF0F172A);
+    final titleColor = foregroundColor ??
+        (isDarkMode
+            ? AppColors.textPrimaryDark
+            : const Color(0xFF0F172A));
 
     Widget headerContent = Container(
       decoration: BoxDecoration(
         color: resolvedBgColor,
+        borderRadius: borderRadius,
+        boxShadow: boxShadow,
         border: elevation > 0 || isGlass
             ? Border(
                 bottom: BorderSide(
@@ -94,11 +107,14 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                   (showBackButton
                       ? IconButton(
                           icon: Icon(
-                            Icons.arrow_back_ios_new_rounded,
-                            size: 18.0,
-                            color: isDarkMode
-                                ? AppColors.textPrimaryDark
-                                : const Color(0xFF0F172A),
+                            backIcon,
+                            size: backIcon == Icons.arrow_back_ios_new_rounded
+                                ? 18.0
+                                : context.r(22.0),
+                            color: foregroundColor ??
+                                (isDarkMode
+                                    ? AppColors.textPrimaryDark
+                                    : const Color(0xFF0F172A)),
                           ),
                           onPressed: onBackTap ?? () => Navigator.of(context).maybePop(),
                         )
@@ -113,13 +129,14 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                       children: [
                         Text(
                           title!,
-                          style: TextStyle(
-                            fontSize: context.sp(17),
-                            fontWeight: FontWeight.w700,
-                            color: titleColor,
-                            fontFamily: AppTextStyles.fontFamily,
-                            letterSpacing: -0.3,
-                          ),
+                          style: titleStyle ??
+                              TextStyle(
+                                fontSize: context.sp(18),
+                                fontWeight: FontWeight.w700,
+                                color: titleColor,
+                                fontFamily: AppTextStyles.fontFamily,
+                                letterSpacing: -0.3,
+                              ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -129,7 +146,8 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                             style: TextStyle(
                               fontSize: context.sp(12),
                               fontWeight: FontWeight.w400,
-                              color: const Color(0xFF64748B),
+                              color: foregroundColor?.withValues(alpha: 0.8) ??
+                                  const Color(0xFF64748B),
                               fontFamily: AppTextStyles.fontFamily,
                             ),
                             maxLines: 1,
@@ -161,7 +179,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
       );
     }
 
-    final overlayStyle = isDarkMode
+    final overlayStyle = (backgroundColor == AppColors.primary || isDarkMode)
         ? SystemUiOverlayStyle.light
         : SystemUiOverlayStyle.dark;
 

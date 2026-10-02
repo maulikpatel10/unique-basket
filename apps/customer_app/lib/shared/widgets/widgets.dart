@@ -1,8 +1,11 @@
+export 'app_badge.dart';
 export 'app_bottom_nav_bar.dart';
 export 'app_button.dart';
+export 'app_chip.dart';
 export 'app_empty_state.dart';
 export 'app_error_state.dart';
 export 'app_header.dart';
+export 'app_icon_button.dart';
 export 'app_loading.dart';
 export 'app_price.dart';
 export 'app_product_card.dart';

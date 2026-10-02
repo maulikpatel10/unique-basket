@@ -88,12 +88,12 @@ describe('Customer Management Integration Tests', () => {
       data: {
         userId: activeCustomerId,
         title: 'Home Address',
-        addressLine: '123 Test Street',
-        city: 'Bangalore',
-        state: 'Karnataka',
-        pincode: '560001',
-        latitude: 12.9716,
-        longitude: 77.5946,
+        addressLine: 'Nana Mava Road',
+        city: 'Rajkot',
+        state: 'Gujarat',
+        pincode: '360005',
+        latitude: 22.308155,
+        longitude: 70.800705,
         isDefault: true,
       },
     });

@@ -6,6 +6,7 @@ abstract class CustomerProfileRepository {
     required String name,
     String? email,
     DateTime? dob,
+    String? gender,
   });
 }
 
@@ -24,7 +25,13 @@ class CustomerProfileRepositoryImpl implements CustomerProfileRepository {
     required String name,
     String? email,
     DateTime? dob,
+    String? gender,
   }) {
-    return _remoteDataSource.updateProfile(name: name, email: email, dob: dob);
+    return _remoteDataSource.updateProfile(
+      name: name,
+      email: email,
+      dob: dob,
+      gender: gender,
+    );
   }
 }

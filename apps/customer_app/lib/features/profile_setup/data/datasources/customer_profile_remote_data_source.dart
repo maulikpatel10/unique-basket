@@ -7,6 +7,7 @@ abstract class CustomerProfileRemoteDataSource {
     required String name,
     String? email,
     DateTime? dob,
+    String? gender,
   });
 }
 
@@ -29,6 +30,7 @@ class CustomerProfileRemoteDataSourceImpl implements CustomerProfileRemoteDataSo
     required String name,
     String? email,
     DateTime? dob,
+    String? gender,
   }) async {
     final response = await _apiClient.put(
       ApiEndpoints.profile,
@@ -37,6 +39,7 @@ class CustomerProfileRemoteDataSourceImpl implements CustomerProfileRemoteDataSo
         if (email != null) 'email': email,
         if (dob != null)
           'dob': DateTime.utc(dob.year, dob.month, dob.day).toIso8601String(),
+        if (gender != null) 'gender': gender,
       },
     );
     if (response is Map<String, dynamic>) {

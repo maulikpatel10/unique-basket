@@ -49,4 +49,146 @@ export class NotificationController {
       next(error);
     }
   }
+
+  /**
+   * Get authenticated customer's in-app notifications.
+   */
+  static async getNotifications(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.id;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const offset = parseInt(req.query.offset as string) || 0;
+
+      const [notifications, totalCount, unreadCount] = await Promise.all([
+        prisma.notification.findMany({
+          where: { userId },
+          orderBy: { createdAt: 'desc' },
+          take: limit,
+          skip: offset,
+        }),
+        prisma.notification.count({
+          where: { userId },
+        }),
+        prisma.notification.count({
+          where: { userId, isRead: false },
+        }),
+      ]);
+
+      res.status(200).json({
+        success: true,
+        data: notifications,
+        meta: {
+          totalCount,
+          unreadCount,
+          limit,
+          offset,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get unread notification count for the authenticated customer.
+   */
+  static async getUnreadCount(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.id;
+
+      const unreadCount = await prisma.notification.count({
+        where: { userId, isRead: false },
+      });
+
+      res.status(200).json({
+        success: true,
+        data: {
+          unreadCount,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Mark a single notification as read.
+   */
+  static async markAsRead(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.id;
+      const { id } = req.params;
+
+      if (!id) {
+        res.status(400).json({
+          success: false,
+          message: 'Notification ID is required.',
+          errorCode: 'MISSING_NOTIFICATION_ID',
+        });
+        return;
+      }
+
+      const existing = await prisma.notification.findUnique({
+        where: { id },
+      });
+
+      if (!existing) {
+        res.status(404).json({
+          success: false,
+          message: 'Notification not found.',
+          errorCode: 'NOTIFICATION_NOT_FOUND',
+        });
+        return;
+      }
+
+      if (existing.userId !== userId) {
+        res.status(403).json({
+          success: false,
+          message: 'Access denied. You do not own this notification.',
+          errorCode: 'FORBIDDEN',
+        });
+        return;
+      }
+
+      const updated = await prisma.notification.update({
+        where: { id },
+        data: {
+          isRead: true,
+          updatedAt: new Date(),
+        },
+      });
+
+      res.status(200).json({
+        success: true,
+        message: 'Notification marked as read.',
+        data: updated,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Mark all customer notifications as read.
+   */
+  static async markAllAsRead(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.id;
+
+      await prisma.notification.updateMany({
+        where: { userId, isRead: false },
+        data: {
+          isRead: true,
+          updatedAt: new Date(),
+        },
+      });
+
+      res.status(200).json({
+        success: true,
+        message: 'All notifications marked as read.',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../constants/app_constants.dart';
 
 /// Generic persistent key-value local storage service backed by SharedPreferences.
 class LocalStorageService {
@@ -47,6 +48,14 @@ class LocalStorageService {
   }
 
   Future<bool> remove(String key) => _prefs.remove(key);
+
+  /// Clears all authenticated user-scoped session and cache data from local storage
+  /// while strictly preserving device-level preferences (e.g. ub_onboarding_completed).
+  Future<void> clearUserSessionData() async {
+    for (final key in AppConstants.userScopedStorageKeys) {
+      await _prefs.remove(key);
+    }
+  }
 
   Future<bool> clear() => _prefs.clear();
 }

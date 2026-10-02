@@ -34,6 +34,7 @@ async function main() {
   await prisma.user.deleteMany({});
   await prisma.deliverySettings.deleteMany({});
   await prisma.banner.deleteMany({});
+  await prisma.supportedPincode.deleteMany({});
 
   console.log('Cleared existing records.');
 
@@ -86,22 +87,23 @@ async function main() {
 
   console.log('Seeded admin users.');
 
-  // 4. Create Stores
+  // 4. Create Stores (Store One = ACTIVE, others = INACTIVE)
   const centralStore = await prisma.store.create({
     data: {
       storeId: 'STORE-001',
-      name: 'Unique Basket - Central Store',
-      address: '100 MG Road, Central Bangalore',
-      city: 'Bangalore',
-      state: 'Karnataka',
-      pincode: '560001',
-      latitude: 12.971598,
-      longitude: 77.594562,
-      deliveryRadiusKm: 10.00, // 10 km
+      name: 'Store One',
+      address: 'Nana Mava Main Rd, Opp. Haridwar Heights, Satyam Park, Nana Mava',
+      city: 'Rajkot',
+      state: 'Gujarat',
+      pincode: '360005',
+      latitude: 22.308155,
+      longitude: 70.800705,
+      deliveryRadiusKm: 15.00, // 15 km covers all Rajkot deliverable pincodes (360001-360007)
       phone: '+919876543210',
-      email: 'central@uniquebasket.com',
-      openingTime: '08:00',
+      email: 'storeone@uniquebasket.com',
+      openingTime: '07:00',
       closingTime: '22:00',
+      isActive: true,
     },
   });
 
@@ -120,6 +122,7 @@ async function main() {
       email: 'east@uniquebasket.com',
       openingTime: '08:00',
       closingTime: '22:00',
+      isActive: false, // Inactive
     },
   });
 
@@ -138,10 +141,11 @@ async function main() {
       email: 'north@uniquebasket.com',
       openingTime: '08:00',
       closingTime: '22:00',
+      isActive: false, // Inactive
     },
   });
 
-  console.log('Seeded stores.');
+  console.log('Seeded stores (Store One = ACTIVE, others = INACTIVE).');
 
   // 5. Assign Managers to Stores
   await prisma.storeManager.createMany({
@@ -250,12 +254,53 @@ async function main() {
 
   console.log('Seeded store inventories.');
 
-  // 9. Seed audit log
+  // 9. Create Marketing Banners
+  await prisma.banner.createMany({
+    data: [
+      {
+        title: 'Fresh Produce\nSpecial Offer',
+        imageUrl: 'https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&q=80&w=800',
+        displayOrder: 1,
+        isActive: true,
+      },
+      {
+        title: 'Organic Veggies\nFlat 20% OFF',
+        imageUrl: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&q=80&w=800',
+        displayOrder: 2,
+        isActive: true,
+      },
+      {
+        title: 'Fresh Harvest\nDaily Discounts',
+        imageUrl: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?auto=format&fit=crop&q=80&w=800',
+        displayOrder: 3,
+        isActive: true,
+      },
+    ],
+  });
+  console.log('Seeded marketing banners.');
+
+  // 10. Create Supported Pincodes (Initial Rajkot Deliverable Areas)
+  const initialPincodes = [
+    { pincode: '360001', city: 'Rajkot', state: 'Gujarat', isActive: true },
+    { pincode: '360002', city: 'Rajkot', state: 'Gujarat', isActive: true },
+    { pincode: '360003', city: 'Rajkot', state: 'Gujarat', isActive: true },
+    { pincode: '360004', city: 'Rajkot', state: 'Gujarat', isActive: true },
+    { pincode: '360005', city: 'Rajkot', state: 'Gujarat', isActive: true },
+    { pincode: '360006', city: 'Rajkot', state: 'Gujarat', isActive: true },
+    { pincode: '360007', city: 'Rajkot', state: 'Gujarat', isActive: true },
+  ];
+
+  await prisma.supportedPincode.createMany({
+    data: initialPincodes,
+  });
+  console.log('Seeded supported pincodes (Rajkot 360001-360007).');
+
+  // 11. Seed audit log
   await prisma.auditLog.create({
     data: {
       adminUserId: superAdmin.id,
       action: 'SYSTEM_INITIAL_SEED',
-      details: 'Successfully executed system relational initial seeding.',
+      details: 'Successfully executed system relational initial seeding including supported pincodes.',
     },
   });
 

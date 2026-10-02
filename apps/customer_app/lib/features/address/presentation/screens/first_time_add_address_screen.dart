@@ -11,6 +11,7 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/providers/core_providers.dart';
 import '../../../../core/validators/app_validators.dart';
+import '../../../../shared/widgets/widgets.dart';
 import '../providers/customer_address_provider.dart';
 
 /// Enum representing the address type selection.
@@ -48,9 +49,6 @@ class FirstTimeAddAddressScreen extends ConsumerStatefulWidget {
 
   /// Fixed state for the initial delivery launch.
   static const String defaultState = 'Gujarat';
-
-  /// Allowed pincodes set in Rajkot city.
-  static const Set<String> allowedPincodes = AppValidators.allowedPincodes;
 
   /// Optional callback invoked upon successful address submission for testing.
   final ValueChanged<Map<String, dynamic>>? onAddressSaved;
@@ -390,17 +388,25 @@ class _FirstTimeAddAddressScreenState
     final areaLocalityError = AppValidators.validateAreaLocality(areaLocality);
     final pinCodeError = AppValidators.validatePinCode(pinCode);
 
+    final activePincodes = ref.read(activeSupportedPincodesProvider).valueOrNull;
+    final isPincodeServiceable = activePincodes != null && activePincodes.isNotEmpty
+        ? activePincodes.contains(pinCode)
+        : true;
+
     if (fullAddressError != null ||
         areaLocalityError != null ||
-        pinCodeError != null) {
+        pinCodeError != null ||
+        !isPincodeServiceable) {
       setState(() {
         _fullAddressError = fullAddressError;
         _areaLocalityError = areaLocalityError;
-        _pinCodeError = pinCodeError;
+        _pinCodeError = pinCodeError ??
+            (!isPincodeServiceable
+                ? "Sorry, we currently don't deliver to this pincode."
+                : null);
       });
 
-      if (pinCode.length == 6 &&
-          !FirstTimeAddAddressScreen.allowedPincodes.contains(pinCode)) {
+      if (pinCode.length == 6 && !isPincodeServiceable) {
         _pinCodeFocusNode.requestFocus();
         _showPincodeErrorBottomSheet(pinCode);
       } else if (fullAddressError != null) {
@@ -449,7 +455,19 @@ class _FirstTimeAddAddressScreenState
         pincode: pinCode,
         isDefault: true,
       );
-    } catch (_) {
+    } catch (e) {
+      final errStr = e.toString();
+      if (errStr.contains('PINCODE_NOT_SERVICEABLE') || errStr.contains('pincode')) {
+        if (mounted) {
+          setState(() {
+            _isSubmitting = false;
+            _pinCodeError = "Sorry, we currently don't deliver to this pincode.";
+          });
+          _pinCodeFocusNode.requestFocus();
+          _showPincodeErrorBottomSheet(pinCode);
+        }
+        return;
+      }
       // Continue even if network error so user flow is not blocked if offline
     }
 
@@ -497,6 +515,7 @@ class _FirstTimeAddAddressScreenState
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(activeSupportedPincodesProvider);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -879,84 +898,14 @@ class _FirstTimeAddAddressScreenState
                                       const SizedBox(height: AppSpacing.md),
 
                                       // Primary "Save & Continue →" CTA
-                                      Container(
-                                        width: double.infinity,
-                                        height: 54.0,
-                                        decoration: BoxDecoration(
-                                          borderRadius:
-                                              BorderRadius.circular(27.0),
-                                          boxShadow: !_isSubmitting && !isDark
-                                              ? AppShadows.primary
-                                              : AppShadows.none,
-                                        ),
-                                        child: ElevatedButton(
-                                          onPressed: _isSubmitting
-                                              ? null
-                                              : _handleSubmit,
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: AppColors.primary,
-                                            foregroundColor: AppColors.onPrimary,
-                                            disabledBackgroundColor: isDark
-                                                ? AppColors
-                                                    .surfaceContainerDark
-                                                : const Color(0xFF7D9E98),
-                                            disabledForegroundColor: Colors
-                                                .white
-                                                .withValues(alpha: 0.8),
-                                            elevation: 0,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(27.0),
-                                            ),
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: AppSpacing.lg,
-                                            ),
-                                          ),
-                                          child: _isSubmitting
-                                              ? const SizedBox(
-                                                  width: 22.0,
-                                                  height: 22.0,
-                                                  child:
-                                                      CircularProgressIndicator(
-                                                    strokeWidth: 2.5,
-                                                    valueColor:
-                                                        AlwaysStoppedAnimation<
-                                                            Color>(
-                                                      Colors.white,
-                                                    ),
-                                                  ),
-                                                )
-                                              : Row(
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment.center,
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    Flexible(
-                                                      child: Text(
-                                                        'Save & Continue',
-                                                        overflow: TextOverflow
-                                                            .ellipsis,
-                                                        style: AppTextStyles
-                                                            .button
-                                                            .copyWith(
-                                                          fontSize: 16.0,
-                                                          fontWeight:
-                                                              FontWeight.w700,
-                                                          letterSpacing: 0.2,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                    const SizedBox(width: 8.0),
-                                                    const Icon(
-                                                      Icons
-                                                          .arrow_forward_rounded,
-                                                      size: 20.0,
-                                                      color: Colors.white,
-                                                    ),
-                                                  ],
-                                                ),
-                                        ),
+                                      AppButton(
+                                        label: 'Save & Continue',
+                                        variant: ButtonVariant.primary,
+                                        size: ButtonSize.large,
+                                        isLoading: _isSubmitting,
+                                        icon: Icons.arrow_forward_rounded,
+                                        iconPosition: IconPosition.trailing,
+                                        onPressed: _isSubmitting ? null : _handleSubmit,
                                       ),
                                       const SizedBox(height: AppSpacing.sm),
 

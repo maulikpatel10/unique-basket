@@ -57,6 +57,37 @@ class MockAddressRepository implements CustomerAddressRepository {
     bool? isDefault,
   }) async =>
       {};
+
+  @override
+  Future<Map<String, dynamic>> updateAddress({
+    required String id,
+    String? title,
+    String? addressLine,
+    String? city,
+    String? state,
+    String? pincode,
+    double? latitude,
+    double? longitude,
+    bool? isDefault,
+  }) async =>
+      {};
+
+  @override
+  Future<Map<String, dynamic>> setDefaultAddress(String id) async => {};
+
+  @override
+  Future<Map<String, dynamic>> deleteAddress(String id) async => {};
+
+  @override
+  Future<List<SupportedPincodeModel>> getSupportedPincodes() async => const [];
+
+  @override
+  Future<Map<String, dynamic>> checkPincodeServiceability(String pincode) async => {
+        'isServiceable': true,
+        'pincode': pincode,
+        'city': 'Rajkot',
+        'state': 'Gujarat',
+      };
 }
 
 void main() {

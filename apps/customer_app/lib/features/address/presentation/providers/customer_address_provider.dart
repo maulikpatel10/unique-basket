@@ -4,6 +4,9 @@ import '../../../../core/providers/core_providers.dart';
 import '../../data/datasources/customer_address_remote_data_source.dart';
 import '../../data/repositories/customer_address_repository.dart';
 
+import '../../data/models/supported_pincode_model.dart';
+export '../../data/models/supported_pincode_model.dart';
+
 final customerAddressRemoteDataSourceProvider =
     Provider<CustomerAddressRemoteDataSource>((ref) {
   final apiClient = ref.watch(apiClientProvider);
@@ -14,6 +17,27 @@ final customerAddressRepositoryProvider =
     Provider<CustomerAddressRepository>((ref) {
   final remoteDataSource = ref.watch(customerAddressRemoteDataSourceProvider);
   return CustomerAddressRepositoryImpl(remoteDataSource);
+});
+
+/// Provider to fetch all active supported delivery pincodes from backend.
+final supportedPincodesProvider =
+    FutureProvider<List<SupportedPincodeModel>>((ref) async {
+  final repository = ref.watch(customerAddressRepositoryProvider);
+  try {
+    return await repository.getSupportedPincodes();
+  } catch (e) {
+    return const [];
+  }
+});
+
+/// Set of active 6-digit deliverable pincodes derived from backend.
+final activeSupportedPincodesProvider =
+    Provider<AsyncValue<Set<String>>>((ref) {
+  final pincodesAsync = ref.watch(supportedPincodesProvider);
+  return pincodesAsync.whenData((list) => list
+      .where((p) => p.isActive)
+      .map((p) => p.pincode.trim())
+      .toSet());
 });
 
 /// Provider to fetch all saved addresses for the authenticated customer.

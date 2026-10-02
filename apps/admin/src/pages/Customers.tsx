@@ -21,6 +21,7 @@ interface CustomerSummary {
   name: string;
   email: string | null;
   dob?: string | null;
+  gender?: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;

@@ -11,6 +11,7 @@ import '../../../../app/theme/app_shadows.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/services/startup_state_resolver.dart';
+import '../../../../shared/widgets/widgets.dart';
 import '../providers/auth_provider.dart';
 
 /// Screen 05 — Verify Mobile OTP for Unique Basket Customer App.
@@ -657,100 +658,16 @@ class _VerifyOtpScreenState extends ConsumerState<VerifyOtpScreen>
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       const SizedBox(height: AppSpacing.md),
-                                      Container(
-                                        width: double.infinity,
-                                        height: 54.0,
-                                        decoration: BoxDecoration(
-                                          borderRadius:
-                                              BorderRadius.circular(27.0),
-                                          boxShadow: currentOtpText.length ==
-                                                      _otpLength &&
-                                                  !isVerifying &&
-                                                  !isDark
-                                              ? AppShadows.primary
-                                              : AppShadows.none,
-                                        ),
-                                        child: ElevatedButton(
-                                          onPressed: isVerifying ||
-                                                  currentOtpText.length !=
-                                                      _otpLength
-                                              ? null
-                                              : _handleVerify,
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor:
-                                                currentOtpText.length ==
-                                                        _otpLength
-                                                    ? AppColors.primary
-                                                    : (isDark
-                                                        ? AppColors
-                                                            .surfaceContainerDark
-                                                        : const Color(
-                                                            0xFF7D9E98)),
-                                            foregroundColor:
-                                                AppColors.onPrimary,
-                                            disabledBackgroundColor: isDark
-                                                ? AppColors
-                                                    .surfaceContainerDark
-                                                : const Color(0xFF7D9E98),
-                                            disabledForegroundColor: Colors
-                                                .white
-                                                .withValues(alpha: 0.8),
-                                            elevation: 0,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(27.0),
-                                            ),
-                                            padding: const EdgeInsets
-                                                .symmetric(
-                                              horizontal: AppSpacing.xl,
-                                            ),
-                                          ),
-                                          child: isVerifying
-                                              ? const SizedBox(
-                                                  width: 22.0,
-                                                  height: 22.0,
-                                                  child:
-                                                      CircularProgressIndicator(
-                                                    strokeWidth: 2.5,
-                                                    valueColor:
-                                                        AlwaysStoppedAnimation<
-                                                            Color>(
-                                                      Colors.white,
-                                                    ),
-                                                  ),
-                                                )
-                                              : Row(
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment.center,
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    Flexible(
-                                                      child: Text(
-                                                        'Verify & Continue',
-                                                        style: AppTextStyles
-                                                            .button
-                                                            .copyWith(
-                                                          fontSize: 16.0,
-                                                          fontWeight:
-                                                              FontWeight.w700,
-                                                          letterSpacing: 0.2,
-                                                        ),
-                                                        maxLines: 1,
-                                                        overflow: TextOverflow
-                                                            .ellipsis,
-                                                      ),
-                                                    ),
-                                                    const SizedBox(width: 8.0),
-                                                    const Icon(
-                                                      Icons
-                                                          .arrow_forward_rounded,
-                                                      size: 20.0,
-                                                      color: Colors.white,
-                                                    ),
-                                                  ],
-                                                ),
-                                        ),
+                                      AppButton(
+                                        label: 'Verify & Continue',
+                                        variant: ButtonVariant.primary,
+                                        size: ButtonSize.large,
+                                        isLoading: isVerifying,
+                                        icon: Icons.arrow_forward_rounded,
+                                        iconPosition: IconPosition.trailing,
+                                        onPressed: isVerifying || currentOtpText.length != _otpLength
+                                            ? null
+                                            : _handleVerify,
                                       ),
                                       const SizedBox(height: AppSpacing.sm),
                                     ],

@@ -303,10 +303,13 @@ export class StoreController {
         },
       });
 
-      if (!store) {
+      const role = req.user?.role;
+      const isStaff = role === 'SUPER_ADMIN' || role === 'STORE_MANAGER';
+
+      if (!store || (!isStaff && !store.isActive)) {
         res.status(404).json({
           success: false,
-          message: 'Store not found.',
+          message: 'Store not found or currently inactive.',
           errorCode: 'STORE_NOT_FOUND',
         });
         return;
