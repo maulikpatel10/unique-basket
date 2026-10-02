@@ -97,7 +97,7 @@
 ## P1 — Core existing functionality
 
 ### P1-01 — Addresses get a fake location (Rajkot centre) so store assignment is meaningless
-- **Priority:** P1 · **Area:** Backend + Flutter / Address, Serviceability · **Status:** TODO
+- **Priority:** P1 · **Area:** Backend + Flutter / Address, Serviceability · **Status:** BLOCKED — DECISION REQUIRED (P4-04 location provider, P4-05 serviceability model). Removing the Rajkot default without a way to capture coordinates would block every delivery order from the current app, so this waits on how coordinates are obtained and which serviceability rule is authoritative.
 - **Problem:** The app never sends coordinates; the backend silently stores `22.3039, 70.8022` for every address. Nearest-store assignment, delivery-radius checks and `stores/nearby` all run on the same fake point.
 - **Evidence:** `customerController.addAddress` defaults lat/lng; Flutter `add_new_address_screen.dart` / `first_time_add_address_screen.dart` call `addAddress` without lat/lng; `orderController.createOrder` uses address coordinates for Haversine.
 - **Required fix:** Stop silently defaulting (store null / mark unverified) and make delivery assignment explicit about missing coordinates. How coordinates are captured depends on P4-04.
@@ -205,7 +205,7 @@
 - **Verification:** Tests: invalid UUID → 400/404; missing addressId → 400; CONCURRENCY_ERROR → 409; no 500 for client errors.
 
 ### P1-13 — Phone numbers not normalized server-side
-- **Priority:** P1 · **Area:** Backend / Auth · **Status:** TODO
+- **Priority:** P1 · **Area:** Backend / Auth · **Status:** BLOCKED — DECISION REQUIRED (supported phone countries / canonical format). The backend cannot safely decide whether a bare 10-digit number means +91 without that decision; the app already sends +91 numbers.
 - **Problem:** `send-otp` accepts any E.164-ish string, with or without `+`. `9876543210` and `+919876543210` become two different users. Only the Flutter app normalizes to `+91`.
 - **Evidence:** `authController.sendOtp` regex `^\+?[1-9]\d{1,14}$`; `User.phone` unique on the raw value; Flutter `auth_provider.dart` adds `+91`.
 - **Required fix:** Normalize to one canonical format server-side for OTP, users and pickup verification. The allowed country set is a decision (default to what the app sends today only after confirmation).
