@@ -17,6 +17,7 @@ import {
   Shield,
   Key
 } from 'lucide-react';
+import { asApiError } from '../utils/apiError';
 
 interface ManagerListItem {
   id: string;
@@ -77,7 +78,8 @@ export const Managers: React.FC = () => {
 
       setManagers(managersRes.data.data);
       setStores(storesRes.data.data);
-    } catch (err: any) {
+    } catch (caught: unknown) {
+      const err = asApiError(caught);
       console.error('Error fetching manager details:', err);
       setError('Failed to retrieve store managers catalog. Please refresh.');
     } finally {
@@ -187,7 +189,8 @@ export const Managers: React.FC = () => {
       }
       setIsDrawerOpen(false);
       fetchData();
-    } catch (err: any) {
+    } catch (caught: unknown) {
+      const err = asApiError(caught);
       console.error('Error saving manager:', err);
       const msg = err.response?.data?.message || 'Failed to save store manager profile.';
       showToast('error', msg);
@@ -204,7 +207,7 @@ export const Managers: React.FC = () => {
         await api.put(`/admin/managers/${manager.id}`, { isActive: true });
         showToast('success', `Manager ${manager.name} activated successfully.`);
         fetchData();
-      } catch (err: any) {
+      } catch {
         showToast('error', 'Failed to activate manager.');
       }
     }
@@ -219,7 +222,7 @@ export const Managers: React.FC = () => {
       showToast('success', `Manager ${manager.name} deactivated successfully.`);
       setConfirmModal({ isOpen: false, manager: null });
       fetchData();
-    } catch (err: any) {
+    } catch {
       showToast('error', 'Failed to deactivate manager.');
     }
   };
@@ -292,7 +295,7 @@ export const Managers: React.FC = () => {
             <span className="text-xs text-slate-400 uppercase font-semibold tracking-wider">Status:</span>
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
+              onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
               className="rounded-lg bg-slate-900 border border-slate-700 text-slate-300 px-3 py-2 text-xs font-semibold focus:border-brand-500 outline-none"
             >
               <option value="ALL">All Statuses</option>

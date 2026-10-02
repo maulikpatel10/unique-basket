@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/authContextStore';
 import { api } from '../services/api';
 import type { Order, Store } from '../types';
 import {
@@ -9,6 +9,7 @@ import {
   Store as StoreIcon,
   AlertCircle
 } from 'lucide-react';
+import { asApiError } from '../utils/apiError';
 
 export const Dashboard: React.FC = () => {
   const { user } = useAuth();
@@ -32,7 +33,8 @@ export const Dashboard: React.FC = () => {
           const storesRes = await api.get('/admin/stores');
           setStores(storesRes.data.data);
         }
-      } catch (err: any) {
+      } catch (caught: unknown) {
+        const err = asApiError(caught);
         console.error('Failed to load dashboard metrics:', err);
         setError('Failed to load dashboard stats. Please try again.');
       } finally {

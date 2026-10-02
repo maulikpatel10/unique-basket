@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/authContextStore';
 import {
   Image as ImageIcon,
   Plus,
@@ -15,6 +15,7 @@ import {
   X,
   AlertCircle
 } from 'lucide-react';
+import { asApiError } from '../utils/apiError';
 
 interface BannerItem {
   id: string;
@@ -89,7 +90,7 @@ export const Banners: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      const params: any = {
+      const params: Record<string, unknown> = {
         page,
         limit: 10,
       };
@@ -100,7 +101,8 @@ export const Banners: React.FC = () => {
       const res = await api.get('/admin/banners', { params });
       setBanners(res.data.data.banners);
       setPagination(res.data.data.pagination);
-    } catch (err: any) {
+    } catch (caught: unknown) {
+      const err = asApiError(caught);
       console.error('Error fetching banners:', err);
       setError(err.response?.data?.message || 'Failed to load marketing banners.');
     } finally {
@@ -160,7 +162,8 @@ export const Banners: React.FC = () => {
 
       setModalState({ isOpen: false, mode: 'create' });
       fetchBanners(pagination.page);
-    } catch (err: any) {
+    } catch (caught: unknown) {
+      const err = asApiError(caught);
       console.error('Error saving banner:', err);
       setFormError(err.response?.data?.message || 'Failed to save marketing banner.');
     } finally {
@@ -186,7 +189,8 @@ export const Banners: React.FC = () => {
 
       setConfirmModal({ isOpen: false, banner: null });
       fetchBanners(pagination.page);
-    } catch (err: any) {
+    } catch (caught: unknown) {
+      const err = asApiError(caught);
       console.error('Error modifying banner status:', err);
       showToast('error', err.response?.data?.message || 'Failed to update banner.');
     } finally {
@@ -253,7 +257,7 @@ export const Banners: React.FC = () => {
           <span className="text-xs text-slate-400 uppercase font-semibold">Status:</span>
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as any)}
+            onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
             className="rounded-lg bg-slate-900 border border-slate-700 text-slate-300 px-3 py-2 text-xs font-semibold focus:border-brand-500 outline-none"
           >
             <option value="ALL">All Banners</option>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/authContextStore';
 import { api } from '../services/api';
 import type { Store } from '../types';
 import {
@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   X
 } from 'lucide-react';
+import { asApiError } from '../utils/apiError';
 
 export const Stores: React.FC = () => {
   const navigate = useNavigate();
@@ -64,7 +65,8 @@ export const Stores: React.FC = () => {
       setError(null);
       const res = await api.get('/admin/stores');
       setStores(res.data.data);
-    } catch (err: any) {
+    } catch (caught: unknown) {
+      const err = asApiError(caught);
       console.error('Error fetching stores:', err);
       if (err.response?.status === 403) {
         setError('You do not have permission to view stores.');
@@ -251,7 +253,8 @@ export const Stores: React.FC = () => {
       }
       setIsDrawerOpen(false);
       fetchStores();
-    } catch (err: any) {
+    } catch (caught: unknown) {
+      const err = asApiError(caught);
       console.error('Error saving store:', err);
       const errorCode = err.response?.data?.errorCode;
       let msg = err.response?.data?.message || 'Failed to save store configurations.';
@@ -278,7 +281,7 @@ export const Stores: React.FC = () => {
         await api.put(`/admin/stores/${store.id}`, { isActive: true });
         showToast('success', `Store ${store.storeId} activated successfully.`);
         fetchStores();
-      } catch (err: any) {
+      } catch {
         showToast('error', 'Failed to activate store.');
       }
     }
@@ -298,7 +301,7 @@ export const Stores: React.FC = () => {
       showToast('success', `Store ${store.storeId} deactivated successfully.`);
       setConfirmModal({ isOpen: false, store: null });
       fetchStores();
-    } catch (err: any) {
+    } catch {
       showToast('error', 'Failed to deactivate store.');
     }
   };
@@ -374,7 +377,7 @@ export const Stores: React.FC = () => {
             <span className="text-xs text-slate-400 uppercase font-semibold tracking-wider">Status:</span>
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
+              onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
               className="rounded-lg bg-slate-900 border border-slate-700 text-slate-300 px-3 py-2 text-xs font-semibold focus:border-brand-500 outline-none"
             >
               <option value="ALL">All Statuses</option>

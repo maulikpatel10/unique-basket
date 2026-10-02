@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/authContextStore';
 import {
   Plus,
   Search,
@@ -15,6 +15,7 @@ import {
   Image as ImageIcon,
   Layers
 } from 'lucide-react';
+import { asApiError } from '../utils/apiError';
 
 interface Category {
   id: string;
@@ -65,7 +66,8 @@ export const Categories: React.FC = () => {
       // Fetch categories. Passing isActive='all' to override default customer active-only return
       const res = await api.get('/categories');
       setCategories(res.data.data);
-    } catch (err: any) {
+    } catch (caught: unknown) {
+      const err = asApiError(caught);
       console.error('Error fetching categories:', err);
       setError('Failed to retrieve categories list. Please try again.');
     } finally {
@@ -147,7 +149,8 @@ export const Categories: React.FC = () => {
       }
       setIsDrawerOpen(false);
       fetchCategories();
-    } catch (err: any) {
+    } catch (caught: unknown) {
+      const err = asApiError(caught);
       console.error('Error saving category:', err);
       const msg = err.response?.data?.message || 'Failed to save category details.';
       showToast('error', msg);
@@ -174,7 +177,7 @@ export const Categories: React.FC = () => {
         await api.put(`/categories/${cat.id}`, { isActive: true });
         showToast('success', `Category "${cat.name}" activated successfully.`);
         fetchCategories();
-      } catch (err: any) {
+      } catch {
         showToast('error', 'Failed to activate category.');
       }
     }
@@ -189,7 +192,7 @@ export const Categories: React.FC = () => {
       showToast('success', `Category "${cat.name}" deactivated successfully.`);
       setConfirmModal({ isOpen: false, category: null });
       fetchCategories();
-    } catch (err: any) {
+    } catch {
       showToast('error', 'Failed to deactivate category.');
     }
   };
@@ -261,7 +264,7 @@ export const Categories: React.FC = () => {
           <span className="text-xs text-slate-400 uppercase font-semibold tracking-wider">Status:</span>
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as any)}
+            onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
             className="rounded-lg bg-slate-900 border border-slate-700 text-slate-300 px-3 py-2 text-xs font-semibold focus:border-brand-500 outline-none"
           >
             <option value="ALL">All Categories</option>

@@ -12,6 +12,7 @@ import {
   Activity,
   X
 } from 'lucide-react';
+import { asApiError } from '../utils/apiError';
 
 interface AuditLogItem {
   id: string;
@@ -73,7 +74,7 @@ export const AuditLogs: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      const params: any = {
+      const params: Record<string, unknown> = {
         page,
         limit: 15,
       };
@@ -86,7 +87,8 @@ export const AuditLogs: React.FC = () => {
       const res = await api.get('/admin/audit-logs', { params });
       setLogs(res.data.data.auditLogs);
       setPagination(res.data.data.pagination);
-    } catch (err: any) {
+    } catch (caught: unknown) {
+      const err = asApiError(caught);
       console.error('Error fetching audit logs:', err);
       setError(err.response?.data?.message || 'Failed to load system audit logs.');
     } finally {

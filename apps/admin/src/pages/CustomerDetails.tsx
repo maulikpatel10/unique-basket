@@ -14,6 +14,7 @@ import {
   User,
   Store as StoreIcon
 } from 'lucide-react';
+import { asApiError } from '../utils/apiError';
 
 interface CustomerProfile {
   id: string;
@@ -82,7 +83,8 @@ export const CustomerDetails: React.FC = () => {
         setStats(data.stats);
         setAddresses(data.addresses);
         setOrders(data.orders);
-      } catch (err: any) {
+      } catch (caught: unknown) {
+        const err = asApiError(caught);
         console.error('Error fetching customer details:', err);
         setError(err.response?.data?.message || 'Failed to load customer profile details.');
       } finally {

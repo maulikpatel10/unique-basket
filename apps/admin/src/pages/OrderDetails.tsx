@@ -24,6 +24,7 @@ import {
   formatOrderStatus,
   getWorkflowSteps
 } from '../utils/orderWorkflow';
+import { asApiError } from '../utils/apiError';
 
 interface OrderItemDetail {
   id: string;
@@ -116,7 +117,8 @@ export const OrderDetails: React.FC = () => {
       setError(null);
       const res = await api.get(`/admin/orders/${id}`);
       setOrder(res.data.data);
-    } catch (err: any) {
+    } catch (caught: unknown) {
+      const err = asApiError(caught);
       console.error('Error fetching order details:', err);
       setError(err.response?.data?.message || 'Failed to load order details.');
     } finally {
@@ -139,7 +141,8 @@ export const OrderDetails: React.FC = () => {
       showToast('success', `Order status updated to ${formatOrderStatus(statusModal.nextStatus)}.`);
       setStatusModal({ isOpen: false, nextStatus: '', actionLabel: '' });
       fetchOrderDetails();
-    } catch (err: any) {
+    } catch (caught: unknown) {
+      const err = asApiError(caught);
       console.error('Error updating order status:', err);
       showToast('error', err.response?.data?.message || 'Failed to update order status.');
     } finally {
@@ -158,7 +161,8 @@ export const OrderDetails: React.FC = () => {
       showToast('success', `Order ${order.orderNumber} has been cancelled.`);
       setCancelModal({ isOpen: false });
       fetchOrderDetails();
-    } catch (err: any) {
+    } catch (caught: unknown) {
+      const err = asApiError(caught);
       console.error('Error cancelling order:', err);
       showToast('error', err.response?.data?.message || 'Failed to cancel order.');
     } finally {
@@ -280,7 +284,7 @@ export const OrderDetails: React.FC = () => {
   const nextAction = getNextOrderAction(order.orderStatus, order.fulfillmentType, order.paymentMethod, order.paymentStatus);
   const isCancelable = canCancelOrder(order.orderStatus);
   const workflowSteps = getWorkflowSteps(order.fulfillmentType);
-  const currentStepIndex = workflowSteps.indexOf(order.orderStatus as any);
+  const currentStepIndex = workflowSteps.indexOf(order.orderStatus as (typeof workflowSteps)[number]);
   const isCancelled = order.orderStatus === 'CANCELLED';
 
   return (

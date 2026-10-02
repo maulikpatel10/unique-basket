@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/authContextStore';
 import type { SupportedPincode } from '../types';
 import {
   MapPin,
@@ -15,6 +15,7 @@ import {
   RefreshCw,
   Power
 } from 'lucide-react';
+import { asApiError } from '../utils/apiError';
 
 export const Pincodes: React.FC = () => {
   const { user } = useAuth();
@@ -49,13 +50,19 @@ export const Pincodes: React.FC = () => {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
 
+  const showToast = (type: 'success' | 'error', message: string) => {
+    setToast({ type, message });
+    setTimeout(() => setToast(null), 4000);
+  };
+
   const fetchPincodes = async () => {
     try {
       setLoading(true);
       setError(null);
       const res = await api.get('/admin/pincodes');
       setPincodes(res.data.data || []);
-    } catch (err: any) {
+    } catch (caught: unknown) {
+      const err = asApiError(caught);
       console.error('Error fetching supported pincodes:', err);
       const msg = err.response?.data?.message || 'Failed to retrieve delivery pincodes.';
       setError(msg);
@@ -69,10 +76,6 @@ export const Pincodes: React.FC = () => {
     fetchPincodes();
   }, []);
 
-  const showToast = (type: 'success' | 'error', message: string) => {
-    setToast({ type, message });
-    setTimeout(() => setToast(null), 4000);
-  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -158,7 +161,8 @@ export const Pincodes: React.FC = () => {
       }
       closeModal();
       fetchPincodes();
-    } catch (err: any) {
+    } catch (caught: unknown) {
+      const err = asApiError(caught);
       console.error('Error saving pincode:', err);
       const msg = err.response?.data?.message || 'Failed to save pincode.';
       showToast('error', msg);
@@ -184,7 +188,8 @@ export const Pincodes: React.FC = () => {
       );
       setConfirmModal({ isOpen: false, pincode: null });
       fetchPincodes();
-    } catch (err: any) {
+    } catch (caught: unknown) {
+      const err = asApiError(caught);
       console.error('Error toggling pincode status:', err);
       const msg = err.response?.data?.message || 'Failed to update pincode status.';
       showToast('error', msg);
@@ -300,7 +305,7 @@ export const Pincodes: React.FC = () => {
           <div className="relative">
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
+              onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
               className="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm text-slate-200 outline-none focus:border-brand-500"
             >
               <option value="ALL">All Statuses</option>

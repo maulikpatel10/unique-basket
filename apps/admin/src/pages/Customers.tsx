@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/authContextStore';
 import {
   Search,
   Filter,
@@ -14,6 +14,7 @@ import {
   User,
   ShoppingBag
 } from 'lucide-react';
+import { asApiError } from '../utils/apiError';
 
 interface CustomerSummary {
   id: string;
@@ -88,7 +89,8 @@ export const Customers: React.FC = () => {
 
       setCustomers(res.data.data.customers);
       setPagination(res.data.data.pagination);
-    } catch (err: any) {
+    } catch (caught: unknown) {
+      const err = asApiError(caught);
       console.error('Error fetching customers:', err);
       setError(err.response?.data?.message || 'Failed to load customer list.');
     } finally {
@@ -120,7 +122,8 @@ export const Customers: React.FC = () => {
       );
       setConfirmModal({ isOpen: false, customer: null });
       fetchCustomers(pagination.page);
-    } catch (err: any) {
+    } catch (caught: unknown) {
+      const err = asApiError(caught);
       console.error('Error toggling customer status:', err);
       showToast('error', err.response?.data?.message || 'Failed to update customer status.');
     } finally {
@@ -175,7 +178,7 @@ export const Customers: React.FC = () => {
             <span className="text-xs text-slate-400 uppercase font-semibold">Account State:</span>
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
+              onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
               className="rounded-lg bg-slate-900 border border-slate-700 text-slate-300 px-3 py-2 text-xs font-semibold focus:border-brand-500 outline-none"
             >
               <option value="ALL">All Customers</option>
@@ -189,7 +192,7 @@ export const Customers: React.FC = () => {
             <span className="text-xs text-slate-400 uppercase font-semibold">Sort By:</span>
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
+              onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
               className="rounded-lg bg-slate-900 border border-slate-700 text-slate-300 px-3 py-2 text-xs font-semibold focus:border-brand-500 outline-none"
             >
               <option value="newest">Newest</option>

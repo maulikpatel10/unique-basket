@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/authContextStore';
 import { api } from '../services/api';
 import type { DeliverySettings } from '../types';
 import {
@@ -17,6 +17,7 @@ import {
   Info,
   MapPin
 } from 'lucide-react';
+import { asApiError } from '../utils/apiError';
 
 export const Settings: React.FC = () => {
   const { user } = useAuth();
@@ -70,7 +71,8 @@ export const Settings: React.FC = () => {
       };
       setFormData(parsedData);
       setInitialSettings(parsedData);
-    } catch (err: any) {
+    } catch (caught: unknown) {
+      const err = asApiError(caught);
       console.error('Error fetching settings:', err);
       const msg = err.response?.data?.message || 'Failed to load fares & COD settings.';
       setFetchError(msg);
@@ -168,7 +170,8 @@ export const Settings: React.FC = () => {
       setFormData(parsedData);
       setInitialSettings(parsedData);
       showToast('success', res.data.message || 'Fares and COD settings saved successfully!');
-    } catch (err: any) {
+    } catch (caught: unknown) {
+      const err = asApiError(caught);
       console.error('Error saving settings:', err);
       const msg = err.response?.data?.message || 'Failed to update settings.';
       showToast('error', msg);

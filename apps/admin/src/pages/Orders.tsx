@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/authContextStore';
 import { api } from '../services/api';
 import type { Store, FulfillmentType } from '../types';
 import {
@@ -24,6 +24,7 @@ import {
   isAwaitingOnlinePayment,
   formatOrderStatus
 } from '../utils/orderWorkflow';
+import { asApiError } from '../utils/apiError';
 
 interface OrderSummary {
   id: string;
@@ -127,7 +128,7 @@ export const Orders: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const params: any = {
+      const params: Record<string, unknown> = {
         page,
         limit: 10,
       };
@@ -147,7 +148,8 @@ export const Orders: React.FC = () => {
         setOrders(res.data.data);
         setPagination({ total: res.data.data.length, page: 1, limit: 10, totalPages: 1 });
       }
-    } catch (err: any) {
+    } catch (caught: unknown) {
+      const err = asApiError(caught);
       console.error('Error fetching orders:', err);
       setError(err.response?.data?.message || 'Failed to load orders list.');
     } finally {
@@ -175,7 +177,8 @@ export const Orders: React.FC = () => {
       showToast('success', `Order status updated to ${formatOrderStatus(statusModal.nextStatus)}.`);
       setStatusModal({ isOpen: false, order: null, nextStatus: '', actionLabel: '' });
       fetchOrders(pagination.page);
-    } catch (err: any) {
+    } catch (caught: unknown) {
+      const err = asApiError(caught);
       console.error('Error updating order status:', err);
       showToast('error', err.response?.data?.message || 'Failed to update order status.');
     } finally {
@@ -194,7 +197,8 @@ export const Orders: React.FC = () => {
       showToast('success', `Order ${cancelModal.order.orderNumber} has been cancelled.`);
       setCancelModal({ isOpen: false, order: null });
       fetchOrders(pagination.page);
-    } catch (err: any) {
+    } catch (caught: unknown) {
+      const err = asApiError(caught);
       console.error('Error cancelling order:', err);
       showToast('error', err.response?.data?.message || 'Failed to cancel order.');
     } finally {

@@ -1,16 +1,9 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { api, clearAdminSession, revokeAdminSession } from '../services/api';
 import type { AdminUser } from '../types';
+import { asApiError } from '../utils/apiError';
 
-interface AuthContextType {
-  user: AdminUser | null;
-  token: string | null;
-  loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+import { AuthContext } from './authContextStore';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AdminUser | null>(null);
@@ -170,7 +163,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(adminProfile);
 
 
-  } catch (err: any) {
+  } catch (caught: unknown) {
+    const err = asApiError(caught);
     console.error('Admin login failed:', err);
 
     const message =
@@ -178,7 +172,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       err.message ||
       'Admin authentication failed.';
 
-    throw new Error(message);
+    throw new Error(message, { cause: caught });
   }
 };
 
@@ -212,16 +206,4 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = (): AuthContextType => {
-  const context = useContext(AuthContext);
-
-  if (!context) {
-    throw new Error(
-      'useAuth must be invoked within an AuthProvider context wrapper.'
-    );
-  }
-
-  return context;
 };

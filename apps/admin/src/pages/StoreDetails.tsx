@@ -15,6 +15,7 @@ import {
   AlertCircle,
   Compass
 } from 'lucide-react';
+import { asApiError } from '../utils/apiError';
 
 interface StoreDetailWithManager extends Store {
   managers?: Array<{
@@ -48,7 +49,8 @@ export const StoreDetails: React.FC = () => {
         // Fetch orders to calculate dynamic store performance metrics
         const ordersRes = await api.get('/admin/orders');
         setOrders(ordersRes.data.data);
-      } catch (err: any) {
+      } catch (caught: unknown) {
+        const err = asApiError(caught);
         console.error('Error loading store details:', err);
         setError('Failed to load store profile details. Please try again.');
       } finally {

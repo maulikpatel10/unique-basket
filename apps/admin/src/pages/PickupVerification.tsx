@@ -13,6 +13,7 @@ import {
   RefreshCw,
   AlertCircle
 } from 'lucide-react';
+import { asApiError } from '../utils/apiError';
 
 interface VerifiedPickupData {
   id: string;
@@ -65,7 +66,8 @@ export const PickupVerification: React.FC = () => {
 
       setVerifiedOrder(res.data.data);
       showToast('success', res.data.message || 'Order successfully verified and handed over!');
-    } catch (err: any) {
+    } catch (caught: unknown) {
+      const err = asApiError(caught);
       console.error('Error verifying pickup order:', err);
       const errMsg =
         err.response?.data?.message ||

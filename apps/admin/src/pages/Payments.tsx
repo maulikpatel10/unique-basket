@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/authContextStore';
 import { api } from '../services/api';
 import type { Store } from '../types';
 import {
@@ -14,6 +14,7 @@ import {
   Banknote,
   ShoppingBag
 } from 'lucide-react';
+import { asApiError } from '../utils/apiError';
 
 interface PaymentRow {
   id: string;
@@ -77,7 +78,7 @@ export const Payments: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const params: any = { page, limit: 10 };
+      const params: Record<string, unknown> = { page, limit: 10 };
       if (selectedStoreId) params.storeId = selectedStoreId;
       if (methodFilter !== 'ALL') params.paymentMethod = methodFilter;
       if (statusFilter !== 'ALL') params.paymentStatus = statusFilter;
@@ -86,7 +87,8 @@ export const Payments: React.FC = () => {
       const res = await api.get('/admin/payments', { params });
       setPayments(res.data.data.payments);
       setPagination(res.data.data.pagination);
-    } catch (err: any) {
+    } catch (caught: unknown) {
+      const err = asApiError(caught);
       setError(err.response?.data?.message || 'Failed to load payments.');
     } finally {
       setLoading(false);

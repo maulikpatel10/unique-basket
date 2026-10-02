@@ -19,6 +19,7 @@ import {
   Package,
   Truck,
 } from 'lucide-react';
+import { asApiError } from '../utils/apiError';
 
 interface PaymentDetail {
   id: string;
@@ -104,7 +105,8 @@ export const PaymentDetails: React.FC = () => {
         setError(null);
         const res = await api.get(`/admin/payments/${id}`);
         setDetail(res.data.data);
-      } catch (err: any) {
+      } catch (caught: unknown) {
+        const err = asApiError(caught);
         if (err.response?.status === 403) {
           setError('Access Denied. You do not have permission to view this payment.');
         } else if (err.response?.status === 404) {

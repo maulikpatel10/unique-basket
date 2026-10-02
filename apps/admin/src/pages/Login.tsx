@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/authContextStore';
 import { Apple, Lock, Mail, AlertCircle } from 'lucide-react';
+import { asApiError } from '../utils/apiError';
 
 export const Login: React.FC = () => {
   const { login, user } = useAuth();
@@ -32,7 +33,8 @@ export const Login: React.FC = () => {
     try {
       await login(email, password);
       navigate('/admin/dashboard', { replace: true });
-    } catch (err: any) {
+    } catch (caught: unknown) {
+      const err = asApiError(caught);
       setError(err.message || 'Invalid administrative credentials.');
     } finally {
       setLoading(false);

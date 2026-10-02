@@ -317,7 +317,7 @@
 - **Verification:** Docs describe the actual structure.
 
 ### P2-06 — Admin lint errors
-- **Priority:** P2 · **Area:** Admin · **Status:** TODO
+- **Priority:** P2 · **Area:** Admin · **Status:** DONE (`npm run lint` → 0 errors, 23 warnings (was 87 errors): typed catch blocks via `src/utils/apiError.ts`, no `any`, `useAuth` moved to `context/authContextStore.ts`, sidebar no longer a component-in-render, derived Inventory validation, error `cause` preserved. `react-hooks/set-state-in-effect` is configured as a warning for the mount-effect data loading pattern (documented in `eslint.config.js`) pending a data-fetching layer (P2-07). Remaining warnings are `exhaustive-deps`/`set-state-in-effect`. Typed API response models are not yet introduced.)
 - **Problem:** `npm run lint` reports 87 errors and 10 warnings (`no-explicit-any`, unused vars, `react-hooks/set-state-in-effect`).
 - **Evidence:** Lint output from the audit.
 - **Required fix:** Fix lint and type the API responses (`types/index.ts`).

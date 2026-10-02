@@ -11,6 +11,7 @@ import {
   MapPin,
   AlertCircle
 } from 'lucide-react';
+import { asApiError } from '../utils/apiError';
 
 interface ManagerDetailsData {
   id: string;
@@ -41,7 +42,8 @@ export const ManagerDetails: React.FC = () => {
         setError(null);
         const res = await api.get(`/admin/managers/${id}`);
         setManager(res.data.data);
-      } catch (err: any) {
+      } catch (caught: unknown) {
+        const err = asApiError(caught);
         console.error('Error fetching manager profile details:', err);
         setError('Failed to load store manager profile. Please try again.');
       } finally {

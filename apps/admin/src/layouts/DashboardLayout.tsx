@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation, Outlet } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/authContextStore';
 import {
   LayoutDashboard,
   Store,
@@ -124,7 +124,7 @@ export const DashboardLayout: React.FC = () => {
 
   const filteredItems = menuItems.filter((item) => item.roles.includes(user.role));
 
-  const SidebarContent = () => (
+  const sidebarContent = (
     <div className="flex h-full flex-col bg-darkbg-800 border-r border-slate-700 text-slate-100">
       {/* Brand Header */}
       <div className="flex h-16 items-center px-6 border-b border-slate-700">
@@ -192,7 +192,7 @@ export const DashboardLayout: React.FC = () => {
     <div className="flex h-screen w-screen overflow-hidden bg-darkbg-900 text-slate-200">
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0">
-        <SidebarContent />
+        {sidebarContent}
       </aside>
 
       {/* Main Container */}
@@ -243,7 +243,7 @@ export const DashboardLayout: React.FC = () => {
                 <X className="h-6 w-6" />
               </button>
             </div>
-            <SidebarContent />
+            {sidebarContent}
           </div>
         </div>
       )}

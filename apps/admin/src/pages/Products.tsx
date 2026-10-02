@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import type { Category } from '../types';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/authContextStore';
 import {
   Plus,
   Search,
@@ -17,6 +17,7 @@ import {
   DollarSign,
   Briefcase
 } from 'lucide-react';
+import { asApiError } from '../utils/apiError';
 
 interface Product {
   id: string;
@@ -82,7 +83,8 @@ export const Products: React.FC = () => {
       ]);
       setProducts(productsRes.data.data);
       setCategories(categoriesRes.data.data);
-    } catch (err: any) {
+    } catch (caught: unknown) {
+      const err = asApiError(caught);
       console.error('Error fetching products:', err);
       setError('Failed to retrieve products catalog. Please try again.');
     } finally {
@@ -194,7 +196,8 @@ export const Products: React.FC = () => {
       }
       setIsDrawerOpen(false);
       fetchData();
-    } catch (err: any) {
+    } catch (caught: unknown) {
+      const err = asApiError(caught);
       console.error('Error saving product:', err);
       const msg = err.response?.data?.message || 'Failed to save product profile.';
       showToast('error', msg);
@@ -215,7 +218,7 @@ export const Products: React.FC = () => {
         await api.put(`/products/${prod.id}`, { isActive: true });
         showToast('success', `Product "${prod.name}" activated successfully.`);
         fetchData();
-      } catch (err: any) {
+      } catch {
         showToast('error', 'Failed to activate product.');
       }
     }
@@ -234,7 +237,7 @@ export const Products: React.FC = () => {
       showToast('success', `Product "${prod.name}" deactivated successfully.`);
       setConfirmModal({ isOpen: false, product: null });
       fetchData();
-    } catch (err: any) {
+    } catch {
       showToast('error', 'Failed to deactivate product.');
     }
   };
@@ -313,7 +316,7 @@ export const Products: React.FC = () => {
             <span className="text-xs text-slate-400 uppercase font-semibold tracking-wider">Status:</span>
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
+              onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
               className="rounded-lg bg-slate-900 border border-slate-700 text-slate-300 px-3 py-2 text-xs font-semibold focus:border-brand-500 outline-none"
             >
               <option value="ALL">All Statuses</option>

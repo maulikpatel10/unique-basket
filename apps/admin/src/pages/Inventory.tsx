@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/authContextStore';
 import { api } from '../services/api';
 import type { Store, Category } from '../types';
 import {
@@ -13,6 +13,7 @@ import {
   Store as StoreIcon,
   ArrowRight
 } from 'lucide-react';
+import { asApiError } from '../utils/apiError';
 
 interface StoreProductInventory {
   id: string;
@@ -77,7 +78,6 @@ export const Inventory: React.FC = () => {
   const [adjustReason, setAdjustReason] = useState('');
   const [adjustThreshold, setAdjustThreshold] = useState('');
   const [adjustAvailable, setAdjustAvailable] = useState(true);
-  const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   // Toast notifications
@@ -127,7 +127,8 @@ export const Inventory: React.FC = () => {
       setError(null);
       const res = await api.get(`/products/store/${selectedStoreId}`);
       setInventory(res.data.data);
-    } catch (err: any) {
+    } catch (caught: unknown) {
+      const err = asApiError(caught);
       console.error('Error fetching store inventory:', err);
       setError('Failed to load store inventory catalog.');
     } finally {
@@ -150,18 +151,11 @@ export const Inventory: React.FC = () => {
     return adjust;
   };
 
-  useEffect(() => {
-    if (adjustType === 'REMOVE' && adjustModal.product) {
-      const resulting = getResultingStock();
-      if (resulting < 0) {
-        setFormError('Resulting stock quantity cannot be negative.');
-      } else {
-        setFormError(null);
-      }
-    } else {
-      setFormError(null);
-    }
-  }, [adjustQty, adjustType, adjustModal.product]);
+  // Derived validation (no effect-managed state): only REMOVE can drive stock negative
+  const formError: string | null =
+    adjustType === 'REMOVE' && adjustModal.product && getResultingStock() < 0
+      ? 'Resulting stock quantity cannot be negative.'
+      : null;
 
   const handleOpenAdjustModal = (prod: StoreProductInventory) => {
     setAdjustModal({ isOpen: true, product: prod });
@@ -170,7 +164,6 @@ export const Inventory: React.FC = () => {
     setAdjustReason('');
     setAdjustThreshold(prod.lowStockThreshold.toString());
     setAdjustAvailable(prod.isAvailable);
-    setFormError(null);
   };
 
   const handleOpenHistoryModal = async (prod: StoreProductInventory) => {
@@ -201,7 +194,7 @@ export const Inventory: React.FC = () => {
 
     setSubmitting(true);
     try {
-      const payload: any = {
+      const payload: Record<string, unknown> = {
         lowStockThreshold: parseFloat(adjustThreshold) || 5.0,
         isAvailable: adjustAvailable,
       };
@@ -216,7 +209,8 @@ export const Inventory: React.FC = () => {
       showToast('success', 'Store inventory adjusted successfully.');
       setAdjustModal({ isOpen: false, product: null });
       fetchInventory();
-    } catch (err: any) {
+    } catch (caught: unknown) {
+      const err = asApiError(caught);
       console.error('Error adjusting inventory:', err);
       const msg = err.response?.data?.message || 'Failed to adjust store stock levels.';
       showToast('error', msg);
@@ -356,7 +350,7 @@ export const Inventory: React.FC = () => {
             <span className="text-xs text-slate-400 uppercase font-semibold tracking-wider">Availability:</span>
             <select
               value={stockStatusFilter}
-              onChange={(e) => setStockStatusFilter(e.target.value as any)}
+              onChange={(e) => setStockStatusFilter(e.target.value as typeof stockStatusFilter)}
               className="rounded-lg bg-slate-900 border border-slate-700 text-slate-300 px-3 py-2 text-xs font-semibold focus:border-brand-500 outline-none"
             >
               <option value="ALL">All Stock Levels</option>
