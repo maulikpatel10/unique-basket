@@ -1,4 +1,5 @@
-import * as admin from 'firebase-admin';
+import { initializeApp, cert } from 'firebase-admin/app';
+import { getMessaging, SendResponse } from 'firebase-admin/messaging';
 import dotenv from 'dotenv';
 import { prisma } from '../config/db';
 
@@ -11,8 +12,8 @@ try {
   const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT;
   if (serviceAccountJson) {
     const serviceAccount = JSON.parse(serviceAccountJson);
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
+    initializeApp({
+      credential: cert(serviceAccount),
     });
     firebaseInitialized = true;
     console.log('[FIREBASE] Admin SDK initialized successfully.');
@@ -75,11 +76,11 @@ export class NotificationService {
           tokens: tokenStrings,
         };
 
-        const response = await admin.messaging().sendEachForMulticast(messagePayload);
+        const response = await getMessaging().sendEachForMulticast(messagePayload);
         
         // Clean up invalid or expired tokens returned by FCM
         const tokensToRemove: string[] = [];
-        response.responses.forEach((resp, idx) => {
+        response.responses.forEach((resp: SendResponse, idx: number) => {
           if (!resp.success) {
             const error = resp.error;
             if (
@@ -142,11 +143,11 @@ export class NotificationService {
           tokens: tokenStrings,
         };
 
-        const response = await admin.messaging().sendEachForMulticast(messagePayload);
+        const response = await getMessaging().sendEachForMulticast(messagePayload);
         
         // Prune stale tokens
         const tokensToRemove: string[] = [];
-        response.responses.forEach((resp, idx) => {
+        response.responses.forEach((resp: SendResponse, idx: number) => {
           if (!resp.success) {
             const error = resp.error;
             if (

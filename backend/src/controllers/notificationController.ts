@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import { prisma } from '../config/db';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 import { Platform } from '@prisma/client';
+import { getParam } from '../utils/request';
 
 export class NotificationController {
   /**
@@ -117,7 +118,7 @@ export class NotificationController {
   static async markAsRead(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = req.user!.id;
-      const { id } = req.params;
+      const id = getParam(req, 'id');
 
       if (!id) {
         res.status(400).json({

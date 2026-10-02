@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import { prisma } from '../config/db';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 import { PaymentStatus } from '@prisma/client';
+import { getParam } from '../utils/request';
 
 const ALLOWED_PAYMENT_STATUSES: PaymentStatus[] = [
   PaymentStatus.PENDING,
@@ -122,7 +123,7 @@ export class AdminPaymentController {
    */
   static async getPaymentDetails(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = getParam(req, 'id');
       const { role, storeId: managerStoreId } = req.user!;
 
       const order = await prisma.order.findUnique({

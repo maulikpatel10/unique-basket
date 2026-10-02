@@ -3,6 +3,7 @@ import { prisma } from '../config/db';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 import { OrderStatus, PaymentStatus } from '@prisma/client';
 import { NotificationService } from '../services/notificationService';
+import { getParam } from '../utils/request';
 
 const ALLOWED_PAYMENT_STATUSES: PaymentStatus[] = [
   PaymentStatus.PENDING,
@@ -120,7 +121,7 @@ export class AdminOrderController {
    */
   static async getOrderDetails(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = getParam(req, 'id');
       const { role, storeId: managerStoreId } = req.user!;
 
       const order = await prisma.order.findUnique({
@@ -171,7 +172,7 @@ export class AdminOrderController {
    */
   static async updateOrderStatus(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = getParam(req, 'id');
       const { status } = req.body;
       const { role, storeId: managerStoreId } = req.user!;
 

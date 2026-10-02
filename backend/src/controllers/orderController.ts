@@ -6,6 +6,7 @@ import { razorpay } from '../config/razorpay';
 import { FulfillmentType, PaymentMethod, PaymentStatus, OrderStatus } from '@prisma/client';
 import { NotificationService } from '../services/notificationService';
 import { generateNextOrderNumber } from '../utils/orderNumber';
+import { getParam } from '../utils/request';
 
 export class OrderController {
   /**
@@ -472,7 +473,7 @@ export class OrderController {
    */
   static async getOrderById(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = getParam(req, 'id');
       const userId = req.user?.id;
 
       const order = await prisma.order.findUnique({
@@ -525,7 +526,7 @@ export class OrderController {
    */
   static async cancelOrder(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = getParam(req, 'id');
       const userId = req.user?.id;
 
       const order = await prisma.order.findUnique({

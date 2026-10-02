@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { prisma } from '../config/db';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
+import { getParam } from '../utils/request';
 
 export class CartController {
   /**
@@ -173,7 +174,7 @@ export class CartController {
   static async updateItem(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = req.user?.id;
-      const { id } = req.params;
+      const id = getParam(req, 'id');
       const { quantity } = req.body;
 
       if (!userId) {
@@ -247,7 +248,7 @@ export class CartController {
   static async removeItem(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = req.user?.id;
-      const { id } = req.params;
+      const id = getParam(req, 'id');
 
       if (!userId) {
         res.status(401).json({

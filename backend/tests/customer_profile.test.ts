@@ -39,7 +39,7 @@ describe('Customer Profile & Address API Integration Tests', () => {
     adminToken = generateAccessToken({
       id: admin?.id || 'admin-test-id',
       role: 'SUPER_ADMIN',
-      phone: admin?.phone || '+919999999999',
+      email: admin?.email,
     });
   });
 

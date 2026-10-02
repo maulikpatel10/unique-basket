@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../config/db';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
+import { getParam } from '../utils/request';
 
 export class ProductController {
   /**
@@ -56,7 +57,7 @@ export class ProductController {
    */
   static async getProductById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = getParam(req, 'id');
       const role = (req as AuthenticatedRequest).user?.role;
 
       const product = await prisma.product.findUnique({
@@ -153,7 +154,7 @@ export class ProductController {
    */
   static async updateProduct(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = getParam(req, 'id');
       const { name, description, imageUrl, categoryId, unit, price, mrp, isActive } = req.body;
 
       const product = await prisma.product.findUnique({
@@ -233,7 +234,7 @@ export class ProductController {
    */
   static async deleteProduct(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = getParam(req, 'id');
 
       const product = await prisma.product.findUnique({
         where: { id },
@@ -277,7 +278,7 @@ export class ProductController {
    */
   static async listStoreProducts(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { storeId } = req.params;
+      const storeId = getParam(req, 'storeId');
       const { categoryId } = req.query;
 
       // Ensure store exists and is active for customers
@@ -351,7 +352,8 @@ export class ProductController {
    */
   static async updateStoreInventory(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { storeId, productId } = req.params;
+      const storeId = getParam(req, 'storeId');
+      const productId = getParam(req, 'productId');
       const { stockQuantity, adjustmentType, quantity, reason, lowStockThreshold, isAvailable } = req.body;
 
       // Check product exists

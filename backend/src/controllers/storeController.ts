@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import { prisma } from '../config/db';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 import { calculateHaversineDistance } from '../utils/distance';
+import { getParam } from '../utils/request';
 
 export class StoreController {
   /**
@@ -104,7 +105,7 @@ export class StoreController {
    */
   static async updateStore(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = getParam(req, 'id');
       const updateData = req.body;
 
       const store = await prisma.store.findUnique({
@@ -163,7 +164,7 @@ export class StoreController {
    */
   static async deleteStore(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = getParam(req, 'id');
 
       const store = await prisma.store.findUnique({
         where: { id },
@@ -284,7 +285,7 @@ export class StoreController {
    */
   static async getStoreById(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = getParam(req, 'id');
 
       const store = await prisma.store.findUnique({
         where: { id },

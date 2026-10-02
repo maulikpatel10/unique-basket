@@ -48,7 +48,7 @@
 - **Verification:** Starting with missing secrets in non-test env exits non-zero with a clear message; tests pass with an explicit test env.
 
 ### P0-03 — Backend production build fails (72 TypeScript errors)
-- **Priority:** P0 · **Area:** Backend / Build · **Status:** TODO
+- **Priority:** P0 · **Area:** Backend / Build · **Status:** DONE (0 tsc errors; `getParam` helper in `backend/src/utils/request.ts`; firebase-admin v14 modular imports; `tsconfig.build.json` builds `src` only to `dist/server.js`; `npm start` verified)
 - **Problem:** `npm run build` (tsc) exits 2, while `npm start` runs `dist/server.js`. A clean production build is not possible; type errors hide real bugs.
 - **Evidence:** 45× `string | string[]` from Express 5 `req.params/query` typing (product, manager, payment, store, customer, cart, category, order, notification controllers); 3× `Property 'managers' does not exist`; `notificationService.ts` `admin.messaging` does not exist on `firebase-admin@14` types (so FCM sending is likely broken at runtime when configured); implicit `any`; `tests/customer_profile.test.ts(42)` type error. `tsconfig.json` also includes `tests/**` in the build.
 - **Required fix:** Fix types (typed param/query parsing), use the correct firebase-admin messaging import, exclude tests from the build tsconfig (separate tsconfig for tests).

@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../config/db';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
+import { getParam } from '../utils/request';
 
 export class AdminManagerController {
   /**
@@ -191,7 +192,7 @@ export class AdminManagerController {
    */
   static async updateManager(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = getParam(req, 'id');
       const { name, email, password, storeId, isActive } = req.body;
 
       const admin = await prisma.adminUser.findUnique({
@@ -345,7 +346,7 @@ export class AdminManagerController {
    */
   static async getManagerById(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = getParam(req, 'id');
 
       const manager = await prisma.adminUser.findUnique({
         where: { id },

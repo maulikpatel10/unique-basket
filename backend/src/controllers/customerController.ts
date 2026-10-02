@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { prisma } from '../config/db';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
+import { getParam } from '../utils/request';
 
 export class CustomerController {
   /**
@@ -364,7 +365,7 @@ export class CustomerController {
         return;
       }
 
-      const { id } = req.params;
+      const id = getParam(req, 'id');
       const { title, addressLine, city, state, pincode, latitude, longitude, isDefault } = req.body;
 
       const existing = await prisma.userAddress.findFirst({
@@ -465,7 +466,7 @@ export class CustomerController {
         return;
       }
 
-      const { id } = req.params;
+      const id = getParam(req, 'id');
       const existing = await prisma.userAddress.findFirst({
         where: { id, userId },
       });
@@ -516,7 +517,7 @@ export class CustomerController {
         return;
       }
 
-      const { id } = req.params;
+      const id = getParam(req, 'id');
       const existing = await prisma.userAddress.findFirst({
         where: { id, userId },
       });

@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 import { prisma } from '../config/db';
 import { StoreController } from './storeController';
+import { getParam } from '../utils/request';
 
 /**
  * Admin Store Controller – wraps existing StoreController with admin‑specific isolation.
@@ -47,7 +48,7 @@ export class AdminStoreController {
   /** Get a single store (admin view) */
   static async getStoreById(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = getParam(req, 'id');
 
       if (req.user?.role === 'SUPER_ADMIN') {
         // Super admin can view any store – reuse existing logic

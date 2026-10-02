@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../config/db';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
+import { getParam } from '../utils/request';
 
 export class CategoryController {
   /**
@@ -107,7 +108,7 @@ export class CategoryController {
    */
   static async updateCategory(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = getParam(req, 'id');
       const { name, description, imageUrl, displayOrder, isActive } = req.body;
 
       const category = await prisma.category.findUnique({
@@ -184,7 +185,7 @@ export class CategoryController {
    */
   static async deleteCategory(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = getParam(req, 'id');
 
       const category = await prisma.category.findUnique({
         where: { id },
