@@ -115,7 +115,7 @@
 - **Verification:** Delete an address used by an order → order still shows the full address in customer and admin views.
 
 ### P1-03 — Flutter truncates decimal quantities to integers
-- **Priority:** P1 · **Area:** Flutter / Cart · **Status:** TODO
+- **Priority:** P1 · **Area:** Flutter / Cart · **Status:** BLOCKED — DECISION REQUIRED (P4-08). Decimal quantities are allowed (D-007) but the app only creates whole-number quantities (+1/−1), so truncation only affects carts written by other clients. Supporting decimals in the app requires the step size/min/max for KG/GRAM and how the cart badge counts weight items (e.g. 1.5 kg + 2 pcs). Backend enforcement is done in P1-04.
 - **Problem:** The backend stores decimal quantities (Decimal(10,3), KG/GRAM units), but the app models cart quantities as `int` and calls `toInt()`, so 1.5 kg shows as 1 and the next change sends a wrong value.
 - **Evidence:** `CartItemModel.quantity` is `int` (`qtyNum.toInt()`); `CartStateNotifier extends StateNotifier<Map<String,int>>`; `increment` uses `+1`; `CartRemoteDataSource.addItem/updateItem` take `int`.
 - **Required fix:** Represent quantities as decimals end-to-end and format per unit. Step sizes are P4-08.
@@ -151,7 +151,7 @@
 - **Verification:** Widget tests with a failing repository show an error and keep state consistent; checkout never shows ₹0 placeholders.
 
 ### P1-07 — Flutter has no route guards or session-expiry handling
-- **Priority:** P1 · **Area:** Flutter / Navigation, Auth · **Status:** TODO
+- **Priority:** P1 · **Area:** Flutter / Navigation, Auth · **Status:** DONE (GoRouter `redirect` sends protected routes to login without an access token; `SessionExpiryNotifier` is triggered by AuthInterceptor when the session is cleared and drives `refreshListenable`; dev routes only in debug builds; tests in `apps/customer_app/test/session_expiry_route_guard_test.dart`; flutter analyze clean, 591/591 tests)
 - **Problem:** GoRouter has no `redirect`/`refreshListenable`. When token refresh fails the interceptor clears tokens but the user stays on protected screens with failing calls. Dev-only routes (`/dev/profile-setup`, `/dev/address-first-time-add`) ship in the production router.
 - **Evidence:** `app/router/app_router.dart` (no redirect); `auth_interceptor.dart` `_performRefresh` clears storage only; `route_names.dart` dev routes. `AGENTS.md`/`MOBILE_TODO.md` claim auth-aware redirects exist.
 - **Required fix:** Auth-aware redirect driven by auth state; emit a session-expired event from the interceptor; gate dev routes behind `kDebugMode`.

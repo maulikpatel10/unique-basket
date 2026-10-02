@@ -17,6 +17,7 @@ class ApiClient {
     LocalStorageService? localStorage,
     Dio? dio,
     Dio? tokenDio,
+    void Function()? onSessionExpired,
   })  : _secureStorage = secureStorage,
         _localStorage = localStorage,
         _dio = dio ?? Dio(),
@@ -41,6 +42,7 @@ class ApiClient {
         secureStorage: _secureStorage,
         tokenDio: _tokenDio,
         localStorage: _localStorage,
+        onSessionExpired: onSessionExpired,
       ),
     );
   }

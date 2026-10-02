@@ -15,6 +15,7 @@ class AuthInterceptor extends Interceptor {
   final SecureStorageService _secureStorage;
   final LocalStorageService? _localStorage;
   final Dio _tokenDio;
+  final VoidCallback? _onSessionExpired;
 
   static const String retryExtraKey = 'authRetry';
 
@@ -24,9 +25,19 @@ class AuthInterceptor extends Interceptor {
     required SecureStorageService secureStorage,
     required Dio tokenDio,
     LocalStorageService? localStorage,
+    VoidCallback? onSessionExpired,
   })  : _secureStorage = secureStorage,
         _tokenDio = tokenDio,
-        _localStorage = localStorage;
+        _localStorage = localStorage,
+        _onSessionExpired = onSessionExpired;
+
+  /// Clears credentials and user-scoped data after an authentication failure,
+  /// then notifies listeners (router) that the session has expired.
+  Future<void> _expireSession() async {
+    await _secureStorage.clearTokens();
+    await _localStorage?.clearUserSessionData();
+    _onSessionExpired?.call();
+  }
 
   @override
   Future<void> onRequest(
@@ -128,8 +139,7 @@ class AuthInterceptor extends Interceptor {
       final refreshToken = await _secureStorage.getRefreshToken();
       if (refreshToken == null || refreshToken.trim().isEmpty) {
         // Missing refresh token is an authentication failure -> clear session
-        await _secureStorage.clearTokens();
-        await _localStorage?.clearUserSessionData();
+        await _expireSession();
         return null;
       }
 
@@ -152,8 +162,7 @@ class AuthInterceptor extends Interceptor {
 
       if (newAccessToken == null || newAccessToken.trim().isEmpty) {
         // Response missing usable access token -> authentication failure -> clear session
-        await _secureStorage.clearTokens();
-        await _localStorage?.clearUserSessionData();
+        await _expireSession();
         return null;
       }
 
@@ -168,8 +177,7 @@ class AuthInterceptor extends Interceptor {
       final statusCode = dioErr.response?.statusCode;
       if (statusCode == 401 || statusCode == 403) {
         // Explicit auth rejection -> credentials revoked/expired -> clear session
-        await _secureStorage.clearTokens();
-        await _localStorage?.clearUserSessionData();
+        await _expireSession();
       }
       // Note: For transient network errors (connection timeout, 5xx, SocketException),
       // we do NOT destroy local credentials.

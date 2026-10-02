@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -30,6 +33,8 @@ import '../../features/address/presentation/screens/edit_address_screen.dart';
 import '../../features/payment/presentation/screens/payment_methods_screen.dart';
 import '../../features/profile/presentation/screens/help_support_screen.dart';
 import '../../features/home/data/models/product_model.dart';
+import '../../core/providers/core_providers.dart';
+import '../../core/storage/secure_storage_service.dart';
 
 
 import '../theme/app_colors.dart';
@@ -37,9 +42,44 @@ import '../theme/app_spacing.dart';
 import '../theme/app_text_styles.dart';
 import 'route_names.dart';
 
+/// Routes reachable without an authenticated session.
+const Set<String> publicRoutes = {
+  RouteNames.splash,
+  RouteNames.onboarding,
+  RouteNames.mobileNumber,
+  RouteNames.verifyOtp,
+  RouteNames.termsAndConditions,
+  RouteNames.privacyPolicy,
+  RouteNames.placeholder,
+};
+
+/// Route guard: protected routes require a stored access token; otherwise send the user to login.
+/// Token validity/refresh is handled by AuthInterceptor; an expired session triggers
+/// [SessionExpiryNotifier], which makes the router re-run this guard.
+FutureOr<String?> authRedirect(SecureStorageService secureStorage, String location) {
+  // Public routes resolve synchronously so the first frame (e.g. Splash) is not delayed.
+  if (publicRoutes.contains(location)) {
+    return null;
+  }
+  return _requireAccessToken(secureStorage);
+}
+
+Future<String?> _requireAccessToken(SecureStorageService secureStorage) async {
+  final token = await secureStorage.getAccessToken();
+  if (token == null || token.trim().isEmpty) {
+    return RouteNames.mobileNumber;
+  }
+  return null;
+}
+
 final routerProvider = Provider<GoRouter>((ref) {
+  final secureStorage = ref.watch(secureStorageProvider);
+  final sessionExpiry = ref.watch(sessionExpiryNotifierProvider);
+
   return GoRouter(
     initialLocation: RouteNames.splash,
+    refreshListenable: sessionExpiry,
+    redirect: (context, state) => authRedirect(secureStorage, state.matchedLocation),
     routes: [
       GoRoute(
         path: RouteNames.splash,
@@ -73,22 +113,24 @@ final routerProvider = Provider<GoRouter>((ref) {
           return ProfileSetupScreen(phoneNumber: phone);
         },
       ),
-      // Development-only testing route to inspect Screen 06 directly
-      GoRoute(
-        path: RouteNames.devProfileSetup,
-        builder: (context, state) => const ProfileSetupScreen(
-          phoneNumber: '+91 98765 43210',
+      // Development-only testing route to inspect Screen 06 directly (debug builds only)
+      if (kDebugMode)
+        GoRoute(
+          path: RouteNames.devProfileSetup,
+          builder: (context, state) => const ProfileSetupScreen(
+            phoneNumber: '+91 98765 43210',
+          ),
         ),
-      ),
       GoRoute(
         path: RouteNames.firstTimeAddAddress,
         builder: (context, state) => const FirstTimeAddAddressScreen(),
       ),
-      // Development-only testing route to inspect Screen 07 directly
-      GoRoute(
-        path: RouteNames.devFirstTimeAddAddress,
-        builder: (context, state) => const FirstTimeAddAddressScreen(),
-      ),
+      // Development-only testing route to inspect Screen 07 directly (debug builds only)
+      if (kDebugMode)
+        GoRoute(
+          path: RouteNames.devFirstTimeAddAddress,
+          builder: (context, state) => const FirstTimeAddAddressScreen(),
+        ),
       GoRoute(
         path: RouteNames.home,
         builder: (context, state) => const HomeScreen(),
