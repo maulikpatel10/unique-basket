@@ -77,7 +77,12 @@ Models: User, UserAddress (lat/lng required), Store (radius, hours), AdminUser (
 
 Enums: FulfillmentType (DELIVERY, PICKUP), PaymentMethod (COD, ONLINE), PaymentStatus (PENDING, PAID, FAILED), OrderStatus (PLACED, CONFIRMED, PREPARING, READY_FOR_PICKUP, PICKED_UP, OUT_FOR_DELIVERY, DELIVERED, CANCELLED).
 
-12 migrations (2026-08-23 → 2026-09-29). Seed: `prisma/seed.ts`.
+13 migrations (2026-08-23 → 2026-10-02). Seed: `prisma/seed.ts`.
+
+**Migration status:**
+- Latest migration: `20261002120000_add_favorites_notifications_pincodes_order_sequences` (commit `f392ade`). It creates the tables for `Favorite` (`user_favorites`), `Notification` (`notifications`), `SupportedPincode` (`supported_pincodes`) and `DailyOrderSequence` (`daily_order_sequences`), with their indexes and foreign keys. These models had been added to `schema.prisma` in commit `038dfa7` without a migration.
+- A fresh database built with `prisma migrate deploy` now matches `schema.prisma` (no `migrate diff` difference).
+- Development database (reported by project owner): `20260929130000_add_user_gender` has been reconciled/applied there.
 
 ### 2.8 Tests
 20 Jest suites in `backend/tests/` (auth, catalog, cart/order, admin order/payment/store/pincodes/settings, inventory, notifications, etc.). Require a PostgreSQL database. Not executed during this audit.
