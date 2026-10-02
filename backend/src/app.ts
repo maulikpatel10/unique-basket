@@ -4,6 +4,8 @@ import dotenv from 'dotenv';
 import { Prisma } from '@prisma/client';
 import { AppError } from './utils/errors';
 import { corsOptions, securityHeaders, configureProxyTrust, BODY_LIMIT } from './config/http';
+import { requestLogger } from './utils/logger';
+import { prisma } from './config/db';
 import authRoutes from './routes/authRoutes';
 import adminRoutes from './routes/adminRoutes';
 import storeRoutes from './routes/storeRoutes';
@@ -25,6 +27,7 @@ const PORT = process.env.PORT || 5001;
 app.disable('x-powered-by');
 configureProxyTrust(app);
 app.use(securityHeaders);
+app.use(requestLogger);
 app.use(cors(corsOptions));
 app.use(express.json({ limit: BODY_LIMIT }));
 app.use(express.urlencoded({ extended: true, limit: BODY_LIMIT }));
@@ -42,13 +45,24 @@ app.use('/api/v1/orders', orderRoutes);
 app.use('/api/v1/payments', paymentRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
 
-// Health Check Route
-app.get('/health', (req: Request, res: Response) => {
-  res.status(200).json({
-    success: true,
-    message: 'UNIQUE BASKET API Server is running smoothly.',
-    timestamp: new Date().toISOString(),
-  });
+// Health Check Route (P3-04: reports database connectivity; 503 when the DB is unreachable)
+app.get('/health', async (req: Request, res: Response) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.status(200).json({
+      success: true,
+      message: 'UNIQUE BASKET API Server is running smoothly.',
+      database: 'up',
+      timestamp: new Date().toISOString(),
+    });
+  } catch {
+    res.status(503).json({
+      success: false,
+      message: 'Database is unavailable.',
+      database: 'down',
+      timestamp: new Date().toISOString(),
+    });
+  }
 });
 
 // 404 Route Handler

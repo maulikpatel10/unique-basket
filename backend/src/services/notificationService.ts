@@ -2,6 +2,7 @@ import { initializeApp, cert } from 'firebase-admin/app';
 import { getMessaging, SendResponse } from 'firebase-admin/messaging';
 import dotenv from 'dotenv';
 import { prisma } from '../config/db';
+import { isVerboseLogging } from '../utils/logger';
 
 dotenv.config();
 
@@ -63,7 +64,7 @@ export class NotificationService {
       });
 
       if (tokens.length === 0) {
-        console.log(`[FCM-MOCK] No registered tokens for user ID: ${userId}. In-app notification saved: "${title}: ${body}"`);
+        console.log(`[FCM-MOCK] No registered tokens for user ID: ${userId}. In-app notification saved${isVerboseLogging() ? `: "${title}: ${body}"` : '.'}`);
         return savedNotification;
       }
 
@@ -99,7 +100,7 @@ export class NotificationService {
           console.log(`[FCM] Cleaned up ${tokensToRemove.length} expired device tokens.`);
         }
       } else {
-        console.log(`[FCM-MOCK-DELIVERY] Sent to User: ${userId} (Tokens: ${tokenStrings.length}) - Title: "${title}" | Body: "${body}"`);
+        console.log(`[FCM-MOCK-DELIVERY] Sent to User: ${userId} (Tokens: ${tokenStrings.length})${isVerboseLogging() ? ` - Title: "${title}" | Body: "${body}"` : ''}`);
       }
     } catch (error) {
       console.error('[FCM] Error sending message to user:', error);
@@ -130,7 +131,7 @@ export class NotificationService {
       });
 
       if (tokens.length === 0) {
-        console.log(`[FCM-MOCK] No tokens for managers of store: ${storeId}. Notifying console: "${title}: ${body}"`);
+        console.log(`[FCM-MOCK] No tokens for managers of store: ${storeId}.${isVerboseLogging() ? ` Notifying console: "${title}: ${body}"` : ''}`);
         return;
       }
 
@@ -165,7 +166,7 @@ export class NotificationService {
           });
         }
       } else {
-        console.log(`[FCM-MOCK-DELIVERY] Sent to Store Managers of ${storeId} (Tokens: ${tokenStrings.length}) - Title: "${title}" | Body: "${body}"`);
+        console.log(`[FCM-MOCK-DELIVERY] Sent to Store Managers of ${storeId} (Tokens: ${tokenStrings.length})${isVerboseLogging() ? ` - Title: "${title}" | Body: "${body}"` : ''}`);
       }
     } catch (error) {
       console.error('[FCM] Error sending message to store managers:', error);

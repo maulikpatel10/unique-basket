@@ -375,7 +375,7 @@
 - **Verification:** Requests from unknown origins are rejected; headers present.
 
 ### P3-04 — Logging and monitoring
-- **Priority:** P3 · **Area:** Ops · **Status:** TODO
+- **Priority:** P3 · **Area:** Ops · **Status:** IN PROGRESS (done: structured request log per request via `backend/src/utils/logger.ts` (method, path without query, status, duration, IP; no bodies), `/health` checks the DB and returns 503 when down, notification mock logs omit message content outside development/test; tests in `backend/tests/observability.test.ts`. Remaining: external error reporting/monitoring and log shipping depend on the hosting/monitoring decision (P4-13).)
 - **Problem:** Only `console.*` is used: no request logging, correlation IDs, structured logs or error tracking. Notification bodies and user IDs are logged. `/health` doesn't check the DB.
 - **Evidence:** `notificationService.ts`, `app.ts`.
 - **Required fix:** Structured logger with redaction, request logging, DB-aware health/readiness endpoint, error reporting.
