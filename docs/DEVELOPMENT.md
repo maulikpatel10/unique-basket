@@ -51,3 +51,12 @@ Conventional style: `feat(customer-app): ...`, `fix(backend): ...`, `docs: ...`,
 ## 6. Environments & secrets
 - Use `.env` locally (git-ignored). Provide `.env.example` with variable names only.
 - Never commit keys, keystores, `key.properties`, or service-account JSON.
+
+## 7. Database migrations
+- **Create** schema changes only with `npx prisma migrate dev --name <change>` against a local/dev database, and commit the generated folder under `backend/prisma/migrations/`. Never edit a migration that has been applied anywhere.
+- **Never** use `prisma db push` or `prisma migrate reset` on shared, staging or production databases.
+- **Drift check** (run in CI/before release): on a database migrated with `npx prisma migrate deploy`,
+  `npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code` must report no difference.
+- **Deploy** order: take a backup → `npx prisma migrate deploy` → start the new build (`npm start`). The server validates secrets at startup and `/health` reports database connectivity.
+- **Databases that were changed with `db push`** (tables already exist): verify with the drift check, then mark the matching migration applied with `npx prisma migrate resolve --applied <migration_name>` instead of re-running it.
+- **Backups/restore:** DECISION REQUIRED — depends on the database host (P4-13). Before production: enable automated backups/PITR and rehearse a restore.

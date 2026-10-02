@@ -393,7 +393,7 @@
 - **Verification:** Boot doesn't write data; SIGTERM drains cleanly.
 
 ### P3-06 — Database migration, backup and recovery process undocumented
-- **Priority:** P3 · **Area:** Database / Ops · **Status:** TODO
+- **Priority:** P3 · **Area:** Database / Ops · **Status:** IN PROGRESS (migration create/deploy/drift-check/`migrate resolve` process documented in `docs/DEVELOPMENT.md` §7; backup/PITR policy and restore drill depend on the database host (P4-13); CI drift check waits on P3-01)
 - **Problem:** There's no documented `migrate deploy` step for deployments, no drift check, and no backup/restore policy.
 - **Evidence:** README describes `db push`; there's no deploy docs.
 - **Required fix:** Document the deploy-time `prisma migrate deploy`, add the CI drift check (P3-01), and define backup/PITR and restore drills (provider per P4-13).
