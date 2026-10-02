@@ -6,6 +6,21 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+// P0-07: This seed DELETES all existing data and creates admin accounts.
+// It may only run when NODE_ENV is explicitly 'development' or 'test'.
+const SEED_ALLOWED_ENVS = ['development', 'test'];
+if (!SEED_ALLOWED_ENVS.includes(process.env.NODE_ENV ?? '')) {
+  console.error(
+    `[seed] Refusing to run: NODE_ENV is "${process.env.NODE_ENV ?? '(unset)'}". ` +
+      'This seed wipes all data and is allowed only when NODE_ENV is "development" or "test".'
+  );
+  process.exit(1);
+}
+
+// Dev/test admin passwords. Override via env to avoid sharing well-known credentials.
+const SEED_SUPER_ADMIN_PASSWORD = process.env.SEED_SUPER_ADMIN_PASSWORD || 'SuperSecretPassword123';
+const SEED_MANAGER_PASSWORD = process.env.SEED_MANAGER_PASSWORD || 'ManagerPassword123';
+
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
   throw new Error('DATABASE_URL is not set in environment variables');
@@ -55,8 +70,8 @@ async function main() {
   console.log('Seeded delivery settings:', deliverySettings);
 
   // 3. Create Admin Users
-  const superAdminPassword = await bcrypt.hash('SuperSecretPassword123', 10);
-  const managerPassword = await bcrypt.hash('ManagerPassword123', 10);
+  const superAdminPassword = await bcrypt.hash(SEED_SUPER_ADMIN_PASSWORD, 10);
+  const managerPassword = await bcrypt.hash(SEED_MANAGER_PASSWORD, 10);
 
   const superAdmin = await prisma.adminUser.create({
     data: {

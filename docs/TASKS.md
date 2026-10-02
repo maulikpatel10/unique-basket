@@ -84,7 +84,7 @@
 - **Verification:** Concurrency tests: parallel cancel ×2 restores once; parallel adjust + checkout yields correct final stock and matching `inventory_transactions`.
 
 ### P0-07 — Seed script wipes data and creates known admin passwords
-- **Priority:** P0 · **Area:** Backend / Security / Ops · **Status:** TODO
+- **Priority:** P0 · **Area:** Backend / Security / Ops · **Status:** DONE (seed refuses to run unless `NODE_ENV` is `development`/`test`; admin passwords overridable via `SEED_SUPER_ADMIN_PASSWORD`/`SEED_MANAGER_PASSWORD`; tests in `backend/tests/seed_guard.test.ts`. Splitting reference-data seeding is left to P3-05.)
 - **Problem:** `prisma db seed` deletes existing records and creates SUPER_ADMIN/manager accounts with hard-coded passwords. Nothing prevents running it against a non-dev database.
 - **Evidence:** `prisma/seed.ts`: "Cleared existing records", `bcrypt.hash('SuperSecretPassword123')`, `'ManagerPassword123'`; `prisma.config.ts` wires it as the migrate seed.
 - **Required fix:** Refuse to run when `NODE_ENV=production` (or without an explicit override flag); read initial admin credentials from env or generate and print once; separate destructive dev reset from safe reference-data seeding.
