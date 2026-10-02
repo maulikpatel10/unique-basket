@@ -146,7 +146,7 @@ export class AuthController {
 
       const admin = await prisma.adminUser.findUnique({
         where: { email },
-        include: { managers: true },
+        include: { managers: { orderBy: { assignedAt: 'asc' } } },
       });
 
       if (!admin || !admin.isActive) {
@@ -248,7 +248,7 @@ export class AuthController {
           // Admin User refresh session
           const admin = await prisma.adminUser.findUnique({
             where: { id: decoded.id },
-            include: { managers: true },
+            include: { managers: { orderBy: { assignedAt: 'asc' } } },
           });
 
           if (!admin || !admin.isActive) {

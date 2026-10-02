@@ -29,7 +29,11 @@ export async function authenticate(req: AuthenticatedRequest, res: Response, nex
     if (decoded.role === 'SUPER_ADMIN' || decoded.role === 'STORE_MANAGER') {
       const dbUser = await prisma.adminUser.findUnique({
         where: { id: decoded.id },
-        select: { isActive: true },
+        select: {
+          isActive: true,
+          role: true,
+          managers: { select: { storeId: true }, orderBy: { assignedAt: 'asc' }, take: 1 },
+        },
       });
 
       if (!dbUser || !dbUser.isActive) {
@@ -37,6 +41,20 @@ export async function authenticate(req: AuthenticatedRequest, res: Response, nex
           success: false,
           message: 'Account is deactivated or does not exist.',
           errorCode: 'ACCOUNT_DEACTIVATED',
+        });
+        return;
+      }
+
+      // P1-10: role and store assignment come from the database, not the (possibly stale) token claim
+      decoded.role = dbUser.role;
+      decoded.storeId = dbUser.role === 'STORE_MANAGER' ? dbUser.managers[0]?.storeId : undefined;
+
+      // A store manager without a store assignment must not fall through to unfiltered (all-store) queries
+      if (dbUser.role === 'STORE_MANAGER' && !decoded.storeId) {
+        res.status(403).json({
+          success: false,
+          message: 'No store is assigned to this manager account.',
+          errorCode: 'NO_STORE_ASSIGNMENT',
         });
         return;
       }

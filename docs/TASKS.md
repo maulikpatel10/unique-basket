@@ -178,7 +178,7 @@
 - **Verification:** With a 1-minute access TTL in dev, the session survives beyond expiry; failed refresh logs out cleanly.
 
 ### P1-10 — Store-manager isolation relies on a stale token claim
-- **Priority:** P1 · **Area:** Backend / Authorization · **Status:** TODO
+- **Priority:** P1 · **Area:** Backend / Authorization · **Status:** DONE (`authenticate` resolves role and store assignment from the DB on every admin request; managers without an assignment get 403 `NO_STORE_ASSIGNMENT`; first assignment by `assignedAt` used consistently; tests in `backend/tests/manager_store_resolution.test.ts`. One-vs-many stores per manager remains a pending decision.)
 - **Problem:** The manager's `storeId` is read from the JWT (taken from `managers[0]`). After reassignment, the old store stays accessible until the token expires. The data model allows several stores per manager, but only the first is ever used.
 - **Evidence:** `authController.adminLogin/refresh` `managers[0].storeId`; `authMiddleware.requireStoreAccess/restrictManagerAccess` compare against `req.user.storeId`; `StoreManager` has `@@unique([adminUserId, storeId])` (many-to-many).
 - **Required fix:** Resolve the manager's store assignment from the DB in `authenticate` (it already loads `isActive`), and enforce one-store-per-manager or support many explicitly (DECISION REQUIRED if many).
