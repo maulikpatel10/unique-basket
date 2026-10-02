@@ -106,7 +106,7 @@
 - **Verification:** Address without coordinates is not treated as Rajkot centre; tests cover delivery assignment with/without coordinates.
 
 ### P1-02 — Deleting an address erases the delivery address of past orders
-- **Priority:** P1 · **Area:** Database / Orders · **Status:** TODO
+- **Priority:** P1 · **Area:** Database / Orders · **Status:** DONE (additive migration `20261002190000_add_order_delivery_address_snapshot` adds `orders.delivery_address_snapshot` and backfills it from existing addresses; checkout stores the snapshot for DELIVERY orders; customer/admin order details and admin payment details fall back to it when the address row is gone; tests in `backend/tests/order_address_snapshot.test.ts`)
 - **Problem:** `orders.address_id` is `ON DELETE SET NULL`, and the API hard-deletes addresses, so active and historical delivery orders lose their address.
 - **Evidence:** init migration `orders_address_id_fkey ... ON DELETE SET NULL`; `customerController.deleteAddress` uses `prisma.userAddress.delete`.
 - **Required fix:** Snapshot the delivery address on the order (like `order_items` does for products) and/or soft-delete addresses. Requires a schema change → needs approval.

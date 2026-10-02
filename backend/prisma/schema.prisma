@@ -176,6 +176,8 @@ model Order {
   fulfillmentType FulfillmentType @map("fulfillment_type")
   addressId       String?         @map("address_id") @db.Uuid
   address         UserAddress?    @relation(fields: [addressId], references: [id])
+  // P1-02: copy of the delivery address at checkout; survives address edits/deletion
+  deliveryAddressSnapshot Json?   @map("delivery_address_snapshot")
   subtotal        Decimal         @db.Decimal(10, 2)
   deliveryFee     Decimal         @map("delivery_fee") @db.Decimal(10, 2)
   codCharge       Decimal         @default(0.00) @map("cod_charge") @db.Decimal(10, 2)

@@ -183,7 +183,7 @@ export class AdminPaymentController {
           total: order.total,
           user: order.user,
           store: order.store,
-          deliveryAddress: order.address,
+          deliveryAddress: order.address ?? order.deliveryAddressSnapshot ?? null,
           razorpayTransactions: safePayments,
           isCOD: order.paymentMethod === 'COD',
         },

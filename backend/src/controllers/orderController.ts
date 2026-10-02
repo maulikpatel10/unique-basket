@@ -7,6 +7,7 @@ import { FulfillmentType, PaymentMethod, PaymentStatus, OrderStatus } from '@pri
 import { NotificationService } from '../services/notificationService';
 import { generateNextOrderNumber } from '../utils/orderNumber';
 import { AppError } from '../utils/errors';
+import { snapshotDeliveryAddress, withDeliveryAddress } from '../utils/orderAddress';
 import { validateQuantityForUnit } from '../utils/quantity';
 import { loadFareSettings, calculateDeliveryFee } from '../services/pricingService';
 import { claimOrderStatus, restoreOrderStock, ORDER_STATUS_CHANGED } from '../services/inventoryService';
@@ -51,6 +52,7 @@ export class OrderController {
       // Execute entire order creation within a database transaction
       const result = await prisma.$transaction(async (tx) => {
         let assignedStoreId = storeId;
+        let deliveryAddressSnapshot: ReturnType<typeof snapshotDeliveryAddress> | undefined;
         let calculatedDeliveryFee = 0.00;
 
         // 1. Load system configurations
@@ -79,6 +81,8 @@ export class OrderController {
           if (!address || address.userId !== userId) {
             throw new AppError(404, 'ADDRESS_NOT_FOUND', 'Delivery address not found.');
           }
+
+          deliveryAddressSnapshot = snapshotDeliveryAddress(address);
 
           const clientLat = Number(address.latitude);
           const clientLng = Number(address.longitude);
@@ -263,6 +267,7 @@ export class OrderController {
             storeId: assignedStoreId,
             fulfillmentType: fulfillmentType as FulfillmentType,
             addressId: fulfillmentType === 'DELIVERY' ? addressId : null,
+            deliveryAddressSnapshot: fulfillmentType === 'DELIVERY' ? deliveryAddressSnapshot : undefined,
             subtotal,
             deliveryFee: calculatedDeliveryFee,
             codCharge: calculatedCodCharge,
@@ -526,7 +531,7 @@ export class OrderController {
 
       res.status(200).json({
         success: true,
-        data: order,
+        data: withDeliveryAddress(order),
       });
     } catch (error) {
       next(error);

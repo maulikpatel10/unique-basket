@@ -3,6 +3,7 @@ import { prisma } from '../config/db';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 import { OrderStatus, PaymentStatus } from '@prisma/client';
 import { NotificationService } from '../services/notificationService';
+import { withDeliveryAddress } from '../utils/orderAddress';
 import { claimOrderStatus, restoreOrderStock, ORDER_STATUS_CHANGED } from '../services/inventoryService';
 import { getParam } from '../utils/request';
 
@@ -160,7 +161,7 @@ export class AdminOrderController {
 
       res.status(200).json({
         success: true,
-        data: order,
+        data: withDeliveryAddress(order),
       });
     } catch (error) {
       next(error);
