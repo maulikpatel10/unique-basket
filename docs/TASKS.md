@@ -348,7 +348,7 @@
 ## P3 — Production readiness
 
 ### P3-01 — No CI pipeline
-- **Priority:** P3 · **Area:** CI/CD · **Status:** TODO
+- **Priority:** P3 · **Area:** CI/CD · **Status:** DECISION REQUIRED (P-021: CI provider). Ready to implement once chosen: backend `tsc --noEmit`, `npm run build`, `npm test` against a PostgreSQL service + `prisma migrate deploy` + `prisma migrate diff --exit-code`; admin `npm test`, `npm run lint`, `npm run build`; Flutter `flutter analyze`, `flutter test`.)
 - **Problem:** Nothing runs build, lint or tests automatically; `develop`/`main` protection can't require checks.
 - **Evidence:** No `.github/workflows` (or other CI config) in the repo.
 - **Required fix:** CI jobs: backend tsc + tests against a PostgreSQL service + `prisma migrate diff` drift check; Flutter analyze/test; admin lint/build.
@@ -402,7 +402,7 @@
 - **Verification:** Documented and rehearsed restore.
 
 ### P3-07 — Android release configuration not production-ready
-- **Priority:** P3 · **Area:** Flutter / Android · **Status:** TODO
+- **Priority:** P3 · **Area:** Flutter / Android · **Status:** BLOCKED (verification + owner input). Android SDK downloads (dl.google.com) are blocked in this cloud environment, so release builds cannot be verified here. Needed: (1) owner-provided upload keystore and `android/key.properties` (already git-ignored); (2) then: read `key.properties` in `build.gradle.kts` for the release `signingConfig`, move `android:usesCleartextTraffic="true"` from `src/main/AndroidManifest.xml` to `src/debug` and `src/profile` manifests, confirm `applicationId`; (3) verify with `flutter build appbundle --release` and `apksigner verify`.
 - **Problem:** Release builds are signed with debug keys, and `usesCleartextTraffic="true"` is set in the main manifest (applies to release).
 - **Evidence:** `android/app/build.gradle.kts` (`signingConfig = signingConfigs.getByName("debug")`, TODO comment); `android/app/src/main/AndroidManifest.xml`.
 - **Required fix:** Release signing via `key.properties` (already git-ignored); move cleartext to debug/profile manifests only; review `applicationId`.
@@ -420,7 +420,7 @@
 - **Verification:** A release build without a base URL fails or uses the confirmed production URL.
 
 ### P3-09 — iOS permissions for features that don't exist
-- **Priority:** P3 · **Area:** Flutter / iOS · **Status:** TODO
+- **Priority:** P3 · **Area:** Flutter / iOS · **Status:** DONE (removed unused `NSMicrophoneUsageDescription` and `NSLocationWhenInUseUsageDescription`; camera and photo-library descriptions kept for profile photos. Plist validated with a parser; an iOS build was not possible in this environment. Re-add location when P4-04 is decided.)
 - **Problem:** `Info.plist` declares location and microphone usage although the app has no location or microphone feature. This is an App Store review risk and depends on P4-04.
 - **Evidence:** `ios/Runner/Info.plist` `NSLocationWhenInUseUsageDescription`, `NSMicrophoneUsageDescription`; no location packages in `pubspec.yaml`.
 - **Required fix:** Keep only the permissions that are actually used; revisit after P4-04.
