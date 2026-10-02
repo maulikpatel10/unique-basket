@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { prisma } from '../config/db';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
+import { validateQuantityForUnit } from '../utils/quantity';
 import { getParam } from '../utils/request';
 
 export class CartController {
@@ -139,6 +140,16 @@ export class CartController {
         return;
       }
 
+      const quantityError = validateQuantityForUnit(product.unit, targetQty);
+      if (quantityError) {
+        res.status(400).json({
+          success: false,
+          message: quantityError,
+          errorCode: 'INVALID_QUANTITY',
+        });
+        return;
+      }
+
       // Upsert cart item
       const cartItem = await prisma.cartItem.upsert({
         where: {
@@ -199,6 +210,7 @@ export class CartController {
 
       const cartItem = await prisma.cartItem.findUnique({
         where: { id },
+        include: { product: { select: { unit: true } } },
       });
 
       if (!cartItem || cartItem.userId !== userId) {
@@ -219,6 +231,16 @@ export class CartController {
         res.status(200).json({
           success: true,
           message: 'Cart item removed.',
+        });
+        return;
+      }
+
+      const quantityError = validateQuantityForUnit(cartItem.product.unit, targetQty);
+      if (quantityError) {
+        res.status(400).json({
+          success: false,
+          message: quantityError,
+          errorCode: 'INVALID_QUANTITY',
         });
         return;
       }

@@ -124,7 +124,7 @@
 - **Verification:** A server cart with 1.5 renders as 1.5 and round-trips unchanged; unit tests for parsing/formatting.
 
 ### P1-04 — Cart/order accept invalid quantities
-- **Priority:** P1 · **Area:** Backend / Cart, Orders · **Status:** TODO
+- **Priority:** P1 · **Area:** Backend / Cart, Orders · **Status:** DONE (D-007: PIECE quantities must be whole numbers; all units limited to 3 decimals and the DB maximum; enforced on cart add/update and checkout via `backend/src/utils/quantity.ts`; tests in `backend/tests/quantity_rules.test.ts`. Steps/limits for non-PIECE units remain P4-08.)
 - **Problem:** Any positive float is accepted for any unit (e.g. 2.37 PIECE, 0.0001 KG), with no upper bound; values beyond 3 decimals are silently rounded by the DB. No stock check when adding to cart.
 - **Evidence:** `cartController.addItem/updateItem` and `orderController.createOrder` only check `> 0`.
 - **Required fix:** Validate quantity per unit (integer for countable units, min/step/max for weight) and precision; optionally warn on stock at cart time.

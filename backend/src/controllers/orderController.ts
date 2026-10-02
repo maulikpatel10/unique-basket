@@ -7,6 +7,7 @@ import { FulfillmentType, PaymentMethod, PaymentStatus, OrderStatus } from '@pri
 import { NotificationService } from '../services/notificationService';
 import { generateNextOrderNumber } from '../utils/orderNumber';
 import { AppError } from '../utils/errors';
+import { validateQuantityForUnit } from '../utils/quantity';
 import { claimOrderStatus, restoreOrderStock, ORDER_STATUS_CHANGED } from '../services/inventoryService';
 import { getParam } from '../utils/request';
 
@@ -150,6 +151,11 @@ export class OrderController {
 
           if (!product || !product.isActive || !product.category.isActive) {
             throw new AppError(400, 'PRODUCT_UNAVAILABLE', `Product with ID ${productId} is not available.`);
+          }
+
+          const quantityError = validateQuantityForUnit(product.unit, qtyVal);
+          if (quantityError) {
+            throw new AppError(400, 'INVALID_QUANTITY', quantityError);
           }
 
           // Load current inventory to perform CAS update and transaction log
