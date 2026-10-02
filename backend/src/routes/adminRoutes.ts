@@ -10,6 +10,7 @@ import { AdminAuditController } from '../controllers/adminAuditController';
 import { AdminBannerController } from '../controllers/adminBannerController';
 import { AdminSettingsController } from '../controllers/adminSettingsController';
 import { AdminPincodeController } from '../controllers/adminPincodeController';
+import { AdminDashboardController } from '../controllers/adminDashboardController';
 import { authenticate, requireRole } from '../middlewares/authMiddleware';
 import { authRateLimits } from '../middlewares/rateLimit';
 
@@ -17,6 +18,14 @@ const router = Router();
 
 // Public Admin Auth
 router.post('/login', authRateLimits.adminLoginPerIp, authRateLimits.adminLoginPerEmail, AuthController.adminLogin);
+
+// Dashboard summary (P2-07): DB aggregates, store-isolated for managers
+router.get(
+  '/dashboard/summary',
+  authenticate,
+  requireRole(['SUPER_ADMIN', 'STORE_MANAGER']),
+  AdminDashboardController.getSummary
+);
 
 // Protected Admin order routes
 router.get(

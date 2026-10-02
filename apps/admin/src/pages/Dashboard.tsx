@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/authContextStore';
 import { api } from '../services/api';
-import type { Order, Store } from '../types';
+import type { Order } from '../types';
 import {
   TrendingUp,
   ShoppingBag,
@@ -14,7 +14,7 @@ import { asApiError } from '../utils/apiError';
 export const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
-  const [stores, setStores] = useState<Store[]>([]);
+  const [summary, setSummary] = useState({ totalOrders: 0, pendingOrders: 0, revenue: 0, activeStores: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,15 +24,16 @@ export const Dashboard: React.FC = () => {
         setLoading(true);
         setError(null);
 
-        // Fetch orders (api/v1/admin/orders automatically returns store-isolated orders for managers)
-        const ordersRes = await api.get('/admin/orders');
-        setOrders(ordersRes.data.data);
-
-        // Fetch admin stores list if Super Admin
-        if (user?.role === 'SUPER_ADMIN') {
-          const storesRes = await api.get('/admin/stores');
-          setStores(storesRes.data.data);
-        }
+        // P2-07: metrics are aggregated server-side (store-isolated for managers)
+        const res = await api.get('/admin/dashboard/summary');
+        const data = res.data.data;
+        setOrders(data.recentOrders ?? []);
+        setSummary({
+          totalOrders: data.totalOrders ?? 0,
+          pendingOrders: data.pendingOrders ?? 0,
+          revenue: Number(data.revenue ?? 0),
+          activeStores: data.activeStores ?? 0,
+        });
       } catch (caught: unknown) {
         const err = asApiError(caught);
         console.error('Failed to load dashboard metrics:', err);
@@ -45,16 +46,9 @@ export const Dashboard: React.FC = () => {
     fetchDashboardData();
   }, [user]);
 
-  // Compute metrics from fetched data
-  const totalOrders = orders.length;
-  const completedOrders = orders.filter((o) => o.orderStatus === 'DELIVERED' || o.orderStatus === 'PICKED_UP');
-  const revenue = completedOrders.reduce((sum, o) => sum + Number(o.total), 0);
-  const pendingOrders = orders.filter(
-    (o) => o.orderStatus === 'PLACED' || o.orderStatus === 'CONFIRMED' || o.orderStatus === 'PREPARING'
-  ).length;
-
-  // Active Outlets count: strictly counts outlets where isActive === true
-  const activeOutletsCount = stores.filter((s) => s.isActive === true).length;
+  // Metrics from the server-side summary
+  const { totalOrders, pendingOrders, revenue } = summary;
+  const activeOutletsCount = summary.activeStores;
 
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(val);

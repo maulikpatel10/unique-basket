@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { PrivateRoute } from './components/PrivateRoute';
@@ -6,30 +6,39 @@ import { DashboardLayout } from './layouts/DashboardLayout';
 
 // Pages
 import { Login } from './pages/Login';
-import { Dashboard } from './pages/Dashboard';
-import { Stores } from './pages/Stores';
-import { StoreDetails } from './pages/StoreDetails';
-import { Managers } from './pages/Managers';
-import { ManagerDetails } from './pages/ManagerDetails';
-import { Categories } from './pages/Categories';
-import { Products } from './pages/Products';
-import { Inventory } from './pages/Inventory';
-import { Customers } from './pages/Customers';
-import { CustomerDetails } from './pages/CustomerDetails';
-import { Orders } from './pages/Orders';
-import { OrderDetails } from './pages/OrderDetails';
-import { PickupVerification } from './pages/PickupVerification';
-import { Payments } from './pages/Payments';
-import { PaymentDetails } from './pages/PaymentDetails';
-import { Settings } from './pages/Settings';
-import { Pincodes } from './pages/Pincodes';
-import { Banners } from './pages/Banners';
-import { AuditLogs } from './pages/AuditLogs';
+
+// P2-07: route-level code splitting (pages load on demand)
+const Dashboard = lazy(() => import('./pages/Dashboard').then((m) => ({ default: m.Dashboard })));
+const Stores = lazy(() => import('./pages/Stores').then((m) => ({ default: m.Stores })));
+const StoreDetails = lazy(() => import('./pages/StoreDetails').then((m) => ({ default: m.StoreDetails })));
+const Managers = lazy(() => import('./pages/Managers').then((m) => ({ default: m.Managers })));
+const ManagerDetails = lazy(() => import('./pages/ManagerDetails').then((m) => ({ default: m.ManagerDetails })));
+const Categories = lazy(() => import('./pages/Categories').then((m) => ({ default: m.Categories })));
+const Products = lazy(() => import('./pages/Products').then((m) => ({ default: m.Products })));
+const Inventory = lazy(() => import('./pages/Inventory').then((m) => ({ default: m.Inventory })));
+const Customers = lazy(() => import('./pages/Customers').then((m) => ({ default: m.Customers })));
+const CustomerDetails = lazy(() => import('./pages/CustomerDetails').then((m) => ({ default: m.CustomerDetails })));
+const Orders = lazy(() => import('./pages/Orders').then((m) => ({ default: m.Orders })));
+const OrderDetails = lazy(() => import('./pages/OrderDetails').then((m) => ({ default: m.OrderDetails })));
+const PickupVerification = lazy(() => import('./pages/PickupVerification').then((m) => ({ default: m.PickupVerification })));
+const Payments = lazy(() => import('./pages/Payments').then((m) => ({ default: m.Payments })));
+const PaymentDetails = lazy(() => import('./pages/PaymentDetails').then((m) => ({ default: m.PaymentDetails })));
+const Settings = lazy(() => import('./pages/Settings').then((m) => ({ default: m.Settings })));
+const Pincodes = lazy(() => import('./pages/Pincodes').then((m) => ({ default: m.Pincodes })));
+const Banners = lazy(() => import('./pages/Banners').then((m) => ({ default: m.Banners })));
+const AuditLogs = lazy(() => import('./pages/AuditLogs').then((m) => ({ default: m.AuditLogs })));
 
 export const App: React.FC = () => {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <Suspense
+          fallback={
+            <div className="flex h-screen items-center justify-center bg-darkbg-900">
+              <div className="h-12 w-12 animate-spin rounded-full border-4 border-brand-500 border-t-transparent"></div>
+            </div>
+          }
+        >
         <Routes>
           {/* Public Route */}
           <Route path="/login" element={<Login />} />
@@ -209,6 +218,7 @@ export const App: React.FC = () => {
           {/* Catch-all Fallback */}
           <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
         </Routes>
+        </Suspense>
       </BrowserRouter>
     </AuthProvider>
   );

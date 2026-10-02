@@ -326,7 +326,7 @@
 - **Verification:** `npm run lint` → 0 errors.
 
 ### P2-07 — Admin performance: unpaginated lists, single 572 kB bundle
-- **Priority:** P2 · **Area:** Admin + Backend · **Status:** TODO
+- **Priority:** P2 · **Area:** Admin + Backend · **Status:** IN PROGRESS (done: `GET /admin/dashboard/summary` computes totals/pending/revenue/active stores/5 recent orders in the DB (store-isolated) and the dashboard uses it instead of downloading all orders; admin pages lazy-loaded (main chunk 572 kB → 303 kB); tests in `backend/tests/admin_dashboard.test.ts`. Remaining: server-side pagination for the products, categories, stores and managers lists (orders, payments, customers, banners and audit logs already paginate).)
 - **Problem:** The dashboard fetches all orders (`GET /admin/orders` with no page → backend returns everything). Product, customer and store lists are also unpaginated. There's no code splitting.
 - **Evidence:** `Dashboard.tsx` `api.get('/admin/orders')`; `adminOrderController.getOrders` returns everything without `page`/`limit`; build warning.
 - **Required fix:** Server-side aggregates for the dashboard, pagination everywhere, route-level lazy loading.
