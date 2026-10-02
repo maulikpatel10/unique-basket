@@ -142,7 +142,7 @@
 - **Verification:** Tests: delivery disabled → cart fee consistent with checkout; inactive-category item flagged.
 
 ### P1-06 — Flutter cart silently diverges from the server cart
-- **Priority:** P1 · **Area:** Flutter / Cart, Checkout · **Status:** TODO
+- **Priority:** P1 · **Area:** Flutter / Cart, Checkout · **Status:** DONE (failed cart writes set `cartSyncErrorProvider` (shown app-wide as a SnackBar) and reload the server cart, rolling back optimistic changes; `getCartSummary` rethrows instead of returning an empty cart; checkout resolves items from the store catalogue or the server cart, never a ₹0 "Fresh Item", and blocks ordering when an item is unresolved or no address exists; removed fake name/phone/address/UPI fallbacks and the client-only "Special Bag Discount" (D-007: backend-authoritative totals; offers are P4-11). Tests: `test/cart_sync_reconciliation_test.dart`, new checkout cases P1-06a/b; 598/598 Flutter tests.)
 - **Problem:** Cart sync calls swallow all errors (`catch (_) {}`), and `getCartSummary` returns an empty cart on any error. Checkout builds the order from local state and shows unknown products as a ₹0 "Fresh Item" placeholder.
 - **Evidence:** `cart_provider.dart` `_syncAddItem/_syncUpdateItem/_syncRemoveItem`; `cart_remote_data_source.dart` `getCartSummary` catch; `checkout_screen.dart` placeholder `ProductModel(name: 'Fresh Item', price: 0.0)`.
 - **Required fix:** Surface sync failures, roll back optimistic updates, reconcile with the server before checkout, never show placeholder prices.
@@ -250,7 +250,7 @@
 - **Verification:** Recorded results; 0 analyzer issues and all tests pass, or new tasks filed.
 
 ### P1-18 — Missing critical Flutter tests
-- **Priority:** P1 · **Area:** Testing / Flutter · **Status:** TODO
+- **Priority:** P1 · **Area:** Testing / Flutter · **Status:** IN PROGRESS (cart sync failure/rollback tests added with P1-06 and session-expiry redirect tests with P1-07; decimal quantity round-trip tests are blocked with P1-03 on P4-08)
 - **Problem:** No tests for decimal quantity round-trip, cart sync failure/rollback, session-expiry redirect, or checkout reconciliation with the server cart.
 - **Evidence:** No test references decimal cart quantities (`CartItemModel` is int-only); no router redirect exists to test.
 - **Required fix:** Add tests with P1-03, P1-06, P1-07.

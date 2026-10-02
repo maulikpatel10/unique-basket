@@ -54,6 +54,8 @@ class CartRemoteDataSourceImpl implements CartRemoteDataSource {
       if (kDebugMode) {
         debugPrint('[UB-PERSISTENCE] CART API ERROR: $e');
       }
+      // P1-06: never turn a failed request into an empty cart; callers decide how to handle it
+      rethrow;
     }
     return const CartSummaryModel();
   }

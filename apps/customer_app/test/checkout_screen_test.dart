@@ -287,18 +287,19 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      // Subtotal: ₹60.00, Delivery Fee: ₹30.00, Discount: -₹20.00, To Pay: ₹70.00
+      // Subtotal: ₹60.00, Delivery Fee: ₹30.00, To Pay: ₹90.00
+      // (no client-side discount: totals come from the backend, D-007 / P1-06)
       expect(find.text('₹60.00'), findsNWidgets(2)); // Item price & Subtotal
       expect(find.text('₹30.00'), findsOneWidget); // Delivery fee
-      expect(find.text('₹70.00'), findsOneWidget); // To Pay
+      expect(find.text('₹90.00'), findsOneWidget); // To Pay
 
       // Tap + on Kale
       await tester.tap(find.byIcon(Icons.add_rounded));
       await tester.pumpAndSettle();
 
-      // Subtotal now ₹120.00, Delivery Fee: ₹30.00, Discount: -₹20.00, To Pay: ₹130.00
+      // Subtotal now ₹120.00, Delivery Fee: ₹30.00, To Pay: ₹150.00
       expect(find.text('₹120.00'), findsOneWidget);
-      expect(find.text('₹130.00'), findsOneWidget);
+      expect(find.text('₹150.00'), findsOneWidget);
     });
 
     testWidgets('6. Quantity decrement updates item total and totals', (tester) async {
@@ -317,14 +318,14 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('₹120.00'), findsOneWidget);
-      expect(find.text('₹130.00'), findsOneWidget);
+      expect(find.text('₹150.00'), findsOneWidget);
 
       // Tap - on Kale
       await tester.tap(find.byIcon(Icons.remove_rounded));
       await tester.pumpAndSettle();
 
       expect(find.text('₹60.00'), findsNWidgets(2));
-      expect(find.text('₹70.00'), findsOneWidget);
+      expect(find.text('₹90.00'), findsOneWidget);
     });
 
     testWidgets('7. Decrementing last item handles empty cart', (tester) async {
@@ -453,7 +454,7 @@ void main() {
       await tester.pumpAndSettle();
     });
 
-    testWidgets('11. Bill Details calculations: Subtotal, Delivery Free, Bag Discount, To Pay, and Savings', (tester) async {
+    testWidgets('11. Bill Details calculations: Subtotal, Delivery Free, To Pay; no client-side discount', (tester) async {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
       final localStorage = LocalStorageService(prefs);
@@ -471,19 +472,17 @@ void main() {
       // 2 * 180 + 1 * 60 + 1 * 140 = 360 + 60 + 140 = 560
       expect(find.text('BILL DETAILS'), findsOneWidget);
       expect(find.text('Items Subtotal'), findsOneWidget);
-      expect(find.text('₹560.00'), findsOneWidget);
 
       expect(find.text('Delivery Fee'), findsOneWidget);
       expect(find.text('FREE'), findsNWidgets(2)); // Delivery fee & Handling
 
-      expect(find.text('Special Bag Discount'), findsOneWidget);
-      expect(find.text('-₹20.00'), findsOneWidget);
+      // D-007 / P1-06: no discount unless the backend applies one (offers undecided, P4-11)
+      expect(find.text('Special Bag Discount'), findsNothing);
+      expect(find.textContaining('You saved'), findsNothing);
 
-      // To Pay = 560 - 20 = 540
+      // To Pay = subtotal (free delivery) = 560 → shown as subtotal and To Pay
       expect(find.text('To Pay'), findsOneWidget);
-      expect(find.text('₹540.00'), findsOneWidget);
-
-      expect(find.text('🎉 You saved ₹20.00 on this order'), findsOneWidget);
+      expect(find.text('₹560.00'), findsNWidgets(2));
     });
 
     testWidgets('12. Place Order button renders with lock icon', (tester) async {
@@ -807,11 +806,75 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      // Subtotal: 60.00, Delivery Fee: 50.00, Discount: -20.00, To Pay: 90.00
+      // Subtotal: 60.00, Delivery Fee: 50.00, To Pay: 110.00 (no client-side discount, D-007)
       expect(find.text('₹60.00'), findsNWidgets(2)); // Item price & Subtotal
       expect(find.text('₹50.00'), findsOneWidget); // Delivery Fee
-      expect(find.text('-₹20.00'), findsOneWidget); // Discount
-      expect(find.text('₹90.00'), findsOneWidget); // To Pay: 60 + 50 - 20
+      expect(find.text('-₹20.00'), findsNothing); // No discount
+      expect(find.text('₹110.00'), findsOneWidget); // To Pay: 60 + 50
+    });
+
+    testWidgets('P1-06a. Item missing from the store catalogue uses server cart details, never a placeholder', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final localStorage = LocalStorageService(prefs);
+
+      tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+      tester.view.devicePixelRatio = 3.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      await tester.pumpWidget(_createCheckoutTestWidget(
+        localStorage: localStorage,
+        cartSummary: const CartSummaryModel(
+          items: [
+            CartItemModel(
+              id: 'ci_1',
+              productId: 'p_server_only',
+              productName: 'Server Only Grapes',
+              unit: 'KG',
+              price: 95.0,
+              quantity: 1,
+              totalPrice: 95.0,
+            ),
+          ],
+          subtotal: 95.0,
+          deliveryFee: 30.0,
+          total: 125.0,
+          freeDeliveryThreshold: 499.0,
+        ),
+        initialCart: {'p_server_only': 1},
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Server Only Grapes'), findsOneWidget);
+      expect(find.text('Fresh Item'), findsNothing);
+      expect(find.byKey(const Key('checkout_blocked_message')), findsNothing);
+    });
+
+    testWidgets('P1-06b. Unresolvable cart item blocks ordering instead of showing a ₹0 placeholder', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final localStorage = LocalStorageService(prefs);
+      final orderRepo = MockOrderRepository();
+
+      tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+      tester.view.devicePixelRatio = 3.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      await tester.pumpWidget(_createCheckoutTestWidget(
+        localStorage: localStorage,
+        cartSummary: const CartSummaryModel(),
+        mockOrderRepo: orderRepo,
+        initialCart: {'p_kale': 1, 'p_ghost': 2},
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Fresh Item'), findsNothing);
+      expect(find.byKey(const Key('checkout_blocked_message')), findsOneWidget);
+
+      await tester.ensureVisible(find.text('PLACE ORDER'));
+      await tester.tap(find.text('PLACE ORDER'));
+      await tester.pumpAndSettle();
+      expect(orderRepo.lastPayload, isNull);
     });
 
     testWidgets('18. Authoritative backend CartSummary pricing values render directly on Checkout screen', (tester) async {

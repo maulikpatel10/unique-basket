@@ -55,6 +55,12 @@ enum CartSyncStatus {
 /// Provider exposing whether Cart is currently performing an initial load or background refresh.
 final cartSyncStatusProvider = StateProvider<CartSyncStatus>((ref) => CartSyncStatus.idle);
 
+/// P1-06: user-facing message set when a cart change could not be saved to the server.
+/// The cart is then reloaded from the server so local and server state do not diverge.
+final cartSyncErrorProvider = StateProvider<String?>((ref) => null);
+
+const String cartSyncFailedMessage = "Couldn't update your cart. Showing your latest saved cart.";
+
 /// State for active quantities in cart mapped by productId.
 class CartStateNotifier extends StateNotifier<Map<String, int>> {
   final Ref? _ref;
@@ -302,7 +308,9 @@ class CartStateNotifier extends StateNotifier<Map<String, int>> {
       if (res.containsKey('id') && res['id'] is String) {
         _productIdToCartItemId[productId] = res['id'] as String;
       }
-    } catch (_) {}
+    } catch (e) {
+      await _onSyncFailed(e);
+    }
   }
 
   Future<void> _syncUpdateItem(String productId, int quantity) async {
@@ -320,7 +328,9 @@ class CartStateNotifier extends StateNotifier<Map<String, int>> {
       } else {
         await _syncAddItem(productId, quantity);
       }
-    } catch (_) {}
+    } catch (e) {
+      await _onSyncFailed(e);
+    }
   }
 
   Future<void> _syncRemoveItem(String productId) async {
@@ -333,7 +343,22 @@ class CartStateNotifier extends StateNotifier<Map<String, int>> {
       if (cartItemId != null && cartItemId.isNotEmpty) {
         await _cartRepository!.removeItem(cartItemId);
       }
-    } catch (_) {}
+    } catch (e) {
+      await _onSyncFailed(e);
+    }
+  }
+
+  /// P1-06: a cart change failed on the server. Surface it and reconcile with the
+  /// server cart (rolls back the optimistic local change when the server is reachable).
+  Future<void> _onSyncFailed(Object error) async {
+    if (kDebugMode) {
+      debugPrint('[UB-PERSISTENCE] CART SYNC FAILED: $error');
+    }
+    if (!mounted) return;
+    if (_ref != null) {
+      _ref!.read(cartSyncErrorProvider.notifier).state = cartSyncFailedMessage;
+    }
+    await loadCart();
   }
 }
 

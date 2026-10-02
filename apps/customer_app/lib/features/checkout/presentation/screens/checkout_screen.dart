@@ -36,7 +36,6 @@ class CheckoutScreen extends ConsumerStatefulWidget {
 }
 
 class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
-  static const double _specialBagDiscount = 20.0;
   bool _isSubmitting = false;
   bool _orderPlaced = false;
 
@@ -223,10 +222,19 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final productsAsync = ref.watch(homeProductsProvider);
     final List<ProductModel> storeProducts = productsAsync.asData?.value ?? const [];
 
+    // Authoritative Cart & Pricing summary from backend
+    final cartSummaryAsync = ref.watch(cartSummaryProvider);
+    final cartSummary = cartSummaryAsync.asData?.value;
+    final Map<String, CartItemModel> serverCartItems = {
+      for (final item in cartSummary?.items ?? const <CartItemModel>[]) item.productId: item,
+    };
+
     // Resolve cart items
     final List<_CheckoutCartItem> cartItems = [];
     final List<Map<String, dynamic>> orderPayloadItems = [];
     double subtotal = 0.0;
+    // P1-06: items that cannot be resolved from the store catalogue or the server cart block ordering
+    int unresolvedItemCount = 0;
 
     for (final entry in cart.entries) {
       final productId = entry.key;
@@ -238,15 +246,24 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             orElse: () => null,
           );
 
-      final product = matchedProduct ??
-          ProductModel(
-            id: productId,
-            categoryId: 'cat_general',
-            name: 'Fresh Item',
-            price: 0.0,
-            unit: '1 unit',
-            stockQuantity: 10.0,
-          );
+      final serverItem = serverCartItems[productId];
+      final ProductModel? product = matchedProduct ??
+          (serverItem != null
+              ? ProductModel(
+                  id: productId,
+                  categoryId: '',
+                  name: serverItem.productName ?? '',
+                  price: serverItem.price,
+                  mrp: serverItem.mrp,
+                  unit: serverItem.unit ?? '',
+                )
+              : null);
+
+      if (product == null) {
+        // Never show placeholder names/prices for items we cannot resolve
+        unresolvedItemCount++;
+        continue;
+      }
 
       final itemTotal = product.price * quantity;
       subtotal += itemTotal;
@@ -271,14 +288,15 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final profileAsync = ref.watch(customerProfileProvider);
     final profile = profileAsync.asData?.value;
 
-    final customerName = profile?['name'] as String? ?? 'Maulik Patel';
+    final customerName = profile?['name'] as String? ?? '';
     final customerPhone = profile?['phone'] as String? ??
-        (defaultAddress?['phone'] as String? ?? '+91 98765 43210');
+        (defaultAddress?['phone'] as String? ?? '');
 
     final addressTitle = defaultAddress?['title'] as String? ?? 'Home';
-    final addressLine = defaultAddress?['addressLine'] as String? ??
-        '123, Example Road, Green Heights, Opp. Central Park, Ahmedabad, Gujarat 380001';
     final addressId = defaultAddress?['id'] as String?;
+    final addressLine = defaultAddress?['addressLine'] as String? ??
+        'Add a delivery address to continue';
+    final bool canPlaceOrder = unresolvedItemCount == 0 && addressId != null;
 
     // Resolve Serving Store
     final servingStoreAsync = ref.watch(servingStoreProvider);
@@ -297,11 +315,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         );
     final upiTitle = defaultUpi != null && defaultUpi.subtitle.isNotEmpty
         ? 'UPI — ${defaultUpi.subtitle}'
-        : (defaultUpi?.title ?? 'UPI — maulik@okaxis');
-
-    // Authoritative Cart & Pricing summary from backend
-    final cartSummaryAsync = ref.watch(cartSummaryProvider);
-    final cartSummary = cartSummaryAsync.asData?.value;
+        : (defaultUpi?.title ?? 'UPI — Pay with any UPI app');
 
     // Delivery settings from backend
     final deliverySettingsAsync = ref.watch(deliverySettingsProvider);
@@ -321,13 +335,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             ? (authoritativeSubtotal >= freeDeliveryThreshold ? 0.0 : backendDeliveryFeeConfig)
             : 0.0);
 
-    final double discount = (cartSummary != null && cartSummary.discount > 0)
-        ? cartSummary.discount
-        : (authoritativeSubtotal >= _specialBagDiscount ? _specialBagDiscount : 0.0);
+    // P1-06 / D-007: discounts come only from the backend (offers are undecided, P4-11)
+    final double discount = cartSummary?.discount ?? 0.0;
 
     // Final authoritative payable amount from backend pricing
     final double toPay = (cartSummary != null && cartSummary.total > 0)
-        ? (cartSummary.total - (cartSummary.discount > 0 ? 0.0 : discount)).clamp(0.0, double.infinity)
+        ? cartSummary.total
         : (authoritativeSubtotal + deliveryFee - discount).clamp(0.0, double.infinity);
 
     return Scaffold(
@@ -883,42 +896,44 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     ),
                     const SizedBox(height: 10.0),
 
-                    // Special Bag Discount
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Flexible(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Text('🏷 ', style: TextStyle(fontSize: 13)),
-                              Flexible(
-                                child: Text(
-                                  'Special Bag Discount',
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontFamily: AppTextStyles.fontFamily,
-                                    fontSize: context.sp(13),
-                                    fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF16A34A),
+                    // Discount (only when applied by the backend)
+                    if (discount > 0) ...[
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Flexible(
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text('🏷 ', style: TextStyle(fontSize: 13)),
+                                Flexible(
+                                  child: Text(
+                                    'Special Bag Discount',
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontFamily: AppTextStyles.fontFamily,
+                                      fontSize: context.sp(13),
+                                      fontWeight: FontWeight.w600,
+                                      color: const Color(0xFF16A34A),
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                        Text(
-                          '-₹${discount.toStringAsFixed(2)}',
-                          style: TextStyle(
-                            fontFamily: AppTextStyles.fontFamily,
-                            fontSize: context.sp(13),
-                            fontWeight: FontWeight.w800,
-                            color: const Color(0xFF16A34A),
+                          Text(
+                            '-₹${discount.toStringAsFixed(2)}',
+                            style: TextStyle(
+                              fontFamily: AppTextStyles.fontFamily,
+                              fontSize: context.sp(13),
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF16A34A),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10.0),
+                        ],
+                      ),
+                      const SizedBox(height: 10.0),
+                    ],
 
                     // Handling & Taxes
                     _buildBillRow(
@@ -964,39 +979,58 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       ],
                     ),
 
-                    const SizedBox(height: 14.0),
+                    // Savings banner (only when the backend applied a discount)
+                    if (discount > 0) ...[
+                      const SizedBox(height: 14.0),
 
-                    // Savings Pill Banner
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 12.0),
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? const Color(0xFF014D40).withValues(alpha: 0.25)
-                            : const Color(0xFFE7F5F4),
-                        borderRadius: BorderRadius.circular(10.0),
-                        border: Border.all(
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 12.0),
+                        decoration: BoxDecoration(
                           color: isDark
-                              ? const Color(0xFF014D40).withValues(alpha: 0.45)
-                              : const Color(0xFFCDECE9),
-                          width: 1.0,
-                        ),
-                      ),
-                      child: Center(
-                        child: Text(
-                          '🎉 You saved ₹${discount.toStringAsFixed(2)} on this order',
-                          style: TextStyle(
-                            fontFamily: AppTextStyles.fontFamily,
-                            fontSize: context.sp(13),
-                            fontWeight: FontWeight.w700,
+                              ? const Color(0xFF014D40).withValues(alpha: 0.25)
+                              : const Color(0xFFE7F5F4),
+                          borderRadius: BorderRadius.circular(10.0),
+                          border: Border.all(
                             color: isDark
-                                ? const Color(0xFF34D399)
-                                : const Color(0xFF014D40),
+                                ? const Color(0xFF014D40).withValues(alpha: 0.45)
+                                : const Color(0xFFCDECE9),
+                            width: 1.0,
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            '🎉 You saved ₹${discount.toStringAsFixed(2)} on this order',
+                            style: TextStyle(
+                              fontFamily: AppTextStyles.fontFamily,
+                              fontSize: context.sp(13),
+                              fontWeight: FontWeight.w700,
+                              color: isDark
+                                  ? const Color(0xFF34D399)
+                                  : const Color(0xFF014D40),
+                            ),
                           ),
                         ),
                       ),
-                    ),
+                    ],
                     const SizedBox(height: 18.0),
+
+                    if (!canPlaceOrder) ...[
+                      Text(
+                        unresolvedItemCount > 0
+                            ? 'Some items in your cart are unavailable. Please review your cart.'
+                            : 'Add a delivery address to place your order.',
+                        key: const Key('checkout_blocked_message'),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontFamily: AppTextStyles.fontFamily,
+                          fontSize: context.sp(12),
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFFB91C1C),
+                        ),
+                      ),
+                      const SizedBox(height: 10.0),
+                    ],
 
                     // PLACE ORDER CTA BUTTON
                     AppButton(
@@ -1006,7 +1040,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       isLoading: _isSubmitting,
                       icon: Icons.lock_outline_rounded,
                       iconPosition: IconPosition.trailing,
-                      onPressed: _isSubmitting
+                      onPressed: _isSubmitting || !canPlaceOrder
                           ? null
                           : () => _handlePlaceOrder(
                                 items: orderPayloadItems,
