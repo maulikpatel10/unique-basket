@@ -133,7 +133,7 @@
 - **Verification:** Tests reject fractional PIECE, excess precision, huge values.
 
 ### P1-05 — Cart totals inconsistent with checkout
-- **Priority:** P1 · **Area:** Backend / Cart, Pricing · **Status:** TODO
+- **Priority:** P1 · **Area:** Backend / Cart, Pricing · **Status:** DONE (cart and checkout share `backend/src/services/pricingService.ts`; delivery-disabled cart shows no fee + `deliveryEnabled`; inactive-category items excluded; tests in `backend/tests/cart_totals.test.ts`. Out-of-stock flagging needs a store context in the cart and is left for the cart/checkout reconciliation in P1-06.)
 - **Problem:** `GET /cart` uses a ₹30 fee when delivery is disabled (`deliveryEnabled ? fee : 30.00`), includes products whose category is inactive, and includes out-of-stock items, so the cart shows totals checkout will reject.
 - **Evidence:** `cartController.getCart` (`configDeliveryFee` expression; filter only on `product.isActive`).
 - **Required fix:** Share one fare calculation between cart and checkout; exclude/flag unavailable items consistently.

@@ -8,6 +8,7 @@ import { NotificationService } from '../services/notificationService';
 import { generateNextOrderNumber } from '../utils/orderNumber';
 import { AppError } from '../utils/errors';
 import { validateQuantityForUnit } from '../utils/quantity';
+import { loadFareSettings, calculateDeliveryFee } from '../services/pricingService';
 import { claimOrderStatus, restoreOrderStock, ORDER_STATUS_CHANGED } from '../services/inventoryService';
 import { getParam } from '../utils/request';
 
@@ -53,18 +54,16 @@ export class OrderController {
         let calculatedDeliveryFee = 0.00;
 
         // 1. Load system configurations
-        const deliverySettings = await tx.deliverySettings.findFirst();
-        const configDeliveryFee = deliverySettings ? Number(deliverySettings.deliveryFee) : 30.00;
-        const configFreeThreshold = deliverySettings ? Number(deliverySettings.freeDeliveryThreshold) : 499.00;
-        const configMinDeliveryOrder = deliverySettings ? Number(deliverySettings.minimumOrderAmount) : 199.00;
-        const configCodCharge = deliverySettings ? Number(deliverySettings.codCharge) : 20.00;
-        const configMinCodOrder = deliverySettings ? Number(deliverySettings.minimumCodOrderAmount) : 100.00;
-        const configMaxCodOrder = deliverySettings ? Number(deliverySettings.maximumCodOrderAmount) : 5000.00;
+        const fares = await loadFareSettings(tx);
+        const configMinDeliveryOrder = fares.minimumOrderAmount;
+        const configCodCharge = fares.codCharge;
+        const configMinCodOrder = fares.minimumCodOrderAmount;
+        const configMaxCodOrder = fares.maximumCodOrderAmount;
 
         // 2. Fulfillment checks
         if (fulfillmentType === 'DELIVERY') {
           // Check if delivery is enabled
-          if (deliverySettings && deliverySettings.deliveryEnabled === false) {
+          if (!fares.deliveryEnabled) {
             throw new Error('DELIVERY_DISABLED');
           }
 
@@ -222,11 +221,7 @@ export class OrderController {
             throw new Error(`MINIMUM_DELIVERY_AMOUNT_NOT_MET:${configMinDeliveryOrder}`);
           }
 
-          if (subtotal >= configFreeThreshold) {
-            calculatedDeliveryFee = 0.00;
-          } else {
-            calculatedDeliveryFee = configDeliveryFee;
-          }
+          calculatedDeliveryFee = calculateDeliveryFee(subtotal, fares);
         } else if (fulfillmentType === 'PICKUP') {
           calculatedDeliveryFee = 0.00;
         }
@@ -234,11 +229,11 @@ export class OrderController {
         // 5. Validate COD & Calculate COD charge
         let calculatedCodCharge = 0.00;
         if (paymentMethod === 'COD') {
-          if (deliverySettings && !deliverySettings.codEnabled) {
+          if (!fares.codEnabled) {
             throw new Error('COD_DISABLED');
           }
 
-          if (fulfillmentType === 'PICKUP' && deliverySettings && !deliverySettings.pickupCodEnabled) {
+          if (fulfillmentType === 'PICKUP' && !fares.pickupCodEnabled) {
             throw new Error('PICKUP_COD_DISABLED');
           }
 

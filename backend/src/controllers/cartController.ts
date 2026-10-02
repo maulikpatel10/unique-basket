@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import { prisma } from '../config/db';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 import { validateQuantityForUnit } from '../utils/quantity';
+import { loadFareSettings, calculateDeliveryFee } from '../services/pricingService';
 import { getParam } from '../utils/request';
 
 export class CartController {
@@ -32,13 +33,14 @@ export class CartController {
               mrp: true,
               unit: true,
               isActive: true,
+              category: { select: { isActive: true } },
             },
           },
         },
       });
 
-      // Filter out inactive products from cart response if any
-      const activeItems = cartItems.filter((item) => item.product.isActive);
+      // Exclude items checkout would reject: inactive products or products in inactive categories (P1-05)
+      const activeItems = cartItems.filter((item) => item.product.isActive && item.product.category.isActive);
 
       // Calculate subtotal safely avoiding floating point errors
       let subtotal = 0;
@@ -62,13 +64,10 @@ export class CartController {
       });
 
       // Fetch delivery settings for authoritative pricing calculations
-      const deliverySettings = await prisma.deliverySettings.findFirst();
-      const configDeliveryFee = deliverySettings && deliverySettings.deliveryEnabled ? Number(deliverySettings.deliveryFee) : 30.00;
-      const configFreeThreshold = deliverySettings ? Number(deliverySettings.freeDeliveryThreshold) : 499.00;
-
-      // Delivery fee is 0 if cart is empty or if subtotal meets free delivery threshold
-      const deliveryFee = activeItems.length > 0
-        ? (subtotal >= configFreeThreshold ? 0.00 : configDeliveryFee)
+      // Same fare rules as checkout (P1-05). No delivery fee when the cart is empty or delivery is disabled.
+      const fares = await loadFareSettings(prisma);
+      const deliveryFee = activeItems.length > 0 && fares.deliveryEnabled
+        ? calculateDeliveryFee(subtotal, fares)
         : 0.00;
 
       const total = parseFloat((subtotal + deliveryFee).toFixed(2));
@@ -80,7 +79,9 @@ export class CartController {
           subtotal,
           deliveryFee,
           total,
-          freeDeliveryThreshold: configFreeThreshold,
+          freeDeliveryThreshold: fares.freeDeliveryThreshold,
+          deliveryEnabled: fares.deliveryEnabled,
+          minimumOrderAmount: fares.minimumOrderAmount,
         },
       });
     } catch (error) {
