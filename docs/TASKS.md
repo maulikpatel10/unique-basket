@@ -187,7 +187,7 @@
 - **Verification:** Test: reassign manager → next request to the old store returns 403.
 
 ### P1-11 — No rate limiting on auth endpoints
-- **Priority:** P1 · **Area:** Backend / Security · **Status:** TODO
+- **Priority:** P1 · **Area:** Backend / Security · **Status:** DONE (in-memory fixed-window limiter `backend/src/middlewares/rateLimit.ts`, no new dependency: send-otp 20/15min/IP, verify-otp 30/15min/IP, refresh 60/15min/IP, admin login 20/15min/IP + 10/15min/email → 429 `RATE_LIMITED` with `Retry-After`; tests in `backend/tests/rate_limit.test.ts`. Single-instance only; a shared store and `trust proxy` are needed behind a load balancer (P3-03).)
 - **Problem:** `/admin/login` can be brute-forced. `/auth/send-otp` is limited only per phone, in memory, so rotating numbers is unlimited (SMS cost once a provider exists).
 - **Evidence:** No rate-limit middleware in `app.ts`; `otpService` per-phone `Map` only.
 - **Required fix:** IP + identity rate limiting on `send-otp`, `verify-otp`, `admin/login`, `refresh`; lockout/backoff for admin login.

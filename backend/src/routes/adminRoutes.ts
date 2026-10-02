@@ -11,11 +11,12 @@ import { AdminBannerController } from '../controllers/adminBannerController';
 import { AdminSettingsController } from '../controllers/adminSettingsController';
 import { AdminPincodeController } from '../controllers/adminPincodeController';
 import { authenticate, requireRole } from '../middlewares/authMiddleware';
+import { authRateLimits } from '../middlewares/rateLimit';
 
 const router = Router();
 
 // Public Admin Auth
-router.post('/login', AuthController.adminLogin);
+router.post('/login', authRateLimits.adminLoginPerIp, authRateLimits.adminLoginPerEmail, AuthController.adminLogin);
 
 // Protected Admin order routes
 router.get(
