@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_constants.dart';
@@ -17,6 +19,7 @@ import '../../../profile_setup/presentation/providers/customer_profile_provider.
 import '../../../search/presentation/providers/search_provider.dart';
 import '../../../store/presentation/providers/store_provider.dart';
 import '../../data/datasources/auth_remote_data_source.dart';
+import '../../data/datasources/session_revocation_remote_data_source.dart';
 import '../../data/repositories/auth_repository.dart';
 import 'auth_state.dart';
 
@@ -24,6 +27,11 @@ import 'auth_state.dart';
 final authRemoteDataSourceProvider = Provider<AuthRemoteDataSource>((ref) {
   final apiClient = ref.watch(apiClientProvider);
   return AuthRemoteDataSourceImpl(apiClient);
+});
+
+/// Provider for server-side session revocation on logout.
+final sessionRevocationDataSourceProvider = Provider<SessionRevocationRemoteDataSource>((ref) {
+  return SessionRevocationRemoteDataSource(ref.watch(apiClientProvider));
 });
 
 /// Provider for AuthRepository.
@@ -333,12 +341,27 @@ class AuthNotifier extends StateNotifier<AuthState> {
     } catch (_) {}
   }
 
+  /// Best-effort revocation of the refresh session on the backend.
+  /// Never blocks local logout: failures (offline, missing provider) are ignored.
+  Future<void> _revokeServerSession() async {
+    try {
+      final refreshToken = await _secureStorage.getRefreshToken();
+      if (refreshToken == null || refreshToken.trim().isEmpty || _ref == null) return;
+      final revocation = _ref!.read(sessionRevocationDataSourceProvider);
+      // Fire-and-forget: local logout never waits for (or fails because of) the network.
+      unawaited(revocation.revokeSession(refreshToken).catchError((Object _) {}));
+    } catch (_) {
+      // Local logout proceeds regardless.
+    }
+  }
+
   /// Logs out the user by clearing secure tokens, purging user-scoped local storage,
   /// resetting user-bound Riverpod providers, and clearing authentication state.
   Future<void> logout() async {
     if (kDebugMode) {
       debugPrint('[UB-PERSISTENCE] LOGOUT CLEANUP');
     }
+    await _revokeServerSession();
     await _secureStorage.clearTokens();
     if (_localStorage != null) {
       await _localStorage!.clearUserSessionData();

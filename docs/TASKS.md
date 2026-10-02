@@ -160,7 +160,7 @@
 - **Verification:** Tests: expired refresh → redirected to login; unauthenticated deep link to `/cart` → login; dev routes absent in release.
 
 ### P1-08 — Logout and refresh tokens are not enforced server-side
-- **Priority:** P1 · **Area:** Backend + Flutter / Auth · **Status:** TODO
+- **Priority:** P1 · **Area:** Backend + Flutter / Auth · **Status:** DONE (additive migration `20261002180000_add_refresh_tokens`; refresh tokens carry a session id (`jti`) and must match a live, unexpired, unrevoked `refresh_tokens` row; refresh rejects deactivated customers/admins and revokes their session; logout revokes the given session and only deletes device tokens owned by its user; Flutter logout revokes the session fire-and-forget. No rotation (client compatibility). Pre-existing refresh tokens become invalid once → users log in again. Tests: `backend/tests/session_revocation.test.ts`, `apps/customer_app/test/logout_session_revocation_test.dart`.)
 - **Problem:** Refresh tokens are stateless and can't be revoked (valid 7 days after logout or deactivation). Customer refresh doesn't check `isActive`. `/auth/logout` is unauthenticated and deletes any device token by value. The app's logout never calls the backend.
 - **Evidence:** `authController.refresh` (customer branch has no `isActive` check), `authController.logout`; `authRoutes.ts` (`/logout` without `authenticate`); Flutter `AuthNotifier.logout` only clears local storage.
 - **Required fix:** Persist/rotate refresh tokens (or a token version per user), revoke on logout/deactivation, authenticate logout, call it from the app. Needs schema approval if persisted.

@@ -19,6 +19,7 @@ model User {
   addresses    UserAddress[]
   orders       Order[]
   deviceTokens DeviceToken[]
+  refreshTokens RefreshToken[]
   cartItems    CartItem[]
   favorites    Favorite[]
   notifications Notification[]
@@ -83,6 +84,7 @@ model AdminUser {
   managers             StoreManager[]
   auditLogs            AuditLog[]
   deviceTokens         DeviceToken[]
+  refreshTokens        RefreshToken[]
   inventoryTransactions InventoryTransaction[]
 
   @@map("admin_users")
@@ -399,3 +401,19 @@ model SupportedPincode {
 }
 
 
+
+// P1-08: server-side record of issued refresh tokens so sessions can be revoked (logout, deactivation)
+model RefreshToken {
+  id          String     @id @default(uuid()) @db.Uuid
+  userId      String?    @map("user_id") @db.Uuid
+  user        User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  adminUserId String?    @map("admin_user_id") @db.Uuid
+  adminUser   AdminUser? @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+  expiresAt   DateTime   @map("expires_at") @db.Timestamptz(6)
+  revokedAt   DateTime?  @map("revoked_at") @db.Timestamptz(6)
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([userId])
+  @@index([adminUserId])
+  @@map("refresh_tokens")
+}

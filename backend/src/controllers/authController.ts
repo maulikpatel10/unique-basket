@@ -2,7 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../config/db';
 import { OtpService, isOtpBypassEnabled } from '../services/otpService';
-import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt';
+import { generateAccessToken } from '../utils/jwt';
+import { issueRefreshToken, validateRefreshToken, revokeRefreshSession } from '../services/sessionService';
 
 export class AuthController {
   /**
@@ -104,7 +105,7 @@ export class AuthController {
         phone: user.phone,
       });
 
-      const refreshToken = generateRefreshToken({
+      const refreshToken = await issueRefreshToken({
         id: user.id,
         role: 'customer',
       });
@@ -179,7 +180,7 @@ export class AuthController {
         storeId,
       });
 
-      const refreshToken = generateRefreshToken({
+      const refreshToken = await issueRefreshToken({
         id: admin.id,
         role: admin.role,
       });
@@ -206,12 +207,14 @@ export class AuthController {
 
   /**
    * Refresh Token endpoint.
+   * P1-08: the refresh token must belong to a live (not revoked, not expired) session
+   * and the account must still be active.
    */
   static async refresh(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { refreshToken } = req.body;
 
-      if (!refreshToken) {
+      if (!refreshToken || typeof refreshToken !== 'string') {
         res.status(400).json({
           success: false,
           message: 'Refresh token is required.',
@@ -220,71 +223,75 @@ export class AuthController {
         return;
       }
 
-      try {
-        const decoded = verifyRefreshToken(refreshToken);
-        
-        let accessToken = '';
+      // Throws AppError 401 INVALID_REFRESH_TOKEN (handled globally)
+      const session = await validateRefreshToken(refreshToken);
 
-        if (decoded.role === 'customer') {
-          const user = await prisma.user.findUnique({
-            where: { id: decoded.id },
+      let accessToken = '';
+
+      if (session.role === 'customer') {
+        const user = await prisma.user.findUnique({
+          where: { id: session.id },
+        });
+
+        if (!user) {
+          res.status(401).json({
+            success: false,
+            message: 'Session invalid: User not found.',
+            errorCode: 'USER_NOT_FOUND',
           });
-
-          if (!user) {
-            res.status(401).json({
-              success: false,
-              message: 'Session invalid: User not found.',
-              errorCode: 'USER_NOT_FOUND',
-            });
-            return;
-          }
-
-          accessToken = generateAccessToken({
-            id: user.id,
-            role: 'customer',
-            phone: user.phone,
-          });
-        } else {
-          // Admin User refresh session
-          const admin = await prisma.adminUser.findUnique({
-            where: { id: decoded.id },
-            include: { managers: { orderBy: { assignedAt: 'asc' } } },
-          });
-
-          if (!admin || !admin.isActive) {
-            res.status(401).json({
-              success: false,
-              message: 'Session invalid or admin account deactivated.',
-              errorCode: 'ADMIN_INACTIVE',
-            });
-            return;
-          }
-
-          const storeId = admin.role === 'STORE_MANAGER' && admin.managers.length > 0
-            ? admin.managers[0].storeId
-            : undefined;
-
-          accessToken = generateAccessToken({
-            id: admin.id,
-            role: admin.role as 'SUPER_ADMIN' | 'STORE_MANAGER',
-            email: admin.email,
-            storeId,
-          });
+          return;
         }
 
-        res.status(200).json({
-          success: true,
-          data: {
-            token: accessToken,
-          },
+        if (!user.isActive) {
+          await revokeRefreshSession(session.jti);
+          res.status(401).json({
+            success: false,
+            message: 'Customer account is deactivated.',
+            errorCode: 'ACCOUNT_DEACTIVATED',
+          });
+          return;
+        }
+
+        accessToken = generateAccessToken({
+          id: user.id,
+          role: 'customer',
+          phone: user.phone,
         });
-      } catch (err) {
-        res.status(401).json({
-          success: false,
-          message: 'Invalid or expired refresh token. Please log in again.',
-          errorCode: 'INVALID_REFRESH_TOKEN',
+      } else {
+        // Admin User refresh session
+        const admin = await prisma.adminUser.findUnique({
+          where: { id: session.id },
+          include: { managers: { orderBy: { assignedAt: 'asc' } } },
+        });
+
+        if (!admin || !admin.isActive) {
+          await revokeRefreshSession(session.jti);
+          res.status(401).json({
+            success: false,
+            message: 'Session invalid or admin account deactivated.',
+            errorCode: 'ADMIN_INACTIVE',
+          });
+          return;
+        }
+
+        const storeId = admin.role === 'STORE_MANAGER' && admin.managers.length > 0
+          ? admin.managers[0].storeId
+          : undefined;
+
+        accessToken = generateAccessToken({
+          id: admin.id,
+          role: admin.role as 'SUPER_ADMIN' | 'STORE_MANAGER',
+          email: admin.email,
+          storeId,
         });
       }
+
+      res.status(200).json({
+        success: true,
+        data: {
+          token: accessToken,
+        },
+      });
     } catch (error) {
       next(error);
     }
@@ -292,17 +299,28 @@ export class AuthController {
 
   /**
    * Logout endpoint.
+   * P1-08: revokes the supplied refresh token's session. A device token is only removed
+   * when it belongs to the owner of that (valid) refresh token.
    */
   static async logout(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      // In stateless JWT, logout is primarily handled client-side.
-      // However, we will clean up active push token registration here if a token is supplied.
-      const { deviceToken } = req.body;
-      
-      if (deviceToken) {
-        await prisma.deviceToken.deleteMany({
-          where: { token: deviceToken },
-        });
+      const { refreshToken, deviceToken } = req.body;
+
+      if (refreshToken && typeof refreshToken === 'string') {
+        try {
+          const session = await validateRefreshToken(refreshToken);
+          await revokeRefreshSession(session.jti);
+
+          if (deviceToken && typeof deviceToken === 'string') {
+            await prisma.deviceToken.deleteMany({
+              where: session.role === 'customer'
+                ? { token: deviceToken, userId: session.id }
+                : { token: deviceToken, adminUserId: session.id },
+            });
+          }
+        } catch {
+          // Already invalid/expired/revoked: nothing to revoke. Logout stays idempotent.
+        }
       }
 
       res.status(200).json({

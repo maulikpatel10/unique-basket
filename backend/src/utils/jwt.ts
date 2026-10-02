@@ -17,14 +17,18 @@ export function generateAccessToken(payload: TokenPayload): string {
   return jwt.sign(payload, accessSecret(), { expiresIn: '15m' });
 }
 
-export function generateRefreshToken(payload: { id: string; role: string }): string {
-  return jwt.sign(payload, refreshSecret(), { expiresIn: '7d' });
+/**
+ * Signs a refresh token. `sessionId` (JWT `jti`) links it to a revocable refresh_tokens row (P1-08).
+ * Use services/sessionService.issueRefreshToken rather than calling this directly.
+ */
+export function generateRefreshToken(payload: { id: string; role: string }, sessionId?: string): string {
+  return jwt.sign(payload, refreshSecret(), { expiresIn: '7d', ...(sessionId ? { jwtid: sessionId } : {}) });
 }
 
 export function verifyAccessToken(token: string): TokenPayload {
   return jwt.verify(token, accessSecret()) as TokenPayload;
 }
 
-export function verifyRefreshToken(token: string): { id: string; role: string } {
-  return jwt.verify(token, refreshSecret()) as { id: string; role: string };
+export function verifyRefreshToken(token: string): { id: string; role: string; jti?: string } {
+  return jwt.verify(token, refreshSecret()) as { id: string; role: string; jti?: string };
 }
