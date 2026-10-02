@@ -7,7 +7,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:customer_app/app/config/app_config.dart';
 import 'package:customer_app/app/config/environment.dart';
-import 'package:customer_app/app/router/route_names.dart';
 import 'package:customer_app/app/theme/app_theme.dart';
 import 'package:customer_app/core/providers/core_providers.dart';
 import 'package:customer_app/core/storage/local_storage_service.dart';
@@ -24,7 +23,6 @@ import 'package:customer_app/features/search/presentation/widgets/search_suggest
 import 'package:customer_app/features/store/data/models/store_model.dart';
 import 'package:customer_app/features/store/presentation/providers/store_provider.dart';
 import 'package:customer_app/shared/widgets/app_product_card.dart';
-import 'package:customer_app/shared/widgets/app_search_bar.dart';
 import 'package:customer_app/shared/widgets/checkout_bar.dart';
 
 const _mockCategories = [
@@ -100,7 +98,7 @@ const _mockProducts = [
 class _MockSearchRepo implements HomeRepository {
   final List<ProductModel> products;
   final List<CategoryModel> categories;
-  _MockSearchRepo({this.products = _mockProducts, this.categories = _mockCategories});
+  _MockSearchRepo() : categories = _mockCategories, products = _mockProducts;
 
   @override
   Future<List<CategoryModel>> getCategories() async => categories;

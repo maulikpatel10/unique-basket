@@ -1,19 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:customer_app/app/config/app_config.dart';
 import 'package:customer_app/app/config/environment.dart';
-import 'package:customer_app/app/router/route_names.dart';
 import 'package:customer_app/app/theme/app_theme.dart';
 import 'package:customer_app/core/providers/core_providers.dart';
 import 'package:customer_app/core/storage/local_storage_service.dart';
 import 'package:customer_app/features/address/presentation/providers/customer_address_provider.dart';
-import 'package:customer_app/features/cart/data/models/cart_summary_model.dart';
-import 'package:customer_app/features/cart/presentation/providers/cart_provider.dart';
 import 'package:customer_app/features/cart/presentation/screens/cart_screen.dart';
 import 'package:customer_app/features/checkout/data/repositories/order_repository.dart';
 import 'package:customer_app/features/checkout/presentation/providers/order_provider.dart';
@@ -73,7 +69,7 @@ const _sampleProducts = [
 
 class _MockHomeRepo implements HomeRepository {
   final List<ProductModel> products;
-  _MockHomeRepo({this.products = _sampleProducts});
+  _MockHomeRepo() : products = _sampleProducts;
 
   @override
   Future<List<CategoryModel>> getCategories() async => [];

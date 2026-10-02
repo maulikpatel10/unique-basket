@@ -10,7 +10,6 @@ import 'package:customer_app/features/store/presentation/providers/store_provide
 import 'package:customer_app/shared/widgets/app_bottom_nav_bar.dart';
 import 'package:customer_app/shared/widgets/app_empty_state.dart';
 import 'package:customer_app/shared/widgets/app_error_state.dart';
-import 'package:customer_app/shared/widgets/app_product_card.dart';
 import 'package:customer_app/shared/widgets/checkout_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

@@ -11,7 +11,6 @@ import 'package:customer_app/app/router/route_names.dart';
 import 'package:customer_app/app/theme/app_theme.dart';
 import 'package:customer_app/core/providers/core_providers.dart';
 import 'package:customer_app/core/storage/local_storage_service.dart';
-import 'package:customer_app/core/utils/currency_formatter.dart';
 import 'package:customer_app/features/home/data/models/banner_model.dart';
 import 'package:customer_app/features/home/data/models/category_model.dart';
 import 'package:customer_app/features/home/data/models/product_model.dart';

@@ -7,8 +7,6 @@ import 'package:customer_app/app/router/route_names.dart';
 import 'package:customer_app/features/checkout/data/repositories/order_repository.dart';
 import 'package:customer_app/features/checkout/presentation/providers/order_provider.dart';
 import 'package:customer_app/features/orders/presentation/screens/my_orders_screen.dart';
-import 'package:customer_app/features/orders/presentation/screens/order_details_screen.dart';
-import 'package:customer_app/features/orders/presentation/screens/order_tracking_screen.dart';
 import 'package:customer_app/features/orders/presentation/widgets/my_orders_help_card.dart';
 import 'package:customer_app/features/orders/presentation/widgets/order_history_card.dart';
 import 'package:customer_app/features/profile/presentation/screens/profile_screen.dart';

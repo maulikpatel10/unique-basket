@@ -5,7 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:customer_app/app/config/app_config.dart';
 import 'package:customer_app/app/config/environment.dart';
-import 'package:customer_app/core/constants/app_constants.dart';
 import 'package:customer_app/core/network/api_client.dart';
 import 'package:customer_app/core/providers/core_providers.dart';
 import 'package:customer_app/core/storage/local_storage_service.dart';
@@ -13,12 +12,9 @@ import 'package:customer_app/core/storage/secure_storage_service.dart';
 import 'package:customer_app/features/authentication/data/repositories/auth_repository.dart';
 import 'package:customer_app/features/authentication/presentation/providers/auth_provider.dart';
 import 'package:customer_app/features/cart/data/datasources/cart_remote_data_source.dart';
-import 'package:customer_app/features/cart/data/models/cart_item_model.dart';
 import 'package:customer_app/features/cart/data/repositories/cart_repository.dart';
-import 'package:customer_app/features/cart/presentation/providers/cart_provider.dart';
 import 'package:customer_app/features/favorites/data/datasources/favorites_remote_data_source.dart';
 import 'package:customer_app/features/favorites/data/repositories/favorites_repository.dart';
-import 'package:customer_app/features/favorites/presentation/providers/favorites_provider.dart';
 import 'package:customer_app/features/home/presentation/providers/home_provider.dart';
 
 class FakeApiClient extends ApiClient {

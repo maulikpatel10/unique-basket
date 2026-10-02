@@ -118,7 +118,7 @@ No `domain/` layers exist, although `ARCHITECTURE.md` / `AGENTS.md` describe Cle
 - Base URL: `--dart-define=API_BASE_URL`, else platform defaults (Android emulator `10.0.2.2:5001`, iOS `localhost:5001`).
 
 ### 3.3 Tests
-49 test files in `test/` (widget, flow, interceptor, router, responsive/theme). Not executed during this audit.
+49 test files in `test/` (widget, flow, interceptor, router, responsive/theme). Verified 2026-10-02 (P1-17): `flutter analyze` → no issues; `flutter test` → 584/584 pass.
 
 ### 3.4 Existing app docs (reference)
 `AGENTS.md`, `ARCHITECTURE.md`, `ARCHITECTURE_MIGRATION_PLAN.md`, `DEVELOPMENT_GUIDELINES.md`, `MOBILE_TODO.md`, `README.md`. `AGENTS.md` forbids agents from editing outside `customer_app/`; this conflicts with root-level docs work (DECISIONS P-020).

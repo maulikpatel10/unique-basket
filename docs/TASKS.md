@@ -241,7 +241,7 @@
 - **Verification:** Each such test carries a reference to its pending decision ID.
 
 ### P1-17 — Flutter analyze/test not verified
-- **Priority:** P1 · **Area:** Testing / Flutter · **Status:** TODO
+- **Priority:** P1 · **Area:** Testing / Flutter · **Status:** DONE (Flutter 3.x stable installed in the cloud session: `flutter analyze` → No issues found (was 28: unused test imports/params + missing `assets/icons/` entry); `flutter test` → 584/584 pass)
 - **Problem:** The Flutter SDK was not available during the audit, so the 49 test files (~20k lines) and lint status are unverified.
 - **Evidence:** `which flutter` → not found in the audit environment.
 - **Required fix:** Run `flutter analyze` and `flutter test` locally/CI; record results in `CURRENT_STATE.md`; triage failures into this backlog.

@@ -9,7 +9,6 @@ import 'package:customer_app/features/address/presentation/providers/customer_ad
 import 'package:customer_app/features/address/presentation/screens/my_addresses_screen.dart';
 import 'package:customer_app/features/profile/presentation/screens/profile_screen.dart';
 import 'package:customer_app/features/profile_setup/presentation/providers/customer_profile_provider.dart';
-import 'package:customer_app/features/store/presentation/providers/store_provider.dart';
 import 'package:customer_app/core/providers/core_providers.dart';
 import 'package:customer_app/core/storage/local_storage_service.dart';
 import 'package:customer_app/shared/widgets/app_error_state.dart';

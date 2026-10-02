@@ -4,7 +4,6 @@ import 'package:customer_app/app/config/environment.dart';
 import 'package:customer_app/app/router/route_names.dart';
 import 'package:customer_app/app/theme/app_theme.dart';
 import 'package:customer_app/core/constants/app_constants.dart';
-import 'package:customer_app/core/errors/app_exception.dart';
 import 'package:customer_app/core/network/auth_interceptor.dart';
 import 'package:customer_app/core/providers/core_providers.dart';
 import 'package:customer_app/core/services/startup_state_resolver.dart';
@@ -15,9 +14,7 @@ import 'package:customer_app/features/address/presentation/providers/customer_ad
 import 'package:customer_app/features/authentication/data/repositories/auth_repository.dart';
 import 'package:customer_app/features/authentication/presentation/providers/auth_provider.dart';
 import 'package:customer_app/features/authentication/presentation/screens/verify_otp_screen.dart';
-import 'package:customer_app/features/checkout/presentation/providers/order_provider.dart';
 import 'package:customer_app/features/home/presentation/providers/home_provider.dart';
-import 'package:customer_app/features/notifications/presentation/providers/notification_provider.dart';
 import 'package:customer_app/features/profile_setup/data/repositories/customer_profile_repository.dart';
 import 'package:customer_app/features/profile_setup/presentation/providers/customer_profile_provider.dart';
 import 'package:customer_app/features/search/presentation/providers/search_provider.dart';

@@ -12,7 +12,6 @@ import 'package:customer_app/app/theme/app_theme.dart';
 import 'package:customer_app/core/errors/app_exception.dart';
 import 'package:customer_app/core/providers/core_providers.dart';
 import 'package:customer_app/core/storage/local_storage_service.dart';
-import 'package:customer_app/core/storage/secure_storage_service.dart';
 import 'package:customer_app/features/authentication/data/repositories/auth_repository.dart';
 import 'package:customer_app/features/authentication/presentation/providers/auth_provider.dart';
 import 'package:customer_app/features/authentication/presentation/screens/mobile_number_screen.dart';

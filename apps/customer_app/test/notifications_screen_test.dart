@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:go_router/go_router.dart';
-import 'package:customer_app/app/router/route_names.dart';
 import 'package:customer_app/features/explore/presentation/screens/explore_screen.dart';
 import 'package:customer_app/features/favorites/presentation/screens/favorites_screen.dart';
 import 'package:customer_app/features/home/presentation/screens/home_screen.dart';
@@ -11,7 +9,6 @@ import 'package:customer_app/features/notifications/data/repositories/notificati
 import 'package:customer_app/features/notifications/presentation/providers/notification_provider.dart';
 import 'package:customer_app/features/notifications/presentation/screens/notifications_screen.dart';
 import 'package:customer_app/features/notifications/presentation/widgets/notification_card.dart';
-import 'package:customer_app/features/notifications/presentation/widgets/notification_section_header.dart';
 import 'package:customer_app/shared/widgets/app_empty_state.dart';
 import 'package:customer_app/shared/widgets/app_error_state.dart';
 import 'package:customer_app/shared/widgets/app_header.dart';
