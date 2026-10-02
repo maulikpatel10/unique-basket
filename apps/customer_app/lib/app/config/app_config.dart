@@ -52,8 +52,11 @@ class AppConfig {
           break;
         case Environment.staging:
         case Environment.production:
-          baseUrl = Env.prodBaseUrl;
-          break;
+          // P3-08: never silently point staging/production builds at a guessed URL
+          throw StateError(
+            'API_BASE_URL must be provided for ${environment.name} builds '
+            '(flutter build ... --dart-define=API_BASE_URL=https://<api-host>/api/v1).',
+          );
       }
     }
 

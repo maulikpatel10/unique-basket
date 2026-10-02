@@ -74,8 +74,10 @@ flutter run
 # Connect to custom LAN / staging backend
 flutter run --dart-define=API_BASE_URL=http://192.168.1.100:5001/api/v1
 
-# Connect to production backend
-flutter run --dart-define=API_BASE_URL=https://api.uniquebasket.com/api/v1
+# Release / staging builds MUST pass the API URL (the production domain is not decided yet).
+# Release builds default to APP_ENV=production and refuse to start without API_BASE_URL.
+flutter build appbundle --release --dart-define=API_BASE_URL=https://<api-host>/api/v1
+flutter run --dart-define=APP_ENV=staging --dart-define=API_BASE_URL=https://<staging-api-host>/api/v1
 ```
 
 ---

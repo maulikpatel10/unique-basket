@@ -411,7 +411,7 @@
 - **Verification:** `flutter build appbundle --release` is signed with the release key; no cleartext in release.
 
 ### P3-08 — Flutter build always targets the development environment
-- **Priority:** P3 · **Area:** Flutter / Config · **Status:** TODO
+- **Priority:** P3 · **Area:** Flutter / Config · **Status:** DONE (environment from `--dart-define=APP_ENV` with release builds defaulting to production; staging/production require `--dart-define=API_BASE_URL` and fail fast otherwise; removed the committed LAN IP and the unconfirmed production URL; README build commands updated; tests in `apps/customer_app/test/app_environment_test.dart`; 603/603 Flutter tests. The real production URL depends on P4-13.)
 - **Problem:** `main.dart` hard-codes `Environment.development`, so release builds hit `10.0.2.2`/`localhost` unless `--dart-define=API_BASE_URL` is passed. A personal LAN IP (`192.168.31.243`) is committed. The prod URL `https://api.uniquebasket.com/api/v1` is unverified.
 - **Evidence:** `lib/main.dart`, `lib/app/config/environment.dart`.
 - **Required fix:** Select the environment via `--dart-define`/flavors, require an explicit base URL for release, and remove the personal IP.

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app/app.dart';
@@ -10,10 +11,11 @@ import 'core/storage/secure_storage_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize App Configuration (Development default; configurable via env/arguments)
+  // Environment from --dart-define=APP_ENV (release builds default to production, P3-08).
+  // Staging/production require --dart-define=API_BASE_URL.
   AppConfig.initialize(
     appName: 'Unique Basket',
-    environment: Environment.development,
+    environment: resolveEnvironment(isRelease: kReleaseMode),
   );
 
   // Initialize Local SharedPreferences Storage
