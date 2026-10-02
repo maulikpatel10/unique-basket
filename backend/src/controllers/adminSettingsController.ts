@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { prisma } from '../config/db';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
+import { loadFareSettings } from '../services/pricingService';
 
 export class AdminSettingsController {
   /**
@@ -10,32 +11,11 @@ export class AdminSettingsController {
   static async getFareCodSettings(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const settings = await prisma.deliverySettings.findFirst();
+      const fares = await loadFareSettings(prisma);
 
       const data = settings
-        ? {
-            id: settings.id,
-            deliveryEnabled: settings.deliveryEnabled,
-            deliveryFee: Number(settings.deliveryFee),
-            freeDeliveryThreshold: Number(settings.freeDeliveryThreshold),
-            minimumOrderAmount: Number(settings.minimumOrderAmount),
-            codEnabled: settings.codEnabled,
-            codCharge: Number(settings.codCharge),
-            minimumCodOrderAmount: Number(settings.minimumCodOrderAmount),
-            maximumCodOrderAmount: Number(settings.maximumCodOrderAmount),
-            pickupCodEnabled: settings.pickupCodEnabled,
-            updatedAt: settings.updatedAt,
-          }
-        : {
-            deliveryEnabled: true,
-            deliveryFee: 30.0,
-            freeDeliveryThreshold: 499.0,
-            minimumOrderAmount: 199.0,
-            codEnabled: true,
-            codCharge: 20.0,
-            minimumCodOrderAmount: 100.0,
-            maximumCodOrderAmount: 5000.0,
-            pickupCodEnabled: true,
-          };
+        ? { id: settings.id, ...fares, updatedAt: settings.updatedAt }
+        : fares;
 
       res.status(200).json({
         success: true,
@@ -65,18 +45,20 @@ export class AdminSettingsController {
       } = req.body;
 
       const current = await prisma.deliverySettings.findFirst();
+      // Unspecified fields keep their current value (or the shared defaults when no row exists)
+      const base = await loadFareSettings(prisma);
 
       // Resolve candidate values
-      const parsedDeliveryFee = deliveryFee !== undefined ? parseFloat(deliveryFee) : current ? Number(current.deliveryFee) : 30.0;
-      const parsedFreeDeliveryThreshold = freeDeliveryThreshold !== undefined ? parseFloat(freeDeliveryThreshold) : current ? Number(current.freeDeliveryThreshold) : 499.0;
-      const parsedMinimumOrderAmount = minimumOrderAmount !== undefined ? parseFloat(minimumOrderAmount) : current ? Number(current.minimumOrderAmount) : 199.0;
-      const parsedCodCharge = codCharge !== undefined ? parseFloat(codCharge) : current ? Number(current.codCharge) : 20.0;
-      const parsedMinCod = minimumCodOrderAmount !== undefined ? parseFloat(minimumCodOrderAmount) : current ? Number(current.minimumCodOrderAmount) : 100.0;
-      const parsedMaxCod = maximumCodOrderAmount !== undefined ? parseFloat(maximumCodOrderAmount) : current ? Number(current.maximumCodOrderAmount) : 5000.0;
+      const parsedDeliveryFee = deliveryFee !== undefined ? parseFloat(deliveryFee) : base.deliveryFee;
+      const parsedFreeDeliveryThreshold = freeDeliveryThreshold !== undefined ? parseFloat(freeDeliveryThreshold) : base.freeDeliveryThreshold;
+      const parsedMinimumOrderAmount = minimumOrderAmount !== undefined ? parseFloat(minimumOrderAmount) : base.minimumOrderAmount;
+      const parsedCodCharge = codCharge !== undefined ? parseFloat(codCharge) : base.codCharge;
+      const parsedMinCod = minimumCodOrderAmount !== undefined ? parseFloat(minimumCodOrderAmount) : base.minimumCodOrderAmount;
+      const parsedMaxCod = maximumCodOrderAmount !== undefined ? parseFloat(maximumCodOrderAmount) : base.maximumCodOrderAmount;
 
-      const resolvedDeliveryEnabled = deliveryEnabled !== undefined ? Boolean(deliveryEnabled) : current ? current.deliveryEnabled : true;
-      const resolvedCodEnabled = codEnabled !== undefined ? Boolean(codEnabled) : current ? current.codEnabled : true;
-      const resolvedPickupCodEnabled = pickupCodEnabled !== undefined ? Boolean(pickupCodEnabled) : current ? current.pickupCodEnabled : true;
+      const resolvedDeliveryEnabled = deliveryEnabled !== undefined ? Boolean(deliveryEnabled) : base.deliveryEnabled;
+      const resolvedCodEnabled = codEnabled !== undefined ? Boolean(codEnabled) : base.codEnabled;
+      const resolvedPickupCodEnabled = pickupCodEnabled !== undefined ? Boolean(pickupCodEnabled) : base.pickupCodEnabled;
 
       // Validation 1: Numbers must be valid and non-NaN / finite
       if (

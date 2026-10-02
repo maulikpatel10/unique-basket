@@ -281,7 +281,7 @@
 - **Verification:** Existing tests stay green; controllers become thin.
 
 ### P2-02 — Duplicated pricing and stock-restore logic
-- **Priority:** P2 · **Area:** Backend · **Status:** TODO
+- **Priority:** P2 · **Area:** Backend · **Status:** DONE (fare/COD defaults live only in `backend/src/services/pricingService.ts`, used by cart, checkout, customer delivery-settings and admin fare/COD settings; stock restore lives in `backend/src/services/inventoryService.ts`; removed unrouted duplicate `AdminOrderController.get/updateDeliverySettings`. Admin store CRUD still delegates to `StoreController` (no duplication).)
 - **Problem:** Fare/COD defaults are duplicated in `cartController`, `orderController` and `adminSettingsController` (₹30/₹499/₹199/₹20/₹100/₹5000). Cancellation stock restore is duplicated in `orderController.cancelOrder` and `adminOrderController.updateOrderStatus`. The admin store controller delegates to the customer-facing `StoreController`.
 - **Evidence:** Files cited.
 - **Required fix:** Single pricing service and single inventory service.

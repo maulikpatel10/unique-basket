@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import { prisma } from '../config/db';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 import { getParam } from '../utils/request';
+import { loadFareSettings } from '../services/pricingService';
 
 export class CustomerController {
   /**
@@ -728,14 +729,14 @@ export class CustomerController {
    */
   static async getDeliverySettings(req: any, res: Response, next: NextFunction): Promise<void> {
     try {
-      const settings = await prisma.deliverySettings.findFirst();
+      const fares = await loadFareSettings(prisma);
       res.status(200).json({
         success: true,
         data: {
-          deliveryEnabled: settings ? settings.deliveryEnabled : true,
-          deliveryFee: settings ? Number(settings.deliveryFee) : 30.00,
-          freeDeliveryThreshold: settings ? Number(settings.freeDeliveryThreshold) : 499.00,
-          minimumOrderAmount: settings ? Number(settings.minimumOrderAmount) : 199.00,
+          deliveryEnabled: fares.deliveryEnabled,
+          deliveryFee: fares.deliveryFee,
+          freeDeliveryThreshold: fares.freeDeliveryThreshold,
+          minimumOrderAmount: fares.minimumOrderAmount,
         },
       });
     } catch (error) {
