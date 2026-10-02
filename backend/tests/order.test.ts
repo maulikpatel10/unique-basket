@@ -41,6 +41,14 @@ describe('Cart & Order Placement Integration Tests', () => {
     if (!apple) throw new Error('Seeded Apple product not found.');
     appleProductId = apple.id;
 
+    // The seed does not set product images; give the test product one so imageUrl can be asserted
+    if (!apple.imageUrl) {
+      await prisma.product.update({
+        where: { id: apple.id },
+        data: { imageUrl: 'https://example.com/test-images/apple.png' },
+      });
+    }
+
     // Reset store stock for Apple to exactly 50.00
     await prisma.storeInventory.upsert({
       where: {

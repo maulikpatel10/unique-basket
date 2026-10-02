@@ -214,7 +214,7 @@
 - **Verification:** Both formats map to the same user; tests.
 
 ### P1-14 — Backend tests: 15 failing in a default environment
-- **Priority:** P1 · **Area:** Testing / Backend · **Status:** TODO
+- **Priority:** P1 · **Area:** Testing / Backend · **Status:** DONE (289/289 on a fresh migrated+seeded DB, re-runnable without reseed; test-only payment secrets in `backend/tests/setup/env.ts`; test setup documented in `backend/README.md` → Testing)
 - **Problem:** Tests depend on unstated env and on fallback secrets that differ between tests and app code.
 - **Evidence:** No env: 15 failures (`admin_pincodes` 13 — tokens signed with `'secret'` while the app falls back to `'fallback_access_secret'`; `order` 1; `admin_order` 1). With `JWT_SECRET=secret`: 2 failures — `order.test.ts:225` expects `imageUrl` string but the seed leaves it null; `admin_order.test.ts:237` signs with `'rzp_test_key_secret_mock'` vs app fallback `'mock_key_secret'`. Tests share one DB and mutate state (re-runs drift).
 - **Required fix:** Add a committed test env (e.g. `.env.test` with non-secret values) and a reset/isolation strategy; fix the outdated expectations (seed vs test). The Razorpay test secret is payment code/test → coordinate with P4-01.

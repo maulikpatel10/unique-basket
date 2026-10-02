@@ -7,3 +7,8 @@ process.env.NODE_ENV = process.env.NODE_ENV || 'test';
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'test_only_jwt_access_secret_not_for_production';
 process.env.JWT_REFRESH_SECRET =
   process.env.JWT_REFRESH_SECRET || 'test_only_jwt_refresh_secret_not_for_production';
+
+// Payment provider test secrets (P1-14): tests and app must sign/verify with the same value.
+process.env.RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || 'test_only_razorpay_key_secret';
+process.env.RAZORPAY_WEBHOOK_SECRET =
+  process.env.RAZORPAY_WEBHOOK_SECRET || 'test_only_razorpay_webhook_secret';

@@ -323,12 +323,26 @@ The PostgreSQL schema managed by Prisma (`prisma/schema.prisma`) includes the fo
 
 ## Testing
 
-The project includes an automated test suite using **Jest**, **SWC**, and **Supertest**:
+The project includes an automated test suite using **Jest**, **SWC**, and **Supertest**.
+
+Tests run against a real PostgreSQL database. Use a **dedicated test database** (never a shared or production one):
 
 ```bash
-# Run all automated test suites
+# 1. Point DATABASE_URL at an empty test database
+export DATABASE_URL="postgresql://user:password@localhost:5432/unique_basket_test"
+
+# 2. Apply migrations and seed test data (the seed only runs with NODE_ENV=development|test)
+NODE_ENV=test npx prisma migrate deploy
+NODE_ENV=test npx prisma db seed
+
+# 3. Run all automated test suites
 npm test
 ```
+
+No other environment variables are needed. `tests/setup/env.ts` (loaded by `jest.config.js`) sets
+`NODE_ENV=test` and test-only values for `JWT_SECRET`, `JWT_REFRESH_SECRET`, `RAZORPAY_KEY_SECRET` and
+`RAZORPAY_WEBHOOK_SECRET`. Values already present in the environment take precedence. The suite can be
+re-run against the same database without reseeding.
 
 Test suites cover:
 - Customer authentication and OTP flow (`tests/auth.test.ts`)

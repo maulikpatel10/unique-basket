@@ -25,7 +25,7 @@
 ## 3. Test requirements (must pass before PR)
 **Backend** (`backend/`)
 - `npm run build` (tsc, no errors)
-- `npm test` against a dedicated test PostgreSQL database (never a shared/prod DB)
+- `npm test` against a dedicated test PostgreSQL database (never a shared/prod DB), after `NODE_ENV=test npx prisma migrate deploy` and `NODE_ENV=test npx prisma db seed`. Test secrets come from `backend/tests/setup/env.ts`; see `backend/README.md` → Testing.
 - Schema change: migration created with `prisma migrate dev`, reviewed, and approved
 
 **Customer app** (`apps/customer_app/`)
