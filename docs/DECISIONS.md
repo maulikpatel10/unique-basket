@@ -27,6 +27,11 @@ Each entry should include: date, decision, confirmed by, notes.
 - **Confirmed by:** Project owner (requested in documentation brief)
 - **Decision:** Feature branches → integrate into `develop` → `main` is protected. Details in `docs/DEVELOPMENT.md`.
 
+### D-004 — OTP length is 4 digits
+- **Date:** 2026-10-02
+- **Confirmed by:** Project owner (Claude Code session, P0-01 work)
+- **Decision:** OTPs are 4 digits in all environments, including production. The static `1234` bypass remains a temporary development/test workaround (enabled only when `NODE_ENV` is `development` or `test`) until an OTP provider is chosen (P-003).
+
 > No product or business rules (pricing, fees, COD, OTP, pickup, delivery radius, etc.) have been confirmed yet.
 
 ---
@@ -40,7 +45,7 @@ All items below are **DECISION REQUIRED**. Do not implement or change these area
 | P-001 | Payment provider | Backend: Razorpay SDK, order creation, signature verify, webhook; Prisma `Payment` has `razorpay_*` columns. App: no payment SDK; "UPI" option sends `ONLINE` and goes straight to success screen. | PDF: Cashfree (feature list); costing lists both Cashfree and Razorpay | DECISION REQUIRED |
 | P-002 | Online payment UX/flow in app | Not implemented | — | DECISION REQUIRED |
 | P-003 | OTP / SMS provider | In-memory mock, logs OTP to console; no SMS gateway | PDF: MSG91 | DECISION REQUIRED |
-| P-004 | OTP length | App: 4 digits. Backend: `1234` in dev/test, 6 digits otherwise. Old docs: 6 digits | — | DECISION REQUIRED |
+| P-004 | OTP length | Resolved by D-004 (4 digits) | — | DECIDED (D-004) |
 | P-005 | OTP storage / rate limits / expiry | In-memory Map (lost on restart, single instance); 5 min expiry, 3 attempts, 5 req/hr | Old plan: hashed in cache/DB | DECISION REQUIRED |
 | P-006 | Pickup scope (customer app) | Backend supports PICKUP orders + manager pickup verification; app checkout hard-codes `DELIVERY` | Old plan describes pickup; PDF does not mention pickup | DECISION REQUIRED |
 | P-007 | Location provider (GPS / geocoding) | No location/geocoding package; addresses carry lat/lng supplied by client | Old plan: geocoding/Google Maps | DECISION REQUIRED |

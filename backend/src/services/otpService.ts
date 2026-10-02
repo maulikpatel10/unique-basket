@@ -1,3 +1,5 @@
+import { randomInt } from 'crypto';
+
 interface OtpRecord {
   otp: string;
   expiresAt: Date;
@@ -15,6 +17,16 @@ const RESEND_COOLDOWN_MS = 60 * 1000; // 1 minute
 const MAX_VERIFICATION_ATTEMPTS = 3;
 const MAX_REQUESTS_PER_HOUR = 5;
 const HOUR_MS = 60 * 60 * 1000;
+export const OTP_LENGTH = 4; // Project decision D-004: 4-digit OTP in all environments
+
+/**
+ * Static OTP bypass is a temporary workaround until a real OTP provider is chosen.
+ * Enabled ONLY when NODE_ENV is explicitly 'development' or 'test'.
+ * A missing or any other NODE_ENV is treated as production.
+ */
+export function isOtpBypassEnabled(): boolean {
+  return process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
+}
 
 export class OtpService {
   /**
@@ -61,13 +73,15 @@ export class OtpService {
     }
 
     // Generate OTP (Temporary development workaround: static '1234')
-    const isDevOrTest = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test' || !process.env.NODE_ENV;
+    const isDevOrTest = isOtpBypassEnabled();
     const generatedOtp = isDevOrTest
       ? '1234'
-      : Math.floor(100000 + Math.random() * 900000).toString();
+      : randomInt(0, 10 ** OTP_LENGTH).toString().padStart(OTP_LENGTH, '0');
 
-    // Log the OTP securely on server side
-    console.log(`[SMS-MOCK] OTP for ${phone} is: ${generatedOtp}`);
+    // Log the OTP only in development/test (never in production)
+    if (isDevOrTest) {
+      console.log(`[SMS-MOCK] OTP for ${phone} is: ${generatedOtp}`);
+    }
 
     // Update/create store entry
     otpStore.set(phone, {

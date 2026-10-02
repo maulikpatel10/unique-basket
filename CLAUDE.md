@@ -33,10 +33,11 @@ Key docs:
 Rules:
 - Never treat existing code, old docs, or `reference/UNIQUE BASKET.pdf` as a product decision.
 - Never invent a decision. If unclear, write "DECISION REQUIRED" and ask.
-- **Ask the owner before** changing anything in an undecided area (see Pending Decisions in `docs/DECISIONS.md`), including: payment provider, OTP provider/length, pickup scope, location/maps, notifications.
+- **Ask the owner before** changing anything in an undecided area (see Pending Decisions in `docs/DECISIONS.md`), including: payment provider, OTP provider, pickup scope, location/maps, notifications.
 
 ## Critical business rules already decided
-- None of the product/business rules are confirmed yet. See `docs/DECISIONS.md`.
+- OTP length is **4 digits** in all environments (D-004). The static `1234` bypass is dev/test only.
+- No other product/business rules are confirmed yet. See `docs/DECISIONS.md`.
 - Payment provider: **DECISION REQUIRED** (backend has Razorpay code; PDF mentions Cashfree; app has no payment SDK). Do not change payment code without approval.
 
 ## Git rules

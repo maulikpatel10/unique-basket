@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../config/db';
-import { OtpService } from '../services/otpService';
+import { OtpService, isOtpBypassEnabled } from '../services/otpService';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt';
 
 export class AuthController {
@@ -31,7 +31,7 @@ export class AuthController {
         return;
       }
 
-      const isDevOrTest = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test' || !process.env.NODE_ENV;
+      const isDevOrTest = isOtpBypassEnabled();
 
       res.status(200).json({
         success: true,

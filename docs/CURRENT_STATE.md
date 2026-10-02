@@ -48,8 +48,8 @@ No CI configuration exists. Branch protection status on GitHub: not verified fro
 
 ### 2.3 OTP (`services/otpService.ts`)
 - In-memory `Map` (not persisted; not multi-instance safe).
-- dev/test/unset `NODE_ENV`: static OTP `1234`, returned in API response. Otherwise random 6-digit.
-- No SMS provider; OTP logged to console as `[SMS-MOCK]` (including in production branch of code).
+- `NODE_ENV` = `development`/`test` only: static OTP `1234`, returned in API response and logged. Otherwise (including unset): random 4-digit OTP (`crypto.randomInt`), not returned or logged (D-004, P0-01).
+- No SMS provider; outside dev/test there is no way to deliver the OTP yet (P4-02).
 - Expiry 5 min, resend cooldown 60 s, 3 verify attempts, 5 requests/hour → 15 min block.
 
 ### 2.4 Orders (`controllers/orderController.ts`)

@@ -30,7 +30,7 @@
 ## P0 — Critical correctness/security
 
 ### P0-01 — OTP bypass and OTP leakage when `NODE_ENV` is unset
-- **Priority:** P0 · **Area:** Backend / Auth · **Status:** TODO
+- **Priority:** P0 · **Area:** Backend / Auth · **Status:** DONE (bypass limited to explicit `development`/`test`; 4-digit random OTP otherwise per D-004; tests in `backend/tests/otp_bypass.test.ts`)
 - **Problem:** If `NODE_ENV` is missing, every OTP is the static `1234` and the OTP is returned in the API response, so anyone can log in as any phone number. OTPs are also written to stdout in every environment.
 - **Evidence:** `otpService.ts` `isDevOrTest = NODE_ENV==='development' || 'test' || !NODE_ENV` → `'1234'`; `authController.sendOtp` returns `otp` under the same condition; `console.log('[SMS-MOCK] OTP for ${phone} is: ...')` runs unconditionally. README marks `NODE_ENV` as optional.
 - **Required fix:** Treat unknown/missing `NODE_ENV` as production (allow-list `development`/`test` explicitly). Never return or log the OTP outside dev/test. Fail startup in production when no real OTP delivery is configured (provider itself is P4-02).
@@ -447,11 +447,11 @@
 - **Dependencies:** Owner decision. **Security-critical if ONLINE stays enabled.**
 - **Verification:** Defined after the decision; must include signature/ownership/state tests.
 
-### P4-02 — OTP/SMS provider, OTP length and OTP storage
+### P4-02 — OTP/SMS provider and OTP storage
 - **Priority:** P4 · **Area:** Auth · **Status:** DECISION REQUIRED
-- **Problem:** There's no SMS provider (mock only). The app uses 4 digits, the backend uses `1234` in dev/test and 6 digits otherwise. The OTP store is an in-memory `Map` (lost on restart, not multi-instance).
+- **Problem:** There's no SMS provider (mock only). OTP length is decided: 4 digits everywhere (D-004, implemented with P0-01). The OTP store is an in-memory `Map` (lost on restart, not multi-instance).
 - **Evidence:** `otpService.ts`; Flutter `verify_otp_screen.dart` `_otpLength = 4`.
-- **Required fix:** Decide provider, length and storage, then implement (hashed OTP, persistent/shared store).
+- **Required fix:** Decide provider and storage, then implement (hashed OTP, persistent/shared store).
 - **Files:** `backend/src/services/otpService.ts`, Flutter `features/authentication/**`
 - **Dependencies:** Owner decision. P0-01 can be done first.
 - **Verification:** Defined after the decision.
