@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../config/db';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 import { getParam } from '../utils/request';
+import { lockInventoryRow } from '../services/inventoryService';
 
 export class ProductController {
   /**
@@ -372,6 +373,9 @@ export class ProductController {
 
       // Perform inside transaction to guarantee atomic updates and history logging
       const result = await prisma.$transaction(async (tx) => {
+        // P0-06: lock the inventory row so concurrent checkouts/adjustments cannot be overwritten
+        await lockInventoryRow(tx, storeId, productId);
+
         // 1. Fetch current inventory details
         const currentInv = await tx.storeInventory.findUnique({
           where: {

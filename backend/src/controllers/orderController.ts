@@ -6,6 +6,7 @@ import { razorpay } from '../config/razorpay';
 import { FulfillmentType, PaymentMethod, PaymentStatus, OrderStatus } from '@prisma/client';
 import { NotificationService } from '../services/notificationService';
 import { generateNextOrderNumber } from '../utils/orderNumber';
+import { claimOrderStatus, restoreOrderStock, ORDER_STATUS_CHANGED } from '../services/inventoryService';
 import { getParam } from '../utils/request';
 
 export class OrderController {
@@ -553,49 +554,25 @@ export class OrderController {
       }
 
       // Perform cancellation in transaction to restore inventory stock
+      if (order.orderStatus === OrderStatus.CANCELLED) {
+        res.status(400).json({
+          success: false,
+          message: 'Order is already cancelled.',
+          errorCode: 'ORDER_ALREADY_CANCELLED',
+        });
+        return;
+      }
+
       const cancelledOrder = await prisma.$transaction(async (tx) => {
-        const updated = await tx.order.update({
-          where: { id },
-          data: { orderStatus: OrderStatus.CANCELLED },
+        // P0-06: claim the cancellation first so concurrent requests cannot restore stock twice
+        const updated = await claimOrderStatus(tx, id, order.orderStatus, OrderStatus.CANCELLED);
+
+        await restoreOrderStock(tx, {
+          orderId: id,
+          storeId: order.storeId,
+          reason: `Order cancellation restore for order: ${order.orderNumber}`,
+          performedByAdminId: req.user?.role === 'SUPER_ADMIN' || req.user?.role === 'STORE_MANAGER' ? req.user.id : null,
         });
-
-        // Load items to restore inventory
-        const items = await tx.orderItem.findMany({
-          where: { orderId: id },
-        });
-
-        for (const item of items) {
-          const currentInv = await tx.storeInventory.findUnique({
-            where: {
-              storeId_productId: { storeId: order.storeId, productId: item.productId },
-            },
-          });
-          const prevStock = currentInv ? Number(currentInv.stockQuantity) : 0;
-          const newStock = prevStock + Number(item.quantity);
-
-          await tx.storeInventory.update({
-            where: {
-              storeId_productId: { storeId: order.storeId, productId: item.productId },
-            },
-            data: {
-              stockQuantity: newStock,
-            },
-          });
-
-          // Log inventory transaction
-          await tx.inventoryTransaction.create({
-            data: {
-              storeId: order.storeId,
-              productId: item.productId,
-              previousQuantity: prevStock,
-              changeQuantity: Number(item.quantity),
-              newQuantity: newStock,
-              type: 'ORDER_CANCELLATION_RESTORE',
-              reason: `Order cancellation restore for order: ${order.orderNumber}`,
-              performedByAdminId: req.user?.role === 'SUPER_ADMIN' || req.user?.role === 'STORE_MANAGER' ? req.user.id : null,
-            },
-          });
-        }
 
         // Log audit
         await tx.auditLog.create({
@@ -621,7 +598,15 @@ export class OrderController {
         message: 'Order cancelled successfully.',
         data: cancelledOrder,
       });
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.message === ORDER_STATUS_CHANGED) {
+        res.status(409).json({
+          success: false,
+          message: 'Order status was changed by another request. Please refresh and try again.',
+          errorCode: 'ORDER_STATUS_CONFLICT',
+        });
+        return;
+      }
       next(error);
     }
   }

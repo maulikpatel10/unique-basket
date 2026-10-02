@@ -75,7 +75,7 @@
 - **Verification:** Tests for every invalid fulfillment/status combination (400), ONLINE FAILED order cannot become PAID via status change, PICKED_UP only via pickup-verify.
 
 ### P0-06 — Inventory lost updates and double restore on cancellation
-- **Priority:** P0 · **Area:** Backend / Inventory · **Status:** TODO
+- **Priority:** P0 · **Area:** Backend / Inventory · **Status:** DONE (`backend/src/services/inventoryService.ts`: conditional status claim before restore, atomic increment/upsert restore, row lock for manual adjustments; tests in `backend/tests/inventory_concurrency.test.ts`)
 - **Problem:** Stock restore and manual adjustments are read-then-write with absolute values, so concurrent checkouts/adjustments are overwritten. Order status is read outside the transaction, so two concurrent cancellations restore stock twice. Restore throws if the inventory row is missing.
 - **Evidence:** `adminOrderController.updateOrderStatus` (cancel branch) and `orderController.cancelOrder`: `findUnique` → `update({ stockQuantity: prev + qty })`; order fetched before `$transaction`; `productController.updateStoreInventory` computes `newStock` from a read inside a default READ COMMITTED transaction. (Checkout itself uses a CAS `updateMany` and is correct.)
 - **Required fix:** Use atomic `increment`/`decrement` or CAS updates; re-read and conditionally update the order status inside the transaction (`updateMany where orderStatus = expected`) so only one cancellation wins; handle missing inventory rows.
