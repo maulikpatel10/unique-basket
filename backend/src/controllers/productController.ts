@@ -3,6 +3,7 @@ import { prisma } from '../config/db';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 import { getParam } from '../utils/request';
 import { lockInventoryRow } from '../services/inventoryService';
+import { AppError } from '../utils/errors';
 
 export class ProductController {
   /**
@@ -392,7 +393,7 @@ export class ProductController {
           // New adjustment UI signature
           const qty = parseFloat(quantity);
           if (isNaN(qty) || qty < 0) {
-            throw new Error('Quantity must be a positive number.');
+            throw new AppError(400, 'INVALID_QUANTITY', 'Quantity must be a positive number.');
           }
 
           if (adjustmentType === 'ADD') {
@@ -408,13 +409,13 @@ export class ProductController {
             changeVal = qty - prevStock;
             type = 'STOCK_ADJUSTED';
           } else {
-            throw new Error('Invalid adjustment type.');
+            throw new AppError(400, 'INVALID_ADJUSTMENT_TYPE', 'Invalid adjustment type.');
           }
         } else if (stockQuantity !== undefined) {
           // Existing test compatibility signature
           const targetQty = parseFloat(stockQuantity);
           if (isNaN(targetQty)) {
-            throw new Error('Stock Quantity must be a number.');
+            throw new AppError(400, 'INVALID_QUANTITY', 'Stock Quantity must be a number.');
           }
           newStock = targetQty;
           changeVal = targetQty - prevStock;

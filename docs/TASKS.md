@@ -196,7 +196,7 @@
 - **Verification:** Tests: exceeding limits returns 429.
 
 ### P1-12 — Validation and error mapping return 500s and leak internals
-- **Priority:** P1 · **Area:** Backend / API · **Status:** TODO
+- **Priority:** P1 · **Area:** Backend / API · **Status:** DONE (`AppError` in `backend/src/utils/errors.ts`; central mapping in `backend/src/app.ts` for invalid JSON/UUID, Prisma P2025/P2002/P2003/validation errors; checkout + inventory validation errors are 4xx; tests in `backend/tests/error_handling.test.ts`. Full validation layer remains P2-01.)
 - **Problem:** Business validation is thrown as plain `Error` inside transactions, and unknown messages fall through to the global handler → HTTP 500 with the message (outside production). Malformed UUIDs make Prisma throw → 500 instead of 400/404. There's no input schema validation.
 - **Evidence:** `orderController.createOrder` throws `'Address ID is required...'`, `'Invalid fulfillment type.'`, `'Quantity must be a positive decimal.'`, `'CONCURRENCY_ERROR'` → `next(error)`; `productController.updateStoreInventory` `'Invalid adjustment type.'`; `app.ts` error handler.
 - **Required fix:** Typed domain errors with status codes; validate request bodies/params (including UUID format) before DB access; map Prisma known errors (P2025, P2002, invalid UUID).

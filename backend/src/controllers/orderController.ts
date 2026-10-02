@@ -6,6 +6,7 @@ import { razorpay } from '../config/razorpay';
 import { FulfillmentType, PaymentMethod, PaymentStatus, OrderStatus } from '@prisma/client';
 import { NotificationService } from '../services/notificationService';
 import { generateNextOrderNumber } from '../utils/orderNumber';
+import { AppError } from '../utils/errors';
 import { claimOrderStatus, restoreOrderStock, ORDER_STATUS_CHANGED } from '../services/inventoryService';
 import { getParam } from '../utils/request';
 
@@ -35,6 +36,15 @@ export class OrderController {
       return;
     }
 
+    if (paymentMethod !== 'COD' && paymentMethod !== 'ONLINE') {
+      res.status(400).json({
+        success: false,
+        message: 'Payment method must be COD or ONLINE.',
+        errorCode: 'INVALID_PAYMENT_METHOD',
+      });
+      return;
+    }
+
     try {
       // Execute entire order creation within a database transaction
       const result = await prisma.$transaction(async (tx) => {
@@ -58,7 +68,7 @@ export class OrderController {
           }
 
           if (!addressId) {
-            throw new Error('Address ID is required for delivery fulfillment.');
+            throw new AppError(400, 'MISSING_ADDRESS_ID', 'Address ID is required for delivery fulfillment.');
           }
 
           // Fetch Address coordinates
@@ -67,7 +77,7 @@ export class OrderController {
           });
 
           if (!address || address.userId !== userId) {
-            throw new Error('Delivery address not found.');
+            throw new AppError(404, 'ADDRESS_NOT_FOUND', 'Delivery address not found.');
           }
 
           const clientLat = Number(address.latitude);
@@ -106,7 +116,7 @@ export class OrderController {
           assignedStoreId = nearestStore.id;
         } else if (fulfillmentType === 'PICKUP') {
           if (!assignedStoreId) {
-            throw new Error('Store ID is required for pickup fulfillment.');
+            throw new AppError(400, 'MISSING_STORE_ID', 'Store ID is required for pickup fulfillment.');
           }
 
           const store = await tx.store.findUnique({
@@ -114,10 +124,10 @@ export class OrderController {
           });
 
           if (!store || !store.isActive) {
-            throw new Error('Selected store is inactive or unavailable.');
+            throw new AppError(400, 'STORE_UNAVAILABLE', 'Selected store is inactive or unavailable.');
           }
         } else {
-          throw new Error('Invalid fulfillment type.');
+          throw new AppError(400, 'INVALID_FULFILLMENT_TYPE', 'Invalid fulfillment type.');
         }
 
         // 3. Process products & inventories
@@ -129,7 +139,7 @@ export class OrderController {
           const qtyVal = parseFloat(quantity);
 
           if (isNaN(qtyVal) || qtyVal <= 0) {
-            throw new Error('Quantity must be a positive decimal.');
+            throw new AppError(400, 'INVALID_QUANTITY', 'Quantity must be a positive decimal.');
           }
 
           // Get global product details
@@ -139,7 +149,7 @@ export class OrderController {
           });
 
           if (!product || !product.isActive || !product.category.isActive) {
-            throw new Error(`Product with ID ${productId} is not available.`);
+            throw new AppError(400, 'PRODUCT_UNAVAILABLE', `Product with ID ${productId} is not available.`);
           }
 
           // Load current inventory to perform CAS update and transaction log
@@ -170,7 +180,7 @@ export class OrderController {
           });
 
           if (updateCount.count === 0) {
-            throw new Error('CONCURRENCY_ERROR');
+            throw new AppError(409, 'CONCURRENCY_ERROR', 'Stock changed while placing the order. Please try again.');
           }
 
           // Create inventory transaction record
