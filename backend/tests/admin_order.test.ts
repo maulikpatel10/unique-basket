@@ -576,7 +576,7 @@ describe('Admin Order Operations & Payment Verification Integration Tests', () =
       expect(res.body.data.paymentStatus).toEqual('PAID');
     });
 
-    it('should complete full PICKUP status workflow: PLACED -> CONFIRMED -> PREPARING -> READY_FOR_PICKUP -> PICKED_UP', async () => {
+    it('should complete full PICKUP status workflow: PLACED -> CONFIRMED -> PREPARING -> READY_FOR_PICKUP -> PICKED_UP (via pickup verification)', async () => {
       const pickOrder = await prisma.order.create({
         data: {
           orderNumber: `TST-PICK-${Date.now().toString().slice(-8)}`,
@@ -617,11 +617,19 @@ describe('Admin Order Operations & Payment Verification Integration Tests', () =
       expect(res.statusCode).toEqual(200);
       expect(res.body.data.orderStatus).toEqual('READY_FOR_PICKUP');
 
-      // 4. READY_FOR_PICKUP -> PICKED_UP
+      // 4. READY_FOR_PICKUP -> PICKED_UP is not allowed via the generic status endpoint (P0-05 / D-006)
       res = await request(app)
         .put(`/api/v1/admin/orders/${pickOrder.id}/status`)
         .set('Authorization', `Bearer ${superAdminToken}`)
         .send({ status: 'PICKED_UP' });
+      expect(res.statusCode).toEqual(400);
+      expect(res.body).toHaveProperty('errorCode', 'PICKUP_VERIFICATION_REQUIRED');
+
+      // 5. Pickup is completed through pickup verification (order number + registered phone)
+      res = await request(app)
+        .post('/api/v1/admin/orders/pickup-verify')
+        .set('Authorization', `Bearer ${superAdminToken}`)
+        .send({ orderNumber: pickOrder.orderNumber, phone: '+919999999999' });
       expect(res.statusCode).toEqual(200);
       expect(res.body.data.orderStatus).toEqual('PICKED_UP');
       expect(res.body.data.paymentStatus).toEqual('PAID');

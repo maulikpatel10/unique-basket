@@ -66,7 +66,7 @@
 - **Verification:** Tests: verifying a CANCELLED/PLACED/PICKED_UP pickup order returns 400 and changes nothing; READY_FOR_PICKUP succeeds.
 
 ### P0-05 — Order status machine ignores fulfillment type and corrupts payment status
-- **Priority:** P0 · **Area:** Backend + Admin / Orders · **Status:** TODO
+- **Priority:** P0 · **Area:** Backend + Admin / Orders · **Status:** DONE (fulfillment-aware transitions; PICKED_UP only via pickup verification (D-006); unpaid ONLINE orders cancel-only (D-005); auto-PAID on DELIVERED only for COD; admin "Verify Pickup" + "Awaiting Payment"; tests in `backend/tests/order_status_rules.test.ts`. Full lifecycle still P4-12.)
 - **Problem:** (a) Transitions don't depend on `fulfillmentType`: a PICKUP order can go `OUT_FOR_DELIVERY → DELIVERED`, a DELIVERY order can be `PICKED_UP`. (b) `PICKED_UP` via the generic status endpoint bypasses phone verification. (c) Moving to `DELIVERED`/`PICKED_UP` always sets `paymentStatus = PAID`, so an ONLINE order with `FAILED`/`PENDING` payment becomes PAID. (d) Unpaid ONLINE orders can be confirmed and advanced.
 - **Evidence:** `adminOrderController.updateOrderStatus` `VALID_TRANSITIONS` (READY_FOR_PICKUP → OUT_FOR_DELIVERY | PICKED_UP); `paymentStatusUpdate = PAID` for DELIVERED/PICKED_UP; admin `utils/orderWorkflow.ts` offers "Mark Picked Up" through `PUT /admin/orders/:id/status`.
 - **Required fix:** Fulfillment-aware transition table; only allow PAID-on-completion for COD; block advancing ONLINE orders that are not PAID; route pickup completion through verification only. Final lifecycle is P4-12 — implement the safety constraints now without inventing new statuses.

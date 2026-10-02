@@ -232,10 +232,48 @@ export class AdminOrderController {
         }
       }
 
+      if (order.orderStatus !== status) {
+        // P0-05 / D-006: pickup completion must go through pickup verification (order number + phone)
+        if (status === OrderStatus.PICKED_UP) {
+          res.status(400).json({
+            success: false,
+            message: 'Pickup orders must be completed via pickup verification.',
+            errorCode: 'PICKUP_VERIFICATION_REQUIRED',
+          });
+          return;
+        }
+
+        // P0-05: transitions must match the fulfillment type
+        const deliveryOnlyStatuses: OrderStatus[] = [OrderStatus.OUT_FOR_DELIVERY, OrderStatus.DELIVERED];
+        if (order.fulfillmentType === 'PICKUP' && deliveryOnlyStatuses.includes(status as OrderStatus)) {
+          res.status(400).json({
+            success: false,
+            message: `Status ${status} is not valid for a PICKUP order.`,
+            errorCode: 'INVALID_STATUS_FOR_FULFILLMENT',
+          });
+          return;
+        }
+
+        // P0-05 / D-005: unpaid ONLINE orders may only be cancelled
+        if (
+          order.paymentMethod === 'ONLINE' &&
+          order.paymentStatus !== PaymentStatus.PAID &&
+          status !== OrderStatus.CANCELLED
+        ) {
+          res.status(400).json({
+            success: false,
+            message: 'Online payment is not completed. Unpaid online orders can only be cancelled.',
+            errorCode: 'ONLINE_PAYMENT_PENDING',
+          });
+          return;
+        }
+      }
+
       // Perform update in transaction
       const updated = await prisma.$transaction(async (tx) => {
+        // P0-05: completing an order marks payment PAID only for COD (cash collected on delivery)
         let paymentStatusUpdate: PaymentStatus | undefined = undefined;
-        if (status === OrderStatus.DELIVERED || status === OrderStatus.PICKED_UP) {
+        if (status === OrderStatus.DELIVERED && order.paymentMethod === 'COD') {
           paymentStatusUpdate = PaymentStatus.PAID;
         }
 

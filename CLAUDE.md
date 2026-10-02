@@ -37,6 +37,8 @@ Rules:
 
 ## Critical business rules already decided
 - OTP length is **4 digits** in all environments (D-004). The static `1234` bypass is dev/test only.
+- Unpaid ONLINE orders can only be cancelled until a payment provider is integrated (D-005).
+- PICKUP orders are completed only via pickup verification, never the generic status update (D-006).
 - No other product/business rules are confirmed yet. See `docs/DECISIONS.md`.
 - Payment provider: **DECISION REQUIRED** (backend has Razorpay code; PDF mentions Cashfree; app has no payment SDK). Do not change payment code without approval.
 

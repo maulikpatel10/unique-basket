@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { api } from '../services/api';
 import {
   QrCode,
@@ -30,7 +31,9 @@ interface VerifiedPickupData {
 }
 
 export const PickupVerification: React.FC = () => {
-  const [orderNumber, setOrderNumber] = useState('');
+  const [searchParams] = useSearchParams();
+  // Pre-fill when opened from an order's "Verify Pickup" action
+  const [orderNumber, setOrderNumber] = useState(searchParams.get('orderNumber') ?? '');
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

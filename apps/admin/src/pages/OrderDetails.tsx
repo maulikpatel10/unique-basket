@@ -277,7 +277,7 @@ export const OrderDetails: React.FC = () => {
     );
   }
 
-  const nextAction = getNextOrderAction(order.orderStatus, order.fulfillmentType);
+  const nextAction = getNextOrderAction(order.orderStatus, order.fulfillmentType, order.paymentMethod, order.paymentStatus);
   const isCancelable = canCancelOrder(order.orderStatus);
   const workflowSteps = getWorkflowSteps(order.fulfillmentType);
   const currentStepIndex = workflowSteps.indexOf(order.orderStatus as any);
@@ -327,11 +327,13 @@ export const OrderDetails: React.FC = () => {
           {nextAction && (
             <button
               onClick={() =>
-                setStatusModal({
-                  isOpen: true,
-                  nextStatus: nextAction.nextStatus,
-                  actionLabel: nextAction.actionLabel,
-                })
+                nextAction.requiresPickupVerification
+                  ? navigate(`/admin/pickup-verify?orderNumber=${encodeURIComponent(order.orderNumber)}`)
+                  : setStatusModal({
+                      isOpen: true,
+                      nextStatus: nextAction.nextStatus,
+                      actionLabel: nextAction.actionLabel,
+                    })
               }
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${getActionButtonStyle(
                 nextAction.buttonVariant

@@ -32,6 +32,16 @@ Each entry should include: date, decision, confirmed by, notes.
 - **Confirmed by:** Project owner (Claude Code session, P0-01 work)
 - **Decision:** OTPs are 4 digits in all environments, including production. The static `1234` bypass remains a temporary development/test workaround (enabled only when `NODE_ENV` is `development` or `test`) until an OTP provider is chosen (P-003).
 
+### D-005 — Unpaid online orders can only be cancelled (interim)
+- **Date:** 2026-10-02
+- **Confirmed by:** Project owner (Claude Code session, P0-05 work)
+- **Decision:** Until a payment provider is integrated (P-001), an ONLINE order whose payment is not PAID cannot be advanced through the order workflow; it can only be cancelled. Completing an order marks payment PAID automatically only for COD.
+
+### D-006 — Pickup completion only via pickup verification
+- **Date:** 2026-10-02
+- **Confirmed by:** Project owner (Claude Code session, P0-05 work)
+- **Decision:** A PICKUP order can be marked PICKED_UP only through pickup verification (order number + registered phone), not through the generic order status update. The admin "Verify Pickup" action opens the Pickup Verification page.
+
 > No product or business rules (pricing, fees, COD, OTP, pickup, delivery radius, etc.) have been confirmed yet.
 
 ---

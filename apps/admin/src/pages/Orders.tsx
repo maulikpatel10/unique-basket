@@ -21,6 +21,7 @@ import {
 import {
   getNextOrderAction,
   canCancelOrder,
+  isAwaitingOnlinePayment,
   formatOrderStatus
 } from '../utils/orderWorkflow';
 
@@ -431,7 +432,8 @@ export const Orders: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-slate-800">
                 {orders.map((o) => {
-                  const nextAction = getNextOrderAction(o.orderStatus, o.fulfillmentType);
+                  const nextAction = getNextOrderAction(o.orderStatus, o.fulfillmentType, o.paymentMethod, o.paymentStatus);
+                  const awaitingPayment = isAwaitingOnlinePayment(o.orderStatus, o.paymentMethod, o.paymentStatus);
                   const isCancelable = canCancelOrder(o.orderStatus);
 
                   return (
@@ -494,18 +496,24 @@ export const Orders: React.FC = () => {
                           {nextAction ? (
                             <button
                               onClick={() =>
-                                setStatusModal({
-                                  isOpen: true,
-                                  order: o,
-                                  nextStatus: nextAction.nextStatus,
-                                  actionLabel: nextAction.actionLabel,
-                                })
+                                nextAction.requiresPickupVerification
+                                  ? navigate(`/admin/pickup-verify?orderNumber=${encodeURIComponent(o.orderNumber)}`)
+                                  : setStatusModal({
+                                      isOpen: true,
+                                      order: o,
+                                      nextStatus: nextAction.nextStatus,
+                                      actionLabel: nextAction.actionLabel,
+                                    })
                               }
                               className="h-9 px-3 flex-1 min-w-[125px] flex items-center justify-between gap-2 rounded-lg text-xs font-semibold bg-brand-500/15 text-brand-400 border border-brand-500/30 hover:bg-brand-500/25 active:bg-brand-500/30 focus:outline-none focus:ring-2 focus:ring-brand-500/40 transition-all shadow-xs"
                             >
                               <span className="whitespace-nowrap">{nextAction.actionLabel}</span>
                               <ArrowRight className="h-3.5 w-3.5 shrink-0 opacity-80" />
                             </button>
+                          ) : awaitingPayment ? (
+                            <div className="h-9 px-3 flex-1 min-w-[110px] flex items-center justify-center rounded-lg text-xs font-semibold border cursor-default select-none text-amber-400/90 bg-slate-900/60 border-amber-500/20">
+                              <span>Awaiting Payment</span>
+                            </div>
                           ) : (
                             <div
                               className={`h-9 px-3 flex-1 min-w-[110px] flex items-center justify-center rounded-lg text-xs font-semibold border cursor-default select-none transition-colors ${

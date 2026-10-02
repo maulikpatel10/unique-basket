@@ -4,7 +4,24 @@ export interface NextOrderAction {
   nextStatus: OrderStatus;
   actionLabel: string;
   buttonVariant: 'primary' | 'info' | 'cyan' | 'amber' | 'emerald';
+  /** When true, the action opens Pickup Verification instead of calling the status endpoint (D-006). */
+  requiresPickupVerification?: boolean;
 }
+
+/**
+ * Unpaid ONLINE orders can only be cancelled until payment is completed (D-005).
+ */
+export const isAwaitingOnlinePayment = (
+  orderStatus: string,
+  paymentMethod?: string,
+  paymentStatus?: string
+): boolean => {
+  return (
+    paymentMethod === 'ONLINE' &&
+    paymentStatus !== 'PAID' &&
+    !['DELIVERED', 'PICKED_UP', 'CANCELLED'].includes(orderStatus)
+  );
+};
 
 /**
  * Returns the exact SINGLE next valid order status and action label based on current status and fulfillment type.
@@ -12,8 +29,14 @@ export interface NextOrderAction {
  */
 export const getNextOrderAction = (
   orderStatus: string,
-  fulfillmentType: FulfillmentType | string
+  fulfillmentType: FulfillmentType | string,
+  paymentMethod?: string,
+  paymentStatus?: string
 ): NextOrderAction | null => {
+  if (isAwaitingOnlinePayment(orderStatus, paymentMethod, paymentStatus)) {
+    return null;
+  }
+
   switch (orderStatus) {
     case 'PLACED':
       return {
@@ -43,8 +66,9 @@ export const getNextOrderAction = (
       }
       return {
         nextStatus: 'PICKED_UP',
-        actionLabel: 'Mark Picked Up',
+        actionLabel: 'Verify Pickup',
         buttonVariant: 'emerald',
+        requiresPickupVerification: true,
       };
     case 'OUT_FOR_DELIVERY':
       if (fulfillmentType === 'DELIVERY') {
