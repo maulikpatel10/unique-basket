@@ -57,7 +57,7 @@
 - **Verification:** `npx tsc --noEmit` → 0 errors; `npm run build` exit 0; `dist/` contains no tests; `npm start` boots.
 
 ### P0-04 — Pickup verification hands over orders in any status
-- **Priority:** P0 · **Area:** Backend / Orders · **Status:** TODO
+- **Priority:** P0 · **Area:** Backend / Orders · **Status:** DONE (handover only from `READY_FOR_PICKUP`, else 400 `ORDER_NOT_READY_FOR_PICKUP`; conditional update returns 409 `ORDER_STATUS_CONFLICT` on races; tests in `backend/tests/pickup_verify_status.test.ts`)
 - **Problem:** `verifyPickup` marks any PICKUP order `PICKED_UP` + `PAID` regardless of its current status, including `CANCELLED` (stock already restored) or `PLACED`.
 - **Evidence:** `adminOrderController.verifyPickup` filters only `orderNumber`, `user.phone`, `fulfillmentType: 'PICKUP'`; no `orderStatus` check before the update.
 - **Required fix:** Allow handover only from an explicitly allowed status (currently `READY_FOR_PICKUP` in the transition table); reject terminal statuses; do the status check inside the transaction with a conditional update.

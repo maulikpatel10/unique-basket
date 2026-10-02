@@ -124,6 +124,12 @@ describe('Admin Order Operations & Payment Verification Integration Tests', () =
     });
 
     it('should allow Store Manager 1 to verify and handover pickup for their store (STORE-001)', async () => {
+      // Handover requires the order to be READY_FOR_PICKUP (P0-04)
+      await prisma.order.update({
+        where: { orderNumber },
+        data: { orderStatus: 'READY_FOR_PICKUP' },
+      });
+
       const res = await request(app)
         .post('/api/v1/admin/orders/pickup-verify')
         .set('Authorization', `Bearer ${manager1Token}`)

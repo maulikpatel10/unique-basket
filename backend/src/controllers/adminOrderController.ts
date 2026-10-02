@@ -371,15 +371,34 @@ export class AdminOrderController {
         return;
       }
 
+      // P0-04: Handover is allowed only once the order is READY_FOR_PICKUP
+      if (order.orderStatus !== OrderStatus.READY_FOR_PICKUP) {
+        res.status(400).json({
+          success: false,
+          message: `Cannot handover order in status ${order.orderStatus}. Order must be READY_FOR_PICKUP.`,
+          errorCode: 'ORDER_NOT_READY_FOR_PICKUP',
+        });
+        return;
+      }
+
       // Mark order as PICKED_UP and update payment status for COD orders
       const updated = await prisma.$transaction(async (tx) => {
-        const orderUpdate = await tx.order.update({
-          where: { id: order.id },
+        // Conditional update guards against concurrent status changes (e.g. cancellation)
+        const { count } = await tx.order.updateMany({
+          where: { id: order.id, orderStatus: OrderStatus.READY_FOR_PICKUP },
           data: {
             orderStatus: OrderStatus.PICKED_UP,
             paymentStatus: PaymentStatus.PAID, // Sets COD to PAID, keeps ONLINE as PAID
             updatedAt: new Date(),
           },
+        });
+
+        if (count === 0) {
+          throw new Error('PICKUP_STATUS_CHANGED');
+        }
+
+        const orderUpdate = await tx.order.findUniqueOrThrow({
+          where: { id: order.id },
         });
 
         // Write audit log inside transaction with cash collection details
@@ -425,7 +444,15 @@ export class AdminOrderController {
           paymentStatus: updated.paymentStatus,
         },
       });
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.message === 'PICKUP_STATUS_CHANGED') {
+        res.status(409).json({
+          success: false,
+          message: 'Order status changed during handover. Please refresh and try again.',
+          errorCode: 'ORDER_STATUS_CONFLICT',
+        });
+        return;
+      }
       next(error);
     }
   }
