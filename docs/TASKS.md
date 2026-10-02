@@ -335,7 +335,7 @@
 - **Verification:** Dashboard request count/size bounded; bundle split.
 
 ### P2-08 — Stale project documentation
-- **Priority:** P2 · **Area:** Docs · **Status:** TODO
+- **Priority:** P2 · **Area:** Docs · **Status:** DONE (`backend/README.md` uses `migrate deploy`/`migrate dev` only, documents NODE_ENV/secret rules, seed safety and rate limiting, drops the unused maps key; old status/plan docs carry a HISTORICAL banner; `docs/CURRENT_STATE.md` has a current section 0)
 - **Problem:** `backend/README.md` tells developers to use `prisma db push` (the cause of the earlier missing migration) and lists the unused `GOOGLE_MAPS_API_KEY`. `docs/task.md`, `docs/MOBILE_TODO.md`, `apps/customer_app/MOBILE_TODO.md` and `MOBILE_INTEGRATION_REPORT.md` describe Razorpay in pubspec, a 6-digit OTP and route guards, none of which match the code.
 - **Evidence:** Files cited.
 - **Required fix:** Update or mark them as historical; make `migrate dev`/`migrate deploy` the only documented path.

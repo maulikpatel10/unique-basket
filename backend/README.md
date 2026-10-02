@@ -115,13 +115,17 @@ $$\text{HTTP Request} \longrightarrow \text{Express App} \longrightarrow \text{M
 4. **Generate Prisma Client and apply migrations**:
    ```bash
    npx prisma generate
-   npx prisma db push
+   npx prisma migrate deploy
    ```
+   Never use `prisma db push` on shared databases: it changes the schema without creating a
+   migration, which is how migration drift happened before. Create schema changes with
+   `npx prisma migrate dev --name <change>` and commit the generated migration.
 
-5. **Seed initial development data (Optional)**:
+5. **Seed initial development data (Optional, development/test only)**:
    ```bash
-   npm run db:seed
+   NODE_ENV=development npm run db:seed
    ```
+   The seed **deletes all data** and refuses to run unless `NODE_ENV` is `development` or `test`.
 
 ---
 
@@ -132,15 +136,17 @@ The application reads configuration from `backend/.env`. Below are the required 
 | Variable | Required | Description | Safe Example Placeholder |
 | :--- | :---: | :--- | :--- |
 | `PORT` | Optional | Port for the HTTP server (defaults to `5001`) | `5001` |
-| `NODE_ENV` | Optional | Environment mode (`development` \| `production`) | `development` |
+| `NODE_ENV` | **Required for local dev** | `development`, `test` or `production`. A missing/unknown value is treated as production (no `1234` OTP bypass, strict secret checks). | `development` |
 | `DATABASE_URL` | **Required** | PostgreSQL connection string | `postgresql://user:password@localhost:5432/unique_basket?schema=public` |
-| `JWT_SECRET` | **Required** | Secret key for signing access tokens (15m expiry) | `your_jwt_access_secret_key` |
-| `JWT_REFRESH_SECRET` | **Required** | Secret key for signing refresh tokens (7d expiry) | `your_jwt_refresh_secret_key` |
+| `JWT_SECRET` | **Required** | Secret for access tokens (15m). Server refuses to start without it; outside development/test it must be ≥ 32 characters. | `your_jwt_access_secret_key` |
+| `JWT_REFRESH_SECRET` | **Required** | Secret for refresh tokens (7d, server-side revocable sessions). Same rules; must differ from `JWT_SECRET` in production. | `your_jwt_refresh_secret_key` |
 | `RAZORPAY_KEY_ID` | Optional | Razorpay API Key ID for online checkout | `rzp_test_placeholder_key` |
 | `RAZORPAY_KEY_SECRET` | Optional | Razorpay Secret Key for HMAC signature verification | `razorpay_secret_placeholder` |
 | `RAZORPAY_WEBHOOK_SECRET` | Optional | Razorpay Webhook Secret for signature validation | `webhook_secret_placeholder` |
 | `FIREBASE_SERVICE_ACCOUNT` | Optional | Stringified JSON of Firebase Admin Service Account | `{"type":"service_account",...}` |
-| `GOOGLE_MAPS_API_KEY` | Optional | Google Maps API key for address geocoding | `your_google_maps_api_key` |
+| `SEED_SUPER_ADMIN_PASSWORD` / `SEED_MANAGER_PASSWORD` | Optional | Passwords for the dev/test seed admin accounts (defaults are well-known dev values) | `choose_a_local_password` |
+
+> Payment and Firebase variables belong to integrations whose providers are still undecided (see `docs/DECISIONS.md`). No maps/geocoding key is used by the code.
 
 > [!CAUTION]
 > Never commit `.env` or files containing live credentials, passwords, or secret keys to version control.
@@ -184,8 +190,10 @@ npm test
 | :--- | :--- | :--- | :--- |
 | `POST` | `/send-otp` | Request OTP for customer phone login | None |
 | `POST` | `/verify-otp` | Verify customer OTP and issue JWT | None |
-| `POST` | `/refresh` | Refresh expired access token | None |
-| `POST` | `/logout` | Invalidate customer session | None |
+| `POST` | `/refresh` | Refresh expired access token (refresh token must belong to a live session) | None |
+| `POST` | `/logout` | Revoke the refresh session given as `refreshToken` (idempotent) | None |
+
+`send-otp`, `verify-otp`, `refresh` and `POST /admin/login` are rate limited (429 `RATE_LIMITED`).
 
 ### 3. Admin Operations (`/api/v1/admin`)
 | Method | Endpoint | Description | Role Required |
@@ -398,7 +406,7 @@ The repository follows a structured Git branching model:
 
 To deploy in a Node.js hosting environment:
 1. Build TypeScript files: `npm run build`
-2. Run Prisma migrations: `npx prisma db push` or `npx prisma migrate deploy`
+2. Apply migrations: `npx prisma migrate deploy` (never `db push`)
 3. Start the production server: `npm start`
 
 ---

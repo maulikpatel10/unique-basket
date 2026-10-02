@@ -1,5 +1,8 @@
 # UNIQUE BASKET — Mobile Integration Report (Phase A Inspection)
 
+> **HISTORICAL DOCUMENT — not maintained.** It may describe plans, providers or behaviour that do not match the current code (e.g. Razorpay in the app, 6-digit OTP, route guards).
+> Current implementation: `docs/CURRENT_STATE.md` · Decisions: `docs/DECISIONS.md` · Backlog: `docs/TASKS.md`.
+
 **Date**: September 1, 2026  
 **Status**: Inspection Complete — Ready for Phase B Architecture & Foundation Setup  
 **Target Platform**: Flutter Mobile Application (iOS & Android)

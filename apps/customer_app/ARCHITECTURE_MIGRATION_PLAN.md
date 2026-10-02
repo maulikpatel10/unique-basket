@@ -1,5 +1,8 @@
 # UNIQUE BASKET Customer Mobile App — Architecture Migration Plan
 
+> **HISTORICAL DOCUMENT — not maintained.** It may describe plans, providers or behaviour that do not match the current code (e.g. Razorpay in the app, 6-digit OTP, route guards).
+> Current implementation: `docs/CURRENT_STATE.md` · Decisions: `docs/DECISIONS.md` · Backlog: `docs/TASKS.md`.
+
 ## 1. Executive Summary
 This document outlines the step-by-step migration of the UNIQUE BASKET Flutter customer application from the existing hybrid structure into a clean, feature-first, MVVM-style production architecture with Riverpod state management and GoRouter navigation.
 

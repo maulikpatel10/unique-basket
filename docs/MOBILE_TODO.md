@@ -1,5 +1,8 @@
 # UNIQUE BASKET — Mobile Development TODO & Progress Tracker
 
+> **HISTORICAL DOCUMENT — not maintained.** It may describe plans, providers or behaviour that do not match the current code (e.g. Razorpay in the app, 6-digit OTP, route guards).
+> Current implementation: `docs/CURRENT_STATE.md` · Decisions: `docs/DECISIONS.md` · Backlog: `docs/TASKS.md`.
+
 ## Status Legend
 - `[x]` **DONE**
 - `[-]` **IN PROGRESS**

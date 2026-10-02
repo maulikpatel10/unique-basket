@@ -3,6 +3,36 @@
 **Audited branch:** `feature/customer-app` @ `c6167c7` (2026-10-02)
 **Scope:** CURRENT IMPLEMENTATION only. Nothing here is a product decision. See `docs/DECISIONS.md`.
 
+> **Section 0 reflects the code after the 2026-10-02 backlog sweep.** Sections 1–6 are the original audit; where they conflict, section 0 wins. Task-level detail is in `docs/TASKS.md`.
+
+## 0. Implementation updates since the audit
+
+**Backend**
+- Build: `npm run build` (tsconfig.build.json, `src` only) produces `dist/server.js`; `tsc --noEmit` clean.
+- Startup validates `JWT_SECRET`/`JWT_REFRESH_SECRET` (no fallbacks; strong secrets required outside development/test).
+- OTP: static `1234` bypass only when `NODE_ENV` is `development`/`test`; otherwise random 4-digit OTP (D-004), never returned or logged. No SMS provider yet (P4-02).
+- Sessions: refresh tokens are backed by `refresh_tokens` rows (revocable); logout revokes the session; refresh rejects deactivated accounts. Admin role and manager store are resolved from the DB on every request; managers without a store get 403.
+- Rate limiting (in-memory, single instance) on send-otp, verify-otp, refresh and admin login.
+- Errors: client errors map to 4xx with stable `errorCode`s (invalid JSON/UUID, not found, duplicates, validation, checkout/inventory validation).
+- Orders: fulfillment-aware status rules; PICKED_UP only via pickup verification from READY_FOR_PICKUP (D-006); unpaid ONLINE orders can only be cancelled (D-005); auto-PAID on delivery only for COD; delivery address snapshot stored on orders.
+- Inventory: atomic stock restore, single cancellation wins, row locks for manual adjustments.
+- Quantities: PIECE must be whole numbers (D-007); max 3 decimals and DB maximum for all units.
+- Cart and checkout share fare rules (`services/pricingService.ts`).
+- Seed refuses to run outside development/test.
+- Tests: 33 suites / 339 tests pass on a fresh migrated+seeded DB.
+
+**Customer app (Flutter)**
+- `flutter analyze` clean; 598 tests pass.
+- Route guard redirects protected routes to login without a token; session expiry (refresh rejected) redirects to login; dev routes debug-only.
+- Logout revokes the backend session (fire-and-forget).
+- Cart write failures are surfaced (SnackBar) and reconciled with the server cart; checkout never shows placeholder items/fake contact data and has no client-only discount.
+- Still open: decimal quantity UI (P1-03, blocked on P4-08), location capture (P1-01, blocked on P4-04/P4-05).
+
+**Admin panel**
+- Refreshes expired access tokens (single-flight) and revokes the session on logout; no token logging.
+- "Verify Pickup" opens pickup verification; unpaid ONLINE orders show "Awaiting Payment".
+- Vitest suite (12 tests); `npm run lint` → 0 errors; build passes.
+
 ---
 
 ## 1. Branches
@@ -77,7 +107,7 @@ Models: User, UserAddress (lat/lng required), Store (radius, hours), AdminUser (
 
 Enums: FulfillmentType (DELIVERY, PICKUP), PaymentMethod (COD, ONLINE), PaymentStatus (PENDING, PAID, FAILED), OrderStatus (PLACED, CONFIRMED, PREPARING, READY_FOR_PICKUP, PICKED_UP, OUT_FOR_DELIVERY, DELIVERED, CANCELLED).
 
-13 migrations (2026-08-23 → 2026-10-02). Seed: `prisma/seed.ts`.
+15 migrations (2026-08-23 → 2026-10-02), including `20261002180000_add_refresh_tokens` and `20261002190000_add_order_delivery_address_snapshot` (additive). Seed: `prisma/seed.ts`.
 
 **Migration status:**
 - Latest migration: `20261002120000_add_favorites_notifications_pincodes_order_sequences` (commit `f392ade`). It creates the tables for `Favorite` (`user_favorites`), `Notification` (`notifications`), `SupportedPincode` (`supported_pincodes`) and `DailyOrderSequence` (`daily_order_sequences`), with their indexes and foreign keys. These models had been added to `schema.prisma` in commit `038dfa7` without a migration.

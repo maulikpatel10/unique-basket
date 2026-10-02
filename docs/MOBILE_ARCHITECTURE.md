@@ -1,5 +1,8 @@
 # UNIQUE BASKET — Mobile Architecture Specification
 
+> **HISTORICAL DOCUMENT — not maintained.** It may describe plans, providers or behaviour that do not match the current code (e.g. Razorpay in the app, 6-digit OTP, route guards).
+> Current implementation: `docs/CURRENT_STATE.md` · Decisions: `docs/DECISIONS.md` · Backlog: `docs/TASKS.md`.
+
 **Framework**: Flutter (Dart) — Android & iOS  
 **State Management**: Riverpod (StateNotifier / AsyncNotifier)  
 **Networking**: Dio with Centralized Interceptors & Token Refresh  

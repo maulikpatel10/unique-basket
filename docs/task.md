@@ -1,5 +1,8 @@
 # UNIQUE BASKET — Technical Implementation Progress
 
+> **HISTORICAL DOCUMENT — not maintained.** It may describe plans, providers or behaviour that do not match the current code (e.g. Razorpay in the app, 6-digit OTP, route guards).
+> Current implementation: `docs/CURRENT_STATE.md` · Decisions: `docs/DECISIONS.md` · Backlog: `docs/TASKS.md`.
+
 ## Stage 1: Backend Foundation & Database
 - [x] Set up Node.js with TypeScript and Express.js framework
 - [x] Initialize Prisma ORM / Knex with PostgreSQL configuration

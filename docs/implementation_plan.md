@@ -1,5 +1,8 @@
 # UNIQUE BASKET — Architecture & System Design Plan
 
+> **HISTORICAL DOCUMENT — not maintained.** It may describe plans, providers or behaviour that do not match the current code (e.g. Razorpay in the app, 6-digit OTP, route guards).
+> Current implementation: `docs/CURRENT_STATE.md` · Decisions: `docs/DECISIONS.md` · Backlog: `docs/TASKS.md`.
+
 This document outlines the detailed system architecture, database design, API specifications, security model, development roadmap, and testing strategies for **UNIQUE BASKET**, a multi-store online fruit and vegetable ordering platform.
 
 ---
