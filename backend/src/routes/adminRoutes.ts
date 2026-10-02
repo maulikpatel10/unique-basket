@@ -172,6 +172,5 @@ router.post('/pincodes', authenticate, requireRole(['SUPER_ADMIN']), AdminPincod
 router.get('/pincodes/:id', authenticate, requireRole(['SUPER_ADMIN']), AdminPincodeController.getPincodeById);
 router.put('/pincodes/:id', authenticate, requireRole(['SUPER_ADMIN']), AdminPincodeController.updatePincode);
 router.patch('/pincodes/:id/status', authenticate, requireRole(['SUPER_ADMIN']), AdminPincodeController.togglePincodeStatus);
-router.put('/pincodes/:id/status', authenticate, requireRole(['SUPER_ADMIN']), AdminPincodeController.togglePincodeStatus);
 
 export default router;

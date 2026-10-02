@@ -3,7 +3,6 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { Prisma } from '@prisma/client';
 import { AppError } from './utils/errors';
-import { connectDb } from './config/db';
 import authRoutes from './routes/authRoutes';
 import adminRoutes from './routes/adminRoutes';
 import storeRoutes from './routes/storeRoutes';

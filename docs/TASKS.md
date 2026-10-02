@@ -299,7 +299,7 @@
 - **Verification:** Property tests over random carts match exact decimal arithmetic.
 
 ### P2-04 — Dead code and duplicate route aliases
-- **Priority:** P2 · **Area:** Backend + Flutter · **Status:** TODO
+- **Priority:** P2 · **Area:** Backend + Flutter · **Status:** DONE (removed unused aliases `PATCH /customer/profile`, `PATCH /customer/addresses/:id`, `GET /customer/serviceability/pincodes`, `PUT /admin/pincodes/:id/status` and the unused `connectDb` import in `app.ts`; kept aliases still used by tests (`/admin/settings`, `POST /customer/favorites`) and `/stores` (used by admin). Kept intentionally: `OrderController.cancelOrder` (future customer cancel, P4-09); Flutter `getFeaturedProducts` and the fallback `ApiClient` in cart/favorites providers (no runtime effect; referenced by test mocks).)
 - **Problem:** `OrderController.cancelOrder` is not routed (dead; see P4-09). `app.ts` has an unused `connectDb` import. There are duplicate aliases: `PUT|PATCH /customer/profile`, `PUT|PATCH /customer/addresses/:id`, `POST /customer/favorites` and `/favorites/:productId`, `/customer/pincodes` and `/serviceability/pincodes`, `/admin/settings` and `/admin/settings/fare-cod`, `PATCH|PUT /admin/pincodes/:id/status`, `/stores` and `/stores/nearby`. Flutter `getFeaturedProducts` is unused, and the cart provider creates a fallback `ApiClient` without local storage.
 - **Evidence:** Route files; `cart_provider.dart` `cartRemoteDataSourceProvider`.
 - **Required fix:** Pick canonical routes (keep aliases the clients use), remove dead code, and stop creating fallback clients inside providers.
