@@ -38,6 +38,13 @@ export async function connectDb() {
     }
   } catch (error) {
     console.error('Failed to connect to the database:', error);
-    process.exit(1);
+    // P3-05: library code does not exit the process; the caller (server.ts) decides.
+    throw error;
   }
+}
+
+/** Closes the Prisma client and its pg pool (used during graceful shutdown). */
+export async function disconnectDb(): Promise<void> {
+  await prisma.$disconnect();
+  await pool.end();
 }

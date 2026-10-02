@@ -384,7 +384,7 @@
 - **Verification:** Logs are structured with no PII/secrets; health returns 503 when the DB is down.
 
 ### P3-05 — Runtime side effects and missing graceful shutdown
-- **Priority:** P3 · **Area:** Backend / Ops · **Status:** TODO
+- **Priority:** P3 · **Area:** Backend / Ops · **Status:** IN PROGRESS (done: graceful SIGTERM/SIGINT shutdown (stop accepting, drain, close Prisma + pg pool, forced exit after 10s); `connectDb` no longer calls `process.exit` (server.ts decides); verified against the built server. Remaining: the boot-time Rajkot pincode insert stays until the serviceability model is decided (P4-05), because removing it changes which pincodes a fresh production DB serves.)
 - **Problem:** `connectDb()` inserts Rajkot pincodes on every boot when the table is empty (data seeding in the runtime path). `connectDb` also calls `process.exit(1)` from library code. There's no SIGTERM handling for the Prisma pool or the HTTP server.
 - **Evidence:** `backend/src/config/db.ts`, `server.ts`.
 - **Required fix:** Move reference-data seeding to migrations/seed (values depend on P4-05); add graceful shutdown.
