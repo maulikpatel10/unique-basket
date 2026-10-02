@@ -357,7 +357,7 @@
 - **Verification:** PRs show required green checks.
 
 ### P3-02 — No environment validation or `.env.example`
-- **Priority:** P3 · **Area:** Config · **Status:** TODO
+- **Priority:** P3 · **Area:** Config · **Status:** DONE (`backend/.env.example` lists every variable the backend reads (placeholders only; undecided providers marked); `apps/admin/.env.example` has `VITE_API_URL`; startup validation of required secrets is in `backend/src/config/validateEnv.ts` (P0-02))
 - **Problem:** There's no example env file for backend/admin/app, and no startup validation (except `DATABASE_URL`).
 - **Evidence:** No `.env.example` files; README table only.
 - **Required fix:** `.env.example` per app (names only) and a typed env loader (shared with P0-02).

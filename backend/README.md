@@ -110,7 +110,7 @@ $$\text{HTTP Request} \longrightarrow \text{Express App} \longrightarrow \text{M
    ```
 
 3. **Configure environment variables**:
-   Create a `.env` file in `backend/` following the [Environment Configuration](#environment-configuration) section.
+   Copy `backend/.env.example` to `backend/.env` and fill in values (see [Environment Configuration](#environment-configuration)).
 
 4. **Generate Prisma Client and apply migrations**:
    ```bash
