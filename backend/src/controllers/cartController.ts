@@ -3,6 +3,7 @@ import { prisma } from '../config/db';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 import { validateQuantityForUnit } from '../utils/quantity';
 import { loadFareSettings, calculateDeliveryFee } from '../services/pricingService';
+import { fromPaise, lineTotalPaise, toPaise } from '../utils/money';
 import { getParam } from '../utils/request';
 
 export class CartController {
@@ -43,13 +44,14 @@ export class CartController {
       const activeItems = cartItems.filter((item) => item.product.isActive && item.product.category.isActive);
 
       // Calculate subtotal safely avoiding floating point errors
-      let subtotal = 0;
+      let subtotalPaise = 0;
       const formattedItems = activeItems.map((item) => {
         const itemQty = Number(item.quantity);
         const itemPrice = Number(item.product.price);
-        const totalItemPrice = parseFloat((itemQty * itemPrice).toFixed(2));
-        
-        subtotal = parseFloat((subtotal + totalItemPrice).toFixed(2));
+        // P2-03: exact paise arithmetic
+        const itemTotalPaise = lineTotalPaise(itemQty, item.product.price);
+        subtotalPaise += itemTotalPaise;
+        const totalItemPrice = fromPaise(itemTotalPaise);
 
         return {
           id: item.id,
@@ -64,13 +66,15 @@ export class CartController {
       });
 
       // Fetch delivery settings for authoritative pricing calculations
+      const subtotal = fromPaise(subtotalPaise);
+
       // Same fare rules as checkout (P1-05). No delivery fee when the cart is empty or delivery is disabled.
       const fares = await loadFareSettings(prisma);
       const deliveryFee = activeItems.length > 0 && fares.deliveryEnabled
         ? calculateDeliveryFee(subtotal, fares)
         : 0.00;
 
-      const total = parseFloat((subtotal + deliveryFee).toFixed(2));
+      const total = fromPaise(subtotalPaise + toPaise(deliveryFee));
 
       res.status(200).json({
         success: true,

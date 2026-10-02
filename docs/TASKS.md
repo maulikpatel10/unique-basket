@@ -290,7 +290,7 @@
 - **Verification:** One implementation per rule; tests unchanged.
 
 ### P2-03 — Money handled as JS floats
-- **Priority:** P2 · **Area:** Backend / Data integrity · **Status:** TODO
+- **Priority:** P2 · **Area:** Backend / Data integrity · **Status:** DONE (`backend/src/utils/money.ts`: integer-paise arithmetic with BigInt line totals and single half-up rounding; used for checkout and cart line totals, subtotals and grand totals; responses still plain rupee numbers; tests in `backend/tests/money.test.ts` incl. 200 random carts checked against Prisma.Decimal and the 0.5 × ₹2.01 case that float `toFixed` got wrong)
 - **Problem:** Prices/totals are converted to `Number`, computed with `parseFloat(toFixed(2))` and written back to Decimal columns; rounding can drift across many items.
 - **Evidence:** `orderController.createOrder`, `cartController.getCart`.
 - **Required fix:** Use Prisma `Decimal` (decimal.js) or integer paise for arithmetic.

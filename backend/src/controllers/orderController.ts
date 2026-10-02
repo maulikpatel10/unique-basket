@@ -9,6 +9,7 @@ import { generateNextOrderNumber } from '../utils/orderNumber';
 import { AppError } from '../utils/errors';
 import { snapshotDeliveryAddress, withDeliveryAddress } from '../utils/orderAddress';
 import { validateQuantityForUnit } from '../utils/quantity';
+import { fromPaise, lineTotalPaise, toPaise } from '../utils/money';
 import { loadFareSettings, calculateDeliveryFee } from '../services/pricingService';
 import { claimOrderStatus, restoreOrderStock, ORDER_STATUS_CHANGED } from '../services/inventoryService';
 import { getParam } from '../utils/request';
@@ -135,7 +136,7 @@ export class OrderController {
         }
 
         // 3. Process products & inventories
-        let subtotal = 0.00;
+        let subtotalPaise = 0;
         const orderItemsToCreate = [];
 
         for (const item of items) {
@@ -206,8 +207,10 @@ export class OrderController {
           });
 
           const itemPrice = Number(product.price);
-          const totalItemPrice = parseFloat((qtyVal * itemPrice).toFixed(2));
-          subtotal = parseFloat((subtotal + totalItemPrice).toFixed(2));
+          // P2-03: exact paise arithmetic (no float rounding drift)
+          const itemTotalPaise = lineTotalPaise(qtyVal, product.price);
+          subtotalPaise += itemTotalPaise;
+          const totalItemPrice = fromPaise(itemTotalPaise);
 
           orderItemsToCreate.push({
             productId,
@@ -218,6 +221,8 @@ export class OrderController {
             totalPrice: totalItemPrice,
           });
         }
+
+        const subtotal = fromPaise(subtotalPaise);
 
         // 4. Validate Delivery minimum order amount & Calculate Delivery Fee
         if (fulfillmentType === 'DELIVERY') {
@@ -254,7 +259,7 @@ export class OrderController {
           calculatedCodCharge = 0.00;
         }
 
-        const grandTotal = parseFloat((subtotal + calculatedDeliveryFee + calculatedCodCharge).toFixed(2));
+        const grandTotal = fromPaise(subtotalPaise + toPaise(calculatedDeliveryFee) + toPaise(calculatedCodCharge));
 
         // 6. Generate standardized Order Number (Format: #UB-DDMMYY-XXX)
         const orderNumber = await generateNextOrderNumber(tx);
