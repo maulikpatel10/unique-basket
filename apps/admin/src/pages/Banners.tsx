@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { api } from '../services/api';
+import { useLoader, usePageState } from '../hooks/useLoader';
 import { useAuth } from '../context/authContextStore';
 import {
   Image as ImageIcon,
@@ -45,8 +46,6 @@ export const Banners: React.FC = () => {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Create / Edit Modal
   const [modalState, setModalState] = useState<{
@@ -85,38 +84,43 @@ export const Banners: React.FC = () => {
     setTimeout(() => setToast(null), 4000);
   };
 
-  const fetchBanners = async (page: number = 1) => {
-    try {
-      setLoading(true);
-      setError(null);
+  // Search is applied on submit; the page resets to 1 whenever filters or the applied search change
+  const [appliedSearch, setAppliedSearch] = useState('');
+  const [page, goToPage] = usePageState(JSON.stringify([statusFilter, appliedSearch]));
 
-      const params: Record<string, unknown> = {
-        page,
-        limit: 10,
-      };
+  const loadBanners = async () => {
 
-      if (searchTerm.trim()) params.search = searchTerm.trim();
-      if (statusFilter !== 'ALL') params.status = statusFilter;
+    const params: Record<string, unknown> = {
+      page,
+      limit: 10,
+    };
 
-      const res = await api.get('/admin/banners', { params });
-      setBanners(res.data.data.banners);
-      setPagination(res.data.data.pagination);
-    } catch (caught: unknown) {
-      const err = asApiError(caught);
-      console.error('Error fetching banners:', err);
-      setError(err.response?.data?.message || 'Failed to load marketing banners.');
-    } finally {
-      setLoading(false);
+    if (appliedSearch) params.search = appliedSearch;
+    if (statusFilter !== 'ALL') params.status = statusFilter;
+
+    const res = await api.get('/admin/banners', { params });
+    setBanners(res.data.data.banners);
+    setPagination(res.data.data.pagination);
+  };
+
+  // useLoader: loading/error derived from the latest request (no setState inside effects)
+  const { loading, error, reload } = useLoader(loadBanners, [page, appliedSearch, statusFilter], {
+    errorMessage: (caught) => asApiError(caught).response?.data?.message || 'Failed to load marketing banners.',
+  });
+
+  /** Applies the typed search and shows page 1 (re-fetches when nothing changed, e.g. Refresh). */
+  const submitSearch = () => {
+    const term = searchTerm.trim();
+    if (term === appliedSearch && page === 1) reload();
+    else {
+      setAppliedSearch(term);
+      goToPage(1);
     }
   };
 
-  useEffect(() => {
-    fetchBanners(1);
-  }, [statusFilter]);
-
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    fetchBanners(1);
+    submitSearch();
   };
 
   const handleOpenCreate = () => {
@@ -161,7 +165,7 @@ export const Banners: React.FC = () => {
       }
 
       setModalState({ isOpen: false, mode: 'create' });
-      fetchBanners(pagination.page);
+      reload();
     } catch (caught: unknown) {
       const err = asApiError(caught);
       console.error('Error saving banner:', err);
@@ -188,7 +192,7 @@ export const Banners: React.FC = () => {
       }
 
       setConfirmModal({ isOpen: false, banner: null });
-      fetchBanners(pagination.page);
+      reload();
     } catch (caught: unknown) {
       const err = asApiError(caught);
       console.error('Error modifying banner status:', err);
@@ -279,7 +283,7 @@ export const Banners: React.FC = () => {
         <div className="text-center py-12 bg-darkbg-800 border border-slate-700/50 rounded-xl">
           <p className="text-red-400 text-sm font-semibold">{error}</p>
           <button
-            onClick={() => fetchBanners(1)}
+            onClick={submitSearch}
             className="mt-4 rounded-lg bg-slate-700 hover:bg-slate-650 text-slate-200 px-4 py-2 text-xs font-bold"
           >
             Retry
@@ -413,14 +417,14 @@ export const Banners: React.FC = () => {
             <div className="flex items-center gap-2">
               <button
                 disabled={pagination.page <= 1}
-                onClick={() => fetchBanners(pagination.page - 1)}
+                onClick={() => goToPage(pagination.page - 1)}
                 className="p-1.5 rounded bg-slate-800 hover:bg-slate-750 text-slate-300 disabled:opacity-40"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
               <button
                 disabled={pagination.page >= pagination.totalPages}
-                onClick={() => fetchBanners(pagination.page + 1)}
+                onClick={() => goToPage(pagination.page + 1)}
                 className="p-1.5 rounded bg-slate-800 hover:bg-slate-750 text-slate-300 disabled:opacity-40"
               >
                 <ChevronRight className="h-4 w-4" />

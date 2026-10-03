@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Pagination } from '../components/Pagination';
 import { ADMIN_PAGE_SIZE, emptyPagination, type PaginationMeta } from '../utils/pagination';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { api } from '../services/api';
+import { useLoader } from '../hooks/useLoader';
 import { useAuth } from '../context/authContextStore';
 import {
   Plus,
@@ -33,8 +34,6 @@ interface Category {
 export const Categories: React.FC = () => {
   const { user } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Search & Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -65,30 +64,20 @@ export const Categories: React.FC = () => {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
 
-  const fetchCategories = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      // Fetch categories. Passing isActive='all' to override default customer active-only return
-      const params: Record<string, unknown> = { page, limit: ADMIN_PAGE_SIZE };
-      if (debouncedSearch) params.search = debouncedSearch;
-      if (statusFilter !== 'ALL') params.isActive = statusFilter === 'ACTIVE' ? 'true' : 'false';
-      const res = await api.get('/categories', { params });
-      setCategories(res.data.data.categories);
-      setPagination(res.data.data.pagination);
-    } catch (caught: unknown) {
-      const err = asApiError(caught);
-      console.error('Error fetching categories:', err);
-      setError('Failed to retrieve categories list. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+  const loadCategories = async () => {
+    // Fetch categories. Passing isActive='all' to override default customer active-only return
+    const params: Record<string, unknown> = { page, limit: ADMIN_PAGE_SIZE };
+    if (debouncedSearch) params.search = debouncedSearch;
+    if (statusFilter !== 'ALL') params.isActive = statusFilter === 'ACTIVE' ? 'true' : 'false';
+    const res = await api.get('/categories', { params });
+    setCategories(res.data.data.categories);
+    setPagination(res.data.data.pagination);
   };
 
-  useEffect(() => {
-    fetchCategories();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, debouncedSearch, statusFilter]);
+  // useLoader: loading/error derived from the latest request (no setState inside effects)
+  const { loading, error, reload: fetchCategories } = useLoader(loadCategories, [page, debouncedSearch, statusFilter], {
+    errorMessage: () => 'Failed to retrieve categories list. Please try again.',
+  });
 
   const showToast = (type: 'success' | 'error', message: string) => {
     setToast({ type, message });

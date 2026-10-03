@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
+import { useLoader, usePageState } from '../hooks/useLoader';
 import { useAuth } from '../context/authContextStore';
 import {
   Search,
@@ -52,8 +53,6 @@ export const Customers: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
   const [sortBy, setSortBy] = useState<'newest' | 'orders_desc' | 'orders_asc' | 'spend_desc' | 'spend_asc'>('newest');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Status toggle confirmation modal
   const [confirmModal, setConfirmModal] = useState<{
@@ -73,38 +72,43 @@ export const Customers: React.FC = () => {
     setTimeout(() => setToast(null), 4000);
   };
 
-  const fetchCustomers = async (page: number = 1) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const res = await api.get('/admin/customers', {
-        params: {
-          search: searchTerm.trim(),
-          status: statusFilter,
-          sortBy,
-          page,
-          limit: 10,
-        },
-      });
+  // Search is applied on submit; the page resets to 1 whenever filters or the applied search change
+  const [appliedSearch, setAppliedSearch] = useState('');
+  const [page, goToPage] = usePageState(JSON.stringify([statusFilter, sortBy, appliedSearch]));
 
-      setCustomers(res.data.data.customers);
-      setPagination(res.data.data.pagination);
-    } catch (caught: unknown) {
-      const err = asApiError(caught);
-      console.error('Error fetching customers:', err);
-      setError(err.response?.data?.message || 'Failed to load customer list.');
-    } finally {
-      setLoading(false);
+  const loadCustomers = async () => {
+    const res = await api.get('/admin/customers', {
+      params: {
+        search: appliedSearch,
+        status: statusFilter,
+        sortBy,
+        page,
+        limit: 10,
+      },
+    });
+
+    setCustomers(res.data.data.customers);
+    setPagination(res.data.data.pagination);
+  };
+
+  // useLoader: loading/error derived from the latest request (no setState inside effects)
+  const { loading, error, reload } = useLoader(loadCustomers, [page, appliedSearch, statusFilter, sortBy], {
+    errorMessage: (caught) => asApiError(caught).response?.data?.message || 'Failed to load customer list.',
+  });
+
+  /** Applies the typed search and shows page 1 (re-fetches when nothing changed, e.g. Refresh). */
+  const submitSearch = () => {
+    const term = searchTerm.trim();
+    if (term === appliedSearch && page === 1) reload();
+    else {
+      setAppliedSearch(term);
+      goToPage(1);
     }
   };
 
-  useEffect(() => {
-    fetchCustomers(1);
-  }, [statusFilter, sortBy]);
-
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    fetchCustomers(1);
+    submitSearch();
   };
 
   const handleToggleStatus = async () => {
@@ -121,7 +125,7 @@ export const Customers: React.FC = () => {
         targetState ? 'Customer activated successfully.' : 'Customer deactivated successfully.'
       );
       setConfirmModal({ isOpen: false, customer: null });
-      fetchCustomers(pagination.page);
+      reload();
     } catch (caught: unknown) {
       const err = asApiError(caught);
       console.error('Error toggling customer status:', err);
@@ -217,7 +221,7 @@ export const Customers: React.FC = () => {
         <div className="text-center py-12 bg-darkbg-800 border border-slate-700/50 rounded-xl">
           <p className="text-red-400 text-sm font-semibold">{error}</p>
           <button
-            onClick={() => fetchCustomers(1)}
+            onClick={submitSearch}
             className="mt-4 rounded-lg bg-slate-700 hover:bg-slate-650 text-slate-200 px-4 py-2 text-xs font-bold"
           >
             Retry
@@ -320,14 +324,14 @@ export const Customers: React.FC = () => {
             <div className="flex items-center gap-2">
               <button
                 disabled={pagination.page <= 1}
-                onClick={() => fetchCustomers(pagination.page - 1)}
+                onClick={() => goToPage(pagination.page - 1)}
                 className="p-1.5 rounded bg-slate-800 hover:bg-slate-750 text-slate-300 disabled:opacity-40"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
               <button
                 disabled={pagination.page >= pagination.totalPages}
-                onClick={() => fetchCustomers(pagination.page + 1)}
+                onClick={() => goToPage(pagination.page + 1)}
                 className="p-1.5 rounded bg-slate-800 hover:bg-slate-750 text-slate-300 disabled:opacity-40"
               >
                 <ChevronRight className="h-4 w-4" />

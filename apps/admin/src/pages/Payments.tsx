@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/authContextStore';
 import { api } from '../services/api';
+import { useLoader, usePageState } from '../hooks/useLoader';
 import type { Store } from '../types';
 import {
   Search,
@@ -53,8 +54,6 @@ export const Payments: React.FC = () => {
   const [methodFilter, setMethodFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
 
   useEffect(() => {
@@ -74,34 +73,40 @@ export const Payments: React.FC = () => {
     fetchStores();
   }, [user, isSuperAdmin]);
 
-  const fetchPayments = async (page = 1) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const params: Record<string, unknown> = { page, limit: 10 };
-      if (selectedStoreId) params.storeId = selectedStoreId;
-      if (methodFilter !== 'ALL') params.paymentMethod = methodFilter;
-      if (statusFilter !== 'ALL') params.paymentStatus = statusFilter;
-      if (searchTerm.trim()) params.search = searchTerm.trim();
+  // Search is applied on submit; the page resets to 1 whenever filters or the applied search change
+  const [appliedSearch, setAppliedSearch] = useState('');
+  const [page, goToPage] = usePageState(JSON.stringify([selectedStoreId, methodFilter, statusFilter, appliedSearch]));
 
-      const res = await api.get('/admin/payments', { params });
-      setPayments(res.data.data.payments);
-      setPagination(res.data.data.pagination);
-    } catch (caught: unknown) {
-      const err = asApiError(caught);
-      setError(err.response?.data?.message || 'Failed to load payments.');
-    } finally {
-      setLoading(false);
+  const loadPayments = async () => {
+    const params: Record<string, unknown> = { page, limit: 10 };
+    if (selectedStoreId) params.storeId = selectedStoreId;
+    if (methodFilter !== 'ALL') params.paymentMethod = methodFilter;
+    if (statusFilter !== 'ALL') params.paymentStatus = statusFilter;
+    if (appliedSearch) params.search = appliedSearch;
+
+    const res = await api.get('/admin/payments', { params });
+    setPayments(res.data.data.payments);
+    setPagination(res.data.data.pagination);
+  };
+
+  // useLoader: loading/error derived from the latest request (no setState inside effects)
+  const { loading, error, reload } = useLoader(loadPayments, [page, appliedSearch, selectedStoreId, methodFilter, statusFilter], {
+    errorMessage: (caught) => asApiError(caught).response?.data?.message || 'Failed to load payments.',
+  });
+
+  /** Applies the typed search and shows page 1 (re-fetches when nothing changed, e.g. Refresh). */
+  const submitSearch = () => {
+    const term = searchTerm.trim();
+    if (term === appliedSearch && page === 1) reload();
+    else {
+      setAppliedSearch(term);
+      goToPage(1);
     }
   };
 
-  useEffect(() => {
-    fetchPayments(1);
-  }, [selectedStoreId, methodFilter, statusFilter]);
-
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    fetchPayments(1);
+    submitSearch();
   };
 
   const getPaymentStatusBadge = (status: string) => {
@@ -220,7 +225,7 @@ export const Payments: React.FC = () => {
       ) : error ? (
         <div className="text-center py-12 bg-darkbg-800 border border-slate-700/50 rounded-xl">
           <p className="text-red-400 text-sm font-semibold">{error}</p>
-          <button onClick={() => fetchPayments(1)} className="mt-4 rounded-lg bg-slate-700 text-slate-200 px-4 py-2 text-xs font-bold">Retry</button>
+          <button onClick={submitSearch} className="mt-4 rounded-lg bg-slate-700 text-slate-200 px-4 py-2 text-xs font-bold">Retry</button>
         </div>
       ) : payments.length === 0 ? (
         <div className="text-center py-16 bg-darkbg-800 border border-slate-700/50 rounded-xl">
@@ -294,10 +299,10 @@ export const Payments: React.FC = () => {
               Page <strong className="text-slate-200">{pagination.page}</strong> of <strong className="text-slate-200">{pagination.totalPages}</strong> ({pagination.total} records)
             </div>
             <div className="flex items-center gap-2">
-              <button disabled={pagination.page <= 1} onClick={() => fetchPayments(pagination.page - 1)} className="p-1.5 rounded bg-slate-800 text-slate-300 disabled:opacity-40">
+              <button disabled={pagination.page <= 1} onClick={() => goToPage(pagination.page - 1)} className="p-1.5 rounded bg-slate-800 text-slate-300 disabled:opacity-40">
                 <ChevronLeft className="h-4 w-4" />
               </button>
-              <button disabled={pagination.page >= pagination.totalPages} onClick={() => fetchPayments(pagination.page + 1)} className="p-1.5 rounded bg-slate-800 text-slate-300 disabled:opacity-40">
+              <button disabled={pagination.page >= pagination.totalPages} onClick={() => goToPage(pagination.page + 1)} className="p-1.5 rounded bg-slate-800 text-slate-300 disabled:opacity-40">
                 <ChevronRight className="h-4 w-4" />
               </button>
             </div>

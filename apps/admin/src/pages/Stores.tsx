@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Pagination } from '../components/Pagination';
 import { ADMIN_PAGE_SIZE, emptyPagination, type PaginationMeta } from '../utils/pagination';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/authContextStore';
 import { api } from '../services/api';
+import { useLoader } from '../hooks/useLoader';
 import type { Store } from '../types';
 import {
   Plus,
@@ -23,8 +24,6 @@ export const Stores: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [stores, setStores] = useState<Store[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Search & Filter state
   const [searchTerm, setSearchTerm] = useState('');
@@ -66,35 +65,24 @@ export const Stores: React.FC = () => {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
 
-  const fetchStores = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const params: Record<string, unknown> = { page, limit: ADMIN_PAGE_SIZE };
-      if (debouncedSearch) params.search = debouncedSearch;
-      if (statusFilter !== 'ALL') params.isActive = statusFilter === 'ACTIVE' ? 'true' : 'false';
-      if (cityFilter !== 'ALL') params.city = cityFilter;
-      const res = await api.get('/admin/stores', { params });
-      setStores(res.data.data.stores);
-      setPagination(res.data.data.pagination);
-      setCityOptions(res.data.data.cities ?? []);
-    } catch (caught: unknown) {
-      const err = asApiError(caught);
-      console.error('Error fetching stores:', err);
-      if (err.response?.status === 403) {
-        setError('You do not have permission to view stores.');
-      } else {
-        setError('Failed to retrieve stores. Please refresh.');
-      }
-    } finally {
-      setLoading(false);
-    }
+  const loadStores = async () => {
+    const params: Record<string, unknown> = { page, limit: ADMIN_PAGE_SIZE };
+    if (debouncedSearch) params.search = debouncedSearch;
+    if (statusFilter !== 'ALL') params.isActive = statusFilter === 'ACTIVE' ? 'true' : 'false';
+    if (cityFilter !== 'ALL') params.city = cityFilter;
+    const res = await api.get('/admin/stores', { params });
+    setStores(res.data.data.stores);
+    setPagination(res.data.data.pagination);
+    setCityOptions(res.data.data.cities ?? []);
   };
 
-  useEffect(() => {
-    fetchStores();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, debouncedSearch, statusFilter, cityFilter]);
+  // useLoader: loading/error derived from the latest request (no setState inside effects)
+  const { loading, error, reload: fetchStores } = useLoader(loadStores, [page, debouncedSearch, statusFilter, cityFilter], {
+    errorMessage: (caught) =>
+      asApiError(caught).response?.status === 403
+        ? 'You do not have permission to view stores.'
+        : 'Failed to retrieve stores. Please refresh.',
+  });
 
   const showToast = (type: 'success' | 'error', message: string) => {
     setToast({ type, message });

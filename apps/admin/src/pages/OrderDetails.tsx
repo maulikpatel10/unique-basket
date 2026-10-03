@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
+import { useLoader } from '../hooks/useLoader';
 import type { FulfillmentType } from '../types';
 import {
   ArrowLeft,
@@ -80,8 +81,6 @@ export const OrderDetails: React.FC = () => {
   const navigate = useNavigate();
 
   const [order, setOrder] = useState<OrderFullDetails | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Status transition modal
   const [statusModal, setStatusModal] = useState<{
@@ -110,25 +109,16 @@ export const OrderDetails: React.FC = () => {
     setTimeout(() => setToast(null), 4000);
   };
 
-  const fetchOrderDetails = async () => {
+  const loadOrderDetails = async () => {
     if (!id) return;
-    try {
-      setLoading(true);
-      setError(null);
-      const res = await api.get(`/admin/orders/${id}`);
-      setOrder(res.data.data);
-    } catch (caught: unknown) {
-      const err = asApiError(caught);
-      console.error('Error fetching order details:', err);
-      setError(err.response?.data?.message || 'Failed to load order details.');
-    } finally {
-      setLoading(false);
-    }
+    const res = await api.get(`/admin/orders/${id}`);
+    setOrder(res.data.data);
   };
 
-  useEffect(() => {
-    fetchOrderDetails();
-  }, [id]);
+  // useLoader: loading/error derived from the latest request (no setState inside effects)
+  const { loading, error, reload: fetchOrderDetails } = useLoader(loadOrderDetails, [id], {
+    errorMessage: (caught) => asApiError(caught).response?.data?.message || 'Failed to load order details.',
+  });
 
   const handleUpdateStatus = async () => {
     if (!order || !statusModal.nextStatus) return;

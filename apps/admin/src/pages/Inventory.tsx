@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../context/authContextStore';
 import { api } from '../services/api';
+import { useLoader } from '../hooks/useLoader';
 import type { Store, Category } from '../types';
 import {
   Search,
@@ -52,8 +53,6 @@ export const Inventory: React.FC = () => {
   const [selectedStoreId, setSelectedStoreId] = useState('');
   const [inventory, setInventory] = useState<StoreProductInventory[]>([]);
   
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Search & Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -88,57 +87,38 @@ export const Inventory: React.FC = () => {
     setTimeout(() => setToast(null), 4000);
   };
 
-  // Load stores list and categories list
-  useEffect(() => {
-    const initData = async () => {
-      try {
-        setLoading(true);
-        const [storesRes, categoriesRes] = await Promise.all([
-          api.get('/stores'),
-          api.get('/categories'),
-        ]);
+  // Load stores list and categories list; lock the store for managers
+  const loadMetadata = async () => {
+    const [storesRes, categoriesRes] = await Promise.all([api.get('/stores'), api.get('/categories')]);
+    const storesList = storesRes.data.data;
+    setStores(storesList);
+    setCategories(categoriesRes.data.data);
 
-        const storesList = storesRes.data.data;
-        setStores(storesList);
-        setCategories(categoriesRes.data.data);
-
-        // Lock store selection based on role claims
-        if (isSuperAdmin) {
-          if (storesList.length > 0) {
-            setSelectedStoreId(storesList[0].id);
-          }
-        } else {
-          // Store Manager: Lock store to manager claim storeId
-          setSelectedStoreId(user?.storeId || '');
-        }
-      } catch (err) {
-        console.error('Error fetching stores/categories:', err);
-        setError('Failed to load stores metadata. Please try again.');
-      }
-    };
-    initData();
-  }, [user, isSuperAdmin]);
-
-  // Load store-specific inventories when selectedStoreId updates
-  const fetchInventory = async () => {
-    if (!selectedStoreId) return;
-    try {
-      setLoading(true);
-      setError(null);
-      const res = await api.get(`/products/store/${selectedStoreId}`);
-      setInventory(res.data.data);
-    } catch (caught: unknown) {
-      const err = asApiError(caught);
-      console.error('Error fetching store inventory:', err);
-      setError('Failed to load store inventory catalog.');
-    } finally {
-      setLoading(false);
+    if (isSuperAdmin) {
+      if (storesList.length > 0) setSelectedStoreId(storesList[0].id);
+    } else {
+      // Store Manager: Lock store to manager claim storeId
+      setSelectedStoreId(user?.storeId || '');
     }
   };
 
-  useEffect(() => {
-    fetchInventory();
-  }, [selectedStoreId]);
+  // Load store-specific inventories when selectedStoreId updates
+  const loadInventory = async () => {
+    if (!selectedStoreId) return;
+    const res = await api.get(`/products/store/${selectedStoreId}`);
+    setInventory(res.data.data);
+  };
+
+  // useLoader: loading/error derived from the latest requests (no setState inside effects)
+  const metadata = useLoader(loadMetadata, [user?.id, user?.storeId, isSuperAdmin], {
+    errorMessage: () => 'Failed to load stores metadata. Please try again.',
+  });
+  const inventoryLoader = useLoader(loadInventory, [selectedStoreId], {
+    errorMessage: () => 'Failed to load store inventory catalog.',
+  });
+  const fetchInventory = inventoryLoader.reload;
+  const loading = metadata.loading || inventoryLoader.loading;
+  const error = metadata.error ?? inventoryLoader.error;
 
   // Handle live stock adjustment preview maths
   const getResultingStock = () => {

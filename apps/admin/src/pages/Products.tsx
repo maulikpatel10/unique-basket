@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Pagination } from '../components/Pagination';
 import { ADMIN_PAGE_SIZE, emptyPagination, type PaginationMeta } from '../utils/pagination';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { api } from '../services/api';
+import { useLoader } from '../hooks/useLoader';
 import type { Category } from '../types';
 import { useAuth } from '../context/authContextStore';
 import {
@@ -46,8 +47,6 @@ export const Products: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Search & Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -85,35 +84,25 @@ export const Products: React.FC = () => {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      // Fetch both products and active categories in parallel
-      const params: Record<string, unknown> = { page, limit: ADMIN_PAGE_SIZE };
-      if (debouncedSearch) params.search = debouncedSearch;
-      if (statusFilter !== 'ALL') params.isActive = statusFilter === 'ACTIVE' ? 'true' : 'false';
-      if (categoryFilter !== 'ALL') params.categoryId = categoryFilter;
-      const [productsRes, categoriesRes] = await Promise.all([
-        api.get('/products', { params }),
-        api.get('/categories'),
-      ]);
-      setProducts(productsRes.data.data.products);
-      setPagination(productsRes.data.data.pagination);
-      setCategories(categoriesRes.data.data);
-    } catch (caught: unknown) {
-      const err = asApiError(caught);
-      console.error('Error fetching products:', err);
-      setError('Failed to retrieve products catalog. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+  const loadData = async () => {
+    // Fetch both products and active categories in parallel
+    const params: Record<string, unknown> = { page, limit: ADMIN_PAGE_SIZE };
+    if (debouncedSearch) params.search = debouncedSearch;
+    if (statusFilter !== 'ALL') params.isActive = statusFilter === 'ACTIVE' ? 'true' : 'false';
+    if (categoryFilter !== 'ALL') params.categoryId = categoryFilter;
+    const [productsRes, categoriesRes] = await Promise.all([
+      api.get('/products', { params }),
+      api.get('/categories'),
+    ]);
+    setProducts(productsRes.data.data.products);
+    setPagination(productsRes.data.data.pagination);
+    setCategories(categoriesRes.data.data);
   };
 
-  useEffect(() => {
-    fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, debouncedSearch, statusFilter, categoryFilter]);
+  // useLoader: loading/error derived from the latest request (no setState inside effects)
+  const { loading, error, reload: fetchData } = useLoader(loadData, [page, debouncedSearch, statusFilter, categoryFilter], {
+    errorMessage: () => 'Failed to retrieve products catalog. Please try again.',
+  });
 
   const showToast = (type: 'success' | 'error', message: string) => {
     setToast({ type, message });

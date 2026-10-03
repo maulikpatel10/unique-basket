@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/authContextStore';
 import { api } from '../services/api';
+import { useLoader, usePageState } from '../hooks/useLoader';
 import type { Store, FulfillmentType } from '../types';
 import {
   Search,
@@ -70,8 +71,6 @@ export const Orders: React.FC = () => {
   const [fulfillmentFilter, setFulfillmentFilter] = useState('ALL');
   const [paymentStatusFilter, setPaymentStatusFilter] = useState('ALL');
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Status transition modal
   const [statusModal, setStatusModal] = useState<{
@@ -124,46 +123,51 @@ export const Orders: React.FC = () => {
     fetchStores();
   }, [user, isSuperAdmin]);
 
-  const fetchOrders = async (page: number = 1) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const params: Record<string, unknown> = {
-        page,
-        limit: 10,
-      };
+  // Search is applied on submit; the page resets to 1 whenever filters or the applied search change
+  const [appliedSearch, setAppliedSearch] = useState('');
+  const [page, goToPage] = usePageState(JSON.stringify([selectedStoreId, statusFilter, fulfillmentFilter, paymentStatusFilter, appliedSearch]));
 
-      if (selectedStoreId) params.storeId = selectedStoreId;
-      if (statusFilter !== 'ALL') params.status = statusFilter;
-      if (fulfillmentFilter !== 'ALL') params.fulfillment = fulfillmentFilter;
-      if (paymentStatusFilter !== 'ALL') params.paymentStatus = paymentStatusFilter;
-      if (searchTerm.trim()) params.search = searchTerm.trim();
+  const loadOrders = async () => {
+    const params: Record<string, unknown> = {
+      page,
+      limit: 10,
+    };
 
-      const res = await api.get('/admin/orders', { params });
-      
-      if (res.data.data.orders) {
-        setOrders(res.data.data.orders);
-        setPagination(res.data.data.pagination);
-      } else {
-        setOrders(res.data.data);
-        setPagination({ total: res.data.data.length, page: 1, limit: 10, totalPages: 1 });
-      }
-    } catch (caught: unknown) {
-      const err = asApiError(caught);
-      console.error('Error fetching orders:', err);
-      setError(err.response?.data?.message || 'Failed to load orders list.');
-    } finally {
-      setLoading(false);
+    if (selectedStoreId) params.storeId = selectedStoreId;
+    if (statusFilter !== 'ALL') params.status = statusFilter;
+    if (fulfillmentFilter !== 'ALL') params.fulfillment = fulfillmentFilter;
+    if (paymentStatusFilter !== 'ALL') params.paymentStatus = paymentStatusFilter;
+    if (appliedSearch) params.search = appliedSearch;
+
+    const res = await api.get('/admin/orders', { params });
+    
+    if (res.data.data.orders) {
+      setOrders(res.data.data.orders);
+      setPagination(res.data.data.pagination);
+    } else {
+      setOrders(res.data.data);
+      setPagination({ total: res.data.data.length, page: 1, limit: 10, totalPages: 1 });
     }
   };
 
-  useEffect(() => {
-    fetchOrders(1);
-  }, [selectedStoreId, statusFilter, fulfillmentFilter, paymentStatusFilter]);
+  // useLoader: loading/error derived from the latest request (no setState inside effects)
+  const { loading, error, reload } = useLoader(loadOrders, [page, appliedSearch, selectedStoreId, statusFilter, fulfillmentFilter, paymentStatusFilter], {
+    errorMessage: (caught) => asApiError(caught).response?.data?.message || 'Failed to load orders list.',
+  });
+
+  /** Applies the typed search and shows page 1 (re-fetches when nothing changed, e.g. Refresh). */
+  const submitSearch = () => {
+    const term = searchTerm.trim();
+    if (term === appliedSearch && page === 1) reload();
+    else {
+      setAppliedSearch(term);
+      goToPage(1);
+    }
+  };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    fetchOrders(1);
+    submitSearch();
   };
 
   const handleUpdateStatus = async () => {
@@ -176,7 +180,7 @@ export const Orders: React.FC = () => {
 
       showToast('success', `Order status updated to ${formatOrderStatus(statusModal.nextStatus)}.`);
       setStatusModal({ isOpen: false, order: null, nextStatus: '', actionLabel: '' });
-      fetchOrders(pagination.page);
+      reload();
     } catch (caught: unknown) {
       const err = asApiError(caught);
       console.error('Error updating order status:', err);
@@ -196,7 +200,7 @@ export const Orders: React.FC = () => {
 
       showToast('success', `Order ${cancelModal.order.orderNumber} has been cancelled.`);
       setCancelModal({ isOpen: false, order: null });
-      fetchOrders(pagination.page);
+      reload();
     } catch (caught: unknown) {
       const err = asApiError(caught);
       console.error('Error cancelling order:', err);
@@ -407,7 +411,7 @@ export const Orders: React.FC = () => {
         <div className="text-center py-12 bg-darkbg-800 border border-slate-700/50 rounded-xl">
           <p className="text-red-400 text-sm font-semibold">{error}</p>
           <button
-            onClick={() => fetchOrders(1)}
+            onClick={submitSearch}
             className="mt-4 rounded-lg bg-slate-700 hover:bg-slate-650 text-slate-200 px-4 py-2 text-xs font-bold"
           >
             Retry
@@ -560,14 +564,14 @@ export const Orders: React.FC = () => {
             <div className="flex items-center gap-2">
               <button
                 disabled={pagination.page <= 1}
-                onClick={() => fetchOrders(pagination.page - 1)}
+                onClick={() => goToPage(pagination.page - 1)}
                 className="p-1.5 rounded bg-slate-800 hover:bg-slate-750 text-slate-300 disabled:opacity-40"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
               <button
                 disabled={pagination.page >= pagination.totalPages}
-                onClick={() => fetchOrders(pagination.page + 1)}
+                onClick={() => goToPage(pagination.page + 1)}
                 className="p-1.5 rounded bg-slate-800 hover:bg-slate-750 text-slate-300 disabled:opacity-40"
               >
                 <ChevronRight className="h-4 w-4" />

@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/authContextStore';
 import { api } from '../services/api';
+import { useLoader } from '../hooks/useLoader';
 import type { DeliverySettings } from '../types';
 import {
   Truck,
@@ -23,9 +24,7 @@ export const Settings: React.FC = () => {
   const { user } = useAuth();
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
 
-  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [fetchError, setFetchError] = useState<string | null>(null);
 
   // Form State
   const [formData, setFormData] = useState<DeliverySettings>({
@@ -50,41 +49,31 @@ export const Settings: React.FC = () => {
     setTimeout(() => setToast(null), 4000);
   };
 
-  const fetchSettings = async () => {
-    try {
-      setLoading(true);
-      setFetchError(null);
-      const res = await api.get('/admin/settings/fare-cod');
-      const data = res.data.data;
-      const parsedData: DeliverySettings = {
-        id: data.id,
-        deliveryEnabled: Boolean(data.deliveryEnabled),
-        deliveryFee: Number(data.deliveryFee),
-        freeDeliveryThreshold: Number(data.freeDeliveryThreshold),
-        minimumOrderAmount: Number(data.minimumOrderAmount),
-        codEnabled: Boolean(data.codEnabled),
-        codCharge: Number(data.codCharge),
-        minimumCodOrderAmount: Number(data.minimumCodOrderAmount),
-        maximumCodOrderAmount: Number(data.maximumCodOrderAmount),
-        pickupCodEnabled: Boolean(data.pickupCodEnabled),
-        updatedAt: data.updatedAt,
-      };
-      setFormData(parsedData);
-      setInitialSettings(parsedData);
-    } catch (caught: unknown) {
-      const err = asApiError(caught);
-      console.error('Error fetching settings:', err);
-      const msg = err.response?.data?.message || 'Failed to load fares & COD settings.';
-      setFetchError(msg);
-      showToast('error', msg);
-    } finally {
-      setLoading(false);
-    }
+  const loadSettings = async () => {
+    const res = await api.get('/admin/settings/fare-cod');
+    const data = res.data.data;
+    const parsedData: DeliverySettings = {
+      id: data.id,
+      deliveryEnabled: Boolean(data.deliveryEnabled),
+      deliveryFee: Number(data.deliveryFee),
+      freeDeliveryThreshold: Number(data.freeDeliveryThreshold),
+      minimumOrderAmount: Number(data.minimumOrderAmount),
+      codEnabled: Boolean(data.codEnabled),
+      codCharge: Number(data.codCharge),
+      minimumCodOrderAmount: Number(data.minimumCodOrderAmount),
+      maximumCodOrderAmount: Number(data.maximumCodOrderAmount),
+      pickupCodEnabled: Boolean(data.pickupCodEnabled),
+      updatedAt: data.updatedAt,
+    };
+    setFormData(parsedData);
+    setInitialSettings(parsedData);
   };
 
-  useEffect(() => {
-    fetchSettings();
-  }, []);
+  // useLoader: loading/error derived from the latest request (no setState inside effects)
+  const { loading, error: fetchError, reload: fetchSettings } = useLoader(loadSettings, [], {
+    errorMessage: (caught) => asApiError(caught).response?.data?.message || 'Failed to load fares & COD settings.',
+    onError: (message) => showToast('error', message),
+  });
 
   const handleNumberChange = (field: keyof DeliverySettings, val: string) => {
     const num = parseFloat(val);

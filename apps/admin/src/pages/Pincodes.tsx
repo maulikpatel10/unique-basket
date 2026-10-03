@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { api } from '../services/api';
+import { useLoader } from '../hooks/useLoader';
 import { useAuth } from '../context/authContextStore';
 import type { SupportedPincode } from '../types';
 import {
@@ -22,8 +23,6 @@ export const Pincodes: React.FC = () => {
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
 
   const [pincodes, setPincodes] = useState<SupportedPincode[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Search & Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -55,26 +54,16 @@ export const Pincodes: React.FC = () => {
     setTimeout(() => setToast(null), 4000);
   };
 
-  const fetchPincodes = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const res = await api.get('/admin/pincodes');
-      setPincodes(res.data.data || []);
-    } catch (caught: unknown) {
-      const err = asApiError(caught);
-      console.error('Error fetching supported pincodes:', err);
-      const msg = err.response?.data?.message || 'Failed to retrieve delivery pincodes.';
-      setError(msg);
-      showToast('error', msg);
-    } finally {
-      setLoading(false);
-    }
+  const loadPincodes = async () => {
+    const res = await api.get('/admin/pincodes');
+    setPincodes(res.data.data || []);
   };
 
-  useEffect(() => {
-    fetchPincodes();
-  }, []);
+  // useLoader: loading/error derived from the latest request (no setState inside effects)
+  const { loading, error, reload: fetchPincodes } = useLoader(loadPincodes, [], {
+    errorMessage: (caught) => asApiError(caught).response?.data?.message || 'Failed to retrieve delivery pincodes.',
+    onError: (message) => showToast('error', message),
+  });
 
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
