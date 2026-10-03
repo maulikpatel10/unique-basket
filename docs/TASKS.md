@@ -272,7 +272,7 @@
 ## P2 — Architecture/maintainability
 
 ### P2-01 — Business logic in controllers; no request validation layer
-- **Priority:** P2 · **Area:** Backend / Architecture · **Status:** IN PROGRESS. The request validation layer is done (parts 1–2). Service extraction part 1 is done for orders, inventory and cart; more controllers can follow.
+- **Priority:** P2 · **Area:** Backend / Architecture · **Status:** DONE. There is a request validation layer for customer and admin endpoints (payment endpoints excluded until P-001). Services were extracted for orders, inventory, cart, customer, admin orders and managers; those controllers are now thin request → service → response layers, and contracts are unchanged. Smaller controllers (stores, banners, pincodes, categories, settings, each ≤ ~300 lines) can follow the same pattern when touched.
   - **Validator:** `backend/src/validation/validator.ts`, an in-house typed schema/parsers module with no new dependency (`zod` is still awaiting approval).
   - **Middleware:** `middlewares/validate.ts` (`validateBody`/`validatedBody`).
   - **Schemas:** `validation/schemas.ts`, covering auth send/verify OTP, customer profile, add/update address, cart add/update, order creation, and admin product create/update.
