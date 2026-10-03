@@ -6,7 +6,7 @@ import { lockInventoryRow } from '../services/inventoryService';
 import { AppError } from '../utils/errors';
 import { parseQuantityConfig } from '../utils/quantity';
 import { validatedBody } from '../middlewares/validate';
-import { createProductSchema, updateProductSchema } from '../validation/schemas';
+import { createProductSchema, updateProductSchema, updateStoreInventorySchema } from '../validation/schemas';
 import { paginationMeta, parsePagination } from '../utils/pagination';
 
 export class ProductController {
@@ -415,7 +415,8 @@ export class ProductController {
     try {
       const storeId = getParam(req, 'storeId');
       const productId = getParam(req, 'productId');
-      const { stockQuantity, adjustmentType, quantity, reason, lowStockThreshold, isAvailable } = req.body;
+      // validateBody(updateStoreInventorySchema): adjustment type, numeric quantities, boolean availability
+      const { stockQuantity, adjustmentType, quantity, reason, lowStockThreshold, isAvailable } = validatedBody(res, updateStoreInventorySchema);
 
       // Check product exists
       const product = await prisma.product.findUnique({
@@ -450,10 +451,10 @@ export class ProductController {
 
         if (adjustmentType) {
           // New adjustment UI signature
-          const qty = parseFloat(quantity);
-          if (isNaN(qty) || qty < 0) {
+          if (quantity == null) {
             throw new AppError(400, 'INVALID_QUANTITY', 'Quantity must be a positive number.');
           }
+          const qty = quantity;
 
           if (adjustmentType === 'ADD') {
             newStock = prevStock + qty;
@@ -467,15 +468,10 @@ export class ProductController {
             newStock = qty;
             changeVal = qty - prevStock;
             type = 'STOCK_ADJUSTED';
-          } else {
-            throw new AppError(400, 'INVALID_ADJUSTMENT_TYPE', 'Invalid adjustment type.');
           }
-        } else if (stockQuantity !== undefined) {
+        } else if (stockQuantity != null) {
           // Existing test compatibility signature
-          const targetQty = parseFloat(stockQuantity);
-          if (isNaN(targetQty)) {
-            throw new AppError(400, 'INVALID_QUANTITY', 'Stock Quantity must be a number.');
-          }
+          const targetQty = stockQuantity;
           newStock = targetQty;
           changeVal = targetQty - prevStock;
           type = 'STOCK_ADJUSTED';
@@ -497,16 +493,16 @@ export class ProductController {
           },
           update: {
             stockQuantity: newStock,
-            lowStockThreshold: lowStockThreshold !== undefined ? parseFloat(lowStockThreshold) : undefined,
-            isAvailable: isAvailable !== undefined ? !!isAvailable : undefined,
+            lowStockThreshold: lowStockThreshold ?? undefined,
+            isAvailable,
             updatedAt: new Date(),
           },
           create: {
             storeId,
             productId,
             stockQuantity: newStock,
-            lowStockThreshold: lowStockThreshold !== undefined ? parseFloat(lowStockThreshold) : 5.0,
-            isAvailable: isAvailable !== undefined ? !!isAvailable : true,
+            lowStockThreshold: lowStockThreshold ?? 5.0,
+            isAvailable: isAvailable ?? true,
           },
         });
 

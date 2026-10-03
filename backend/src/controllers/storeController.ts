@@ -3,6 +3,8 @@ import { prisma } from '../config/db';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 import { calculateHaversineDistance } from '../utils/distance';
 import { getParam } from '../utils/request';
+import { validatedBody } from '../middlewares/validate';
+import { createStoreSchema, updateStoreSchema } from '../validation/schemas';
 
 export class StoreController {
   /**
@@ -10,6 +12,7 @@ export class StoreController {
    */
   static async createStore(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
+      // validateBody(createStoreSchema): required fields, pincode, coordinates, radius, phone/email formats
       const {
         storeId,
         name,
@@ -24,30 +27,7 @@ export class StoreController {
         email,
         openingTime,
         closingTime,
-      } = req.body;
-
-      // Inputs validation
-      if (
-        !storeId ||
-        !name ||
-        !address ||
-        !city ||
-        !state ||
-        !pincode ||
-        latitude === undefined ||
-        longitude === undefined ||
-        deliveryRadiusKm === undefined ||
-        !phone ||
-        !openingTime ||
-        !closingTime
-      ) {
-        res.status(400).json({
-          success: false,
-          message: 'All fields are required, including coordinate values.',
-          errorCode: 'MISSING_PARAMETERS',
-        });
-        return;
-      }
+      } = validatedBody(res, createStoreSchema);
 
       // Check if storeId is unique
       const existing = await prisma.store.findUnique({
@@ -71,11 +51,11 @@ export class StoreController {
           city,
           state,
           pincode,
-          latitude: parseFloat(latitude),
-          longitude: parseFloat(longitude),
-          deliveryRadiusKm: parseFloat(deliveryRadiusKm),
+          latitude,
+          longitude,
+          deliveryRadiusKm,
           phone,
-          email: email || null,
+          email: email ?? null,
           openingTime,
           closingTime,
         },
@@ -106,7 +86,8 @@ export class StoreController {
   static async updateStore(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const id = getParam(req, 'id');
-      const updateData = req.body;
+      // validateBody(updateStoreSchema)
+      const updateData = validatedBody(res, updateStoreSchema);
 
       const store = await prisma.store.findUnique({
         where: { id },
@@ -129,14 +110,14 @@ export class StoreController {
           city: updateData.city,
           state: updateData.state,
           pincode: updateData.pincode,
-          latitude: updateData.latitude !== undefined ? parseFloat(updateData.latitude) : undefined,
-          longitude: updateData.longitude !== undefined ? parseFloat(updateData.longitude) : undefined,
-          deliveryRadiusKm: updateData.deliveryRadiusKm !== undefined ? parseFloat(updateData.deliveryRadiusKm) : undefined,
+          latitude: updateData.latitude ?? undefined,
+          longitude: updateData.longitude ?? undefined,
+          deliveryRadiusKm: updateData.deliveryRadiusKm ?? undefined,
           phone: updateData.phone,
           email: updateData.email,
           openingTime: updateData.openingTime,
           closingTime: updateData.closingTime,
-          isActive: updateData.isActive !== undefined ? !!updateData.isActive : undefined,
+          isActive: updateData.isActive,
         },
       });
 

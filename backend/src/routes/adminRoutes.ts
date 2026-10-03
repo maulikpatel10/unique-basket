@@ -13,11 +13,13 @@ import { AdminPincodeController } from '../controllers/adminPincodeController';
 import { AdminDashboardController } from '../controllers/adminDashboardController';
 import { authenticate, requireRole } from '../middlewares/authMiddleware';
 import { authRateLimits } from '../middlewares/rateLimit';
+import { validateBody } from '../middlewares/validate';
+import { adminLoginSchema, createBannerSchema, createManagerSchema, createPincodeSchema, createStoreSchema, togglePincodeStatusSchema, updateBannerSchema, updateCustomerStatusSchema, updateFareCodSettingsSchema, updateManagerSchema, updateOrderStatusSchema, updatePincodeSchema, updateStoreSchema, verifyPickupSchema } from '../validation/schemas';
 
 const router = Router();
 
 // Public Admin Auth
-router.post('/login', authRateLimits.adminLoginPerIp, authRateLimits.adminLoginPerEmail, AuthController.adminLogin);
+router.post('/login', authRateLimits.adminLoginPerIp, authRateLimits.adminLoginPerEmail, validateBody(adminLoginSchema), AuthController.adminLogin);
 
 // Dashboard summary (P2-07): DB aggregates, store-isolated for managers
 router.get(
@@ -46,6 +48,7 @@ router.put(
   '/orders/:id/status',
   authenticate,
   requireRole(['SUPER_ADMIN', 'STORE_MANAGER']),
+  validateBody(updateOrderStatusSchema),
   AdminOrderController.updateOrderStatus
 );
 
@@ -53,6 +56,7 @@ router.post(
   '/orders/pickup-verify',
   authenticate,
   requireRole(['SUPER_ADMIN', 'STORE_MANAGER']),
+  validateBody(verifyPickupSchema),
   AdminOrderController.verifyPickup
 );
 
@@ -68,6 +72,7 @@ router.put(
   '/settings/fare-cod',
   authenticate,
   requireRole(['SUPER_ADMIN']),
+  validateBody(updateFareCodSettingsSchema),
   AdminSettingsController.updateFareCodSettings
 );
 
@@ -83,6 +88,7 @@ router.put(
   '/settings',
   authenticate,
   requireRole(['SUPER_ADMIN']),
+  validateBody(updateFareCodSettingsSchema),
   AdminSettingsController.updateFareCodSettings
 );
 
@@ -98,6 +104,7 @@ router.post(
   '/managers',
   authenticate,
   requireRole(['SUPER_ADMIN']),
+  validateBody(createManagerSchema),
   AdminManagerController.createManager
 );
 
@@ -112,6 +119,7 @@ router.put(
   '/managers/:id',
   authenticate,
   requireRole(['SUPER_ADMIN']),
+  validateBody(updateManagerSchema),
   AdminManagerController.updateManager
 );
 
@@ -142,6 +150,7 @@ router.put(
   '/customers/:id/status',
   authenticate,
   requireRole(['SUPER_ADMIN']),
+  validateBody(updateCustomerStatusSchema),
   AdminCustomerController.updateCustomerStatus
 );
 
@@ -161,8 +170,8 @@ router.get(
 );
 router.get('/stores', authenticate, requireRole(['SUPER_ADMIN', 'STORE_MANAGER']), AdminStoreController.listStores);
 router.get('/stores/:id', authenticate, requireRole(['SUPER_ADMIN', 'STORE_MANAGER']), AdminStoreController.getStoreById);
-router.post('/stores', authenticate, requireRole(['SUPER_ADMIN']), AdminStoreController.createStore);
-router.put('/stores/:id', authenticate, requireRole(['SUPER_ADMIN']), AdminStoreController.updateStore);
+router.post('/stores', authenticate, requireRole(['SUPER_ADMIN']), validateBody(createStoreSchema), AdminStoreController.createStore);
+router.put('/stores/:id', authenticate, requireRole(['SUPER_ADMIN']), validateBody(updateStoreSchema), AdminStoreController.updateStore);
 router.delete('/stores/:id', authenticate, requireRole(['SUPER_ADMIN']), AdminStoreController.deleteStore);
 // System Audit Logs Routes (Super Admin only)
 router.get('/audit-logs', authenticate, requireRole(['SUPER_ADMIN']), AdminAuditController.getAuditLogs);
@@ -170,16 +179,16 @@ router.get('/audit-logs/actions', authenticate, requireRole(['SUPER_ADMIN']), Ad
 
 // Marketing Banners Routes (Super Admin only)
 router.get('/banners', authenticate, requireRole(['SUPER_ADMIN']), AdminBannerController.getBanners);
-router.post('/banners', authenticate, requireRole(['SUPER_ADMIN']), AdminBannerController.createBanner);
+router.post('/banners', authenticate, requireRole(['SUPER_ADMIN']), validateBody(createBannerSchema), AdminBannerController.createBanner);
 router.get('/banners/:id', authenticate, requireRole(['SUPER_ADMIN']), AdminBannerController.getBannerById);
-router.put('/banners/:id', authenticate, requireRole(['SUPER_ADMIN']), AdminBannerController.updateBanner);
+router.put('/banners/:id', authenticate, requireRole(['SUPER_ADMIN']), validateBody(updateBannerSchema), AdminBannerController.updateBanner);
 router.delete('/banners/:id', authenticate, requireRole(['SUPER_ADMIN']), AdminBannerController.deleteBanner);
 
 // Supported Pincodes / Delivery Areas (Super Admin only)
 router.get('/pincodes', authenticate, requireRole(['SUPER_ADMIN']), AdminPincodeController.listPincodes);
-router.post('/pincodes', authenticate, requireRole(['SUPER_ADMIN']), AdminPincodeController.createPincode);
+router.post('/pincodes', authenticate, requireRole(['SUPER_ADMIN']), validateBody(createPincodeSchema), AdminPincodeController.createPincode);
 router.get('/pincodes/:id', authenticate, requireRole(['SUPER_ADMIN']), AdminPincodeController.getPincodeById);
-router.put('/pincodes/:id', authenticate, requireRole(['SUPER_ADMIN']), AdminPincodeController.updatePincode);
-router.patch('/pincodes/:id/status', authenticate, requireRole(['SUPER_ADMIN']), AdminPincodeController.togglePincodeStatus);
+router.put('/pincodes/:id', authenticate, requireRole(['SUPER_ADMIN']), validateBody(updatePincodeSchema), AdminPincodeController.updatePincode);
+router.patch('/pincodes/:id/status', authenticate, requireRole(['SUPER_ADMIN']), validateBody(togglePincodeStatusSchema), AdminPincodeController.togglePincodeStatus);
 
 export default router;

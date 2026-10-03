@@ -3,6 +3,8 @@ import { prisma } from '../config/db';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 import { getParam } from '../utils/request';
 import { paginationMeta, parsePagination } from '../utils/pagination';
+import { validatedBody } from '../middlewares/validate';
+import { createCategorySchema, updateCategorySchema } from '../validation/schemas';
 
 export class CategoryController {
   /**
@@ -57,16 +59,8 @@ export class CategoryController {
    */
   static async createCategory(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { name, description, imageUrl, displayOrder } = req.body;
-
-      if (!name) {
-        res.status(400).json({
-          success: false,
-          message: 'Category name is required.',
-          errorCode: 'MISSING_PARAMETERS',
-        });
-        return;
-      }
+      // validateBody(createCategorySchema)
+      const { name, description, imageUrl, displayOrder } = validatedBody(res, createCategorySchema);
 
       const existing = await prisma.category.findUnique({
         where: { name },
@@ -84,9 +78,9 @@ export class CategoryController {
       const category = await prisma.category.create({
         data: {
           name,
-          description: description || null,
-          imageUrl: imageUrl || null,
-          displayOrder: displayOrder !== undefined ? parseInt(displayOrder) : 0,
+          description: description ?? null,
+          imageUrl: imageUrl ?? null,
+          displayOrder: displayOrder ?? 0,
         },
       });
 
@@ -115,7 +109,8 @@ export class CategoryController {
   static async updateCategory(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const id = getParam(req, 'id');
-      const { name, description, imageUrl, displayOrder, isActive } = req.body;
+      // validateBody(updateCategorySchema)
+      const { name, description, imageUrl, displayOrder, isActive } = validatedBody(res, updateCategorySchema);
 
       const category = await prisma.category.findUnique({
         where: { id },
@@ -148,11 +143,11 @@ export class CategoryController {
       const updated = await prisma.category.update({
         where: { id },
         data: {
-          name: name || undefined,
-          description: description !== undefined ? description : undefined,
-          imageUrl: imageUrl !== undefined ? imageUrl : undefined,
-          displayOrder: displayOrder !== undefined ? parseInt(displayOrder) : undefined,
-          isActive: isActive !== undefined ? !!isActive : undefined,
+          name,
+          description,
+          imageUrl,
+          displayOrder: displayOrder ?? undefined,
+          isActive,
         },
       });
 

@@ -1,6 +1,8 @@
 import { Response, NextFunction } from 'express';
 import { prisma } from '../config/db';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
+import { validatedBody } from '../middlewares/validate';
+import { updateCustomerStatusSchema } from '../validation/schemas';
 
 export class AdminCustomerController {
   /**
@@ -278,16 +280,8 @@ export class AdminCustomerController {
         return;
       }
 
-      const { isActive } = req.body;
-
-      if (typeof isActive !== 'boolean') {
-        res.status(400).json({
-          success: false,
-          message: 'isActive boolean parameter is required.',
-          errorCode: 'INVALID_PARAMETERS',
-        });
-        return;
-      }
+      // validateBody(updateCustomerStatusSchema): isActive is a boolean
+      const { isActive } = validatedBody(res, updateCustomerStatusSchema);
 
       const user = await prisma.user.findUnique({ where: { id } });
 

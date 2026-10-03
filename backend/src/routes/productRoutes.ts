@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { ProductController } from '../controllers/productController';
 import { authenticate, requireRole, requireStoreAccess, restrictManagerAccess } from '../middlewares/authMiddleware';
 import { validateBody } from '../middlewares/validate';
-import { createProductSchema, updateProductSchema } from '../validation/schemas';
+import { createProductSchema, updateProductSchema, updateStoreInventorySchema } from '../validation/schemas';
 
 const router = Router();
 
@@ -25,6 +25,7 @@ router.put(
   authenticate,
   requireRole(['SUPER_ADMIN', 'STORE_MANAGER']),
   requireStoreAccess,
+  validateBody(updateStoreInventorySchema),
   ProductController.updateStoreInventory
 );
 

@@ -285,6 +285,15 @@
     - A non-numeric product price/mrp or a non-boolean `isActive` reached Prisma; it now returns `VALIDATION_ERROR`.
     - Null address title/city/state on update caused a 500; null values are now ignored.
   - **Tests:** `backend/tests/request_validation.test.ts`.
+  - **Part 2 (admin endpoints, in-house validator kept):** `validateBody` schemas now cover admin login, order status, pickup verification, fare/COD settings, manager create/update, customer status, store create/update (`/admin/stores` and `/stores`), banners, supported pincodes (create/update/status), categories and store inventory. Cross-field rules (negative fees, COD range, quantity required with `adjustmentType`) stay in the controllers with their existing codes.
+  - **Part 2 bug fixes:**
+    - `"false"` strings were coerced to `true` for settings flags and `isActive`; they are now rejected.
+    - A manager update accepted malformed emails; it now returns `INVALID_EMAIL`.
+    - Store coordinates, radius, pincode and email were unchecked; they now return `INVALID_COORDINATES`/`INVALID_PINCODE`/`INVALID_EMAIL`/`VALIDATION_ERROR`.
+    - A fractional or non-numeric banner/category `displayOrder` was silently truncated; it now returns `VALIDATION_ERROR`.
+    - A null pincode city/state on update caused a 500; null values are now ignored.
+  - **Part 2 tests:** `backend/tests/admin_request_validation.test.ts`.
+  - **Not migrated:** payment endpoints (payment code is frozen until P-001), notification read/token endpoints, and refresh/logout (already explicit).
 - **Problem:** Orders, cart, inventory and pricing live in 300–800-line controllers with `any`-typed `whereClause`es and ad-hoc parsing.
 - **Evidence:** `customerController.ts` 800 lines, `orderController.ts` 627, `productController.ts` 535.
 - **Required fix:** Extract services (orders, inventory, pricing) and a validation layer; keep the HTTP contracts unchanged.

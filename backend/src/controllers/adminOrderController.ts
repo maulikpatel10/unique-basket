@@ -6,7 +6,8 @@ import { NotificationService } from '../services/notificationService';
 import { withDeliveryAddress } from '../utils/orderAddress';
 import { claimOrderStatus, restoreOrderStock, ORDER_STATUS_CHANGED } from '../services/inventoryService';
 import { getParam } from '../utils/request';
-import { normalizeIndianPhone } from '../utils/phone';
+import { validatedBody } from '../middlewares/validate';
+import { updateOrderStatusSchema, verifyPickupSchema } from '../validation/schemas';
 
 const ALLOWED_PAYMENT_STATUSES: PaymentStatus[] = [
   PaymentStatus.PENDING,
@@ -176,17 +177,9 @@ export class AdminOrderController {
   static async updateOrderStatus(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const id = getParam(req, 'id');
-      const { status } = req.body;
+      // validateBody(updateOrderStatusSchema): status is a known OrderStatus
+      const { status } = validatedBody(res, updateOrderStatusSchema);
       const { role, storeId: managerStoreId } = req.user!;
-
-      if (!status || !Object.values(OrderStatus).includes(status)) {
-        res.status(400).json({
-          success: false,
-          message: 'Invalid order status value provided.',
-          errorCode: 'INVALID_STATUS',
-        });
-        return;
-      }
 
       const order = await prisma.order.findUnique({
         where: { id },
@@ -344,20 +337,9 @@ export class AdminOrderController {
    */
   static async verifyPickup(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { orderNumber, phone } = req.body;
+      // validateBody(verifyPickupSchema): phone normalised to +91XXXXXXXXXX when valid (D-008)
+      const { orderNumber, phone: registeredPhone } = validatedBody(res, verifyPickupSchema);
       const { role, storeId: managerStoreId } = req.user!;
-
-      if (!orderNumber || !phone) {
-        res.status(400).json({
-          success: false,
-          message: 'Order number and registered mobile number are required.',
-          errorCode: 'MISSING_PARAMETERS',
-        });
-        return;
-      }
-
-      // Registered numbers are stored as +91XXXXXXXXXX; accept 10-digit input too.
-      const registeredPhone = normalizeIndianPhone(phone) ?? phone;
 
       const order = await prisma.order.findFirst({
         where: {

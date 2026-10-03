@@ -2,6 +2,8 @@ import { Response, NextFunction } from 'express';
 import { prisma } from '../config/db';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 import { loadFareSettings } from '../services/pricingService';
+import { validatedBody } from '../middlewares/validate';
+import { updateFareCodSettingsSchema } from '../validation/schemas';
 
 export class AdminSettingsController {
   /**
@@ -32,6 +34,7 @@ export class AdminSettingsController {
    */
   static async updateFareCodSettings(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
+      // validateBody(updateFareCodSettingsSchema): numbers are finite, flags are booleans
       const {
         deliveryEnabled,
         deliveryFee,
@@ -42,46 +45,22 @@ export class AdminSettingsController {
         minimumCodOrderAmount,
         maximumCodOrderAmount,
         pickupCodEnabled,
-      } = req.body;
+      } = validatedBody(res, updateFareCodSettingsSchema);
 
       const current = await prisma.deliverySettings.findFirst();
       // Unspecified fields keep their current value (or the shared defaults when no row exists)
       const base = await loadFareSettings(prisma);
 
-      // Resolve candidate values
-      const parsedDeliveryFee = deliveryFee !== undefined ? parseFloat(deliveryFee) : base.deliveryFee;
-      const parsedFreeDeliveryThreshold = freeDeliveryThreshold !== undefined ? parseFloat(freeDeliveryThreshold) : base.freeDeliveryThreshold;
-      const parsedMinimumOrderAmount = minimumOrderAmount !== undefined ? parseFloat(minimumOrderAmount) : base.minimumOrderAmount;
-      const parsedCodCharge = codCharge !== undefined ? parseFloat(codCharge) : base.codCharge;
-      const parsedMinCod = minimumCodOrderAmount !== undefined ? parseFloat(minimumCodOrderAmount) : base.minimumCodOrderAmount;
-      const parsedMaxCod = maximumCodOrderAmount !== undefined ? parseFloat(maximumCodOrderAmount) : base.maximumCodOrderAmount;
+      const parsedDeliveryFee = deliveryFee ?? base.deliveryFee;
+      const parsedFreeDeliveryThreshold = freeDeliveryThreshold ?? base.freeDeliveryThreshold;
+      const parsedMinimumOrderAmount = minimumOrderAmount ?? base.minimumOrderAmount;
+      const parsedCodCharge = codCharge ?? base.codCharge;
+      const parsedMinCod = minimumCodOrderAmount ?? base.minimumCodOrderAmount;
+      const parsedMaxCod = maximumCodOrderAmount ?? base.maximumCodOrderAmount;
 
-      const resolvedDeliveryEnabled = deliveryEnabled !== undefined ? Boolean(deliveryEnabled) : base.deliveryEnabled;
-      const resolvedCodEnabled = codEnabled !== undefined ? Boolean(codEnabled) : base.codEnabled;
-      const resolvedPickupCodEnabled = pickupCodEnabled !== undefined ? Boolean(pickupCodEnabled) : base.pickupCodEnabled;
-
-      // Validation 1: Numbers must be valid and non-NaN / finite
-      if (
-        isNaN(parsedDeliveryFee) ||
-        isNaN(parsedFreeDeliveryThreshold) ||
-        isNaN(parsedMinimumOrderAmount) ||
-        isNaN(parsedCodCharge) ||
-        isNaN(parsedMinCod) ||
-        isNaN(parsedMaxCod) ||
-        !isFinite(parsedDeliveryFee) ||
-        !isFinite(parsedFreeDeliveryThreshold) ||
-        !isFinite(parsedMinimumOrderAmount) ||
-        !isFinite(parsedCodCharge) ||
-        !isFinite(parsedMinCod) ||
-        !isFinite(parsedMaxCod)
-      ) {
-        res.status(400).json({
-          success: false,
-          message: 'Invalid numerical values provided in settings.',
-          errorCode: 'INVALID_SETTINGS_VALUES',
-        });
-        return;
-      }
+      const resolvedDeliveryEnabled = deliveryEnabled ?? base.deliveryEnabled;
+      const resolvedCodEnabled = codEnabled ?? base.codEnabled;
+      const resolvedPickupCodEnabled = pickupCodEnabled ?? base.pickupCodEnabled;
 
       // Validation 2: Monetary values cannot be negative
       if (

@@ -1,6 +1,8 @@
 import { Response, NextFunction } from 'express';
 import { prisma } from '../config/db';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
+import { validatedBody } from '../middlewares/validate';
+import { createPincodeSchema, togglePincodeStatusSchema, updatePincodeSchema } from '../validation/schemas';
 
 export class AdminPincodeController {
   /**
@@ -77,18 +79,8 @@ export class AdminPincodeController {
   static async createPincode(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const adminUserId = req.user?.id;
-      const { pincode, city, state, isActive } = req.body;
-
-      if (!pincode || typeof pincode !== 'string' || !/^\d{6}$/.test(pincode.trim())) {
-        res.status(400).json({
-          success: false,
-          message: 'A valid 6-digit numeric pincode is required.',
-          errorCode: 'INVALID_PINCODE_FORMAT',
-        });
-        return;
-      }
-
-      const normalizedPincode = pincode.trim();
+      // validateBody(createPincodeSchema): 6-digit pincode, text fields, boolean isActive
+      const { pincode: normalizedPincode, city, state, isActive } = validatedBody(res, createPincodeSchema);
       const existing = await prisma.supportedPincode.findUnique({
         where: { pincode: normalizedPincode },
       });
@@ -102,9 +94,10 @@ export class AdminPincodeController {
         return;
       }
 
-      const resolvedCity = (city && typeof city === 'string' && city.trim().length > 0) ? city.trim() : 'Rajkot';
-      const resolvedState = (state && typeof state === 'string' && state.trim().length > 0) ? state.trim() : 'Gujarat';
-      const resolvedActive = isActive !== undefined ? Boolean(isActive) : true;
+      // Rajkot/Gujarat fallback is existing behaviour; serviceability model is pending (P4-05)
+      const resolvedCity = city || 'Rajkot';
+      const resolvedState = state || 'Gujarat';
+      const resolvedActive = isActive ?? true;
 
       const created = await prisma.supportedPincode.create({
         data: {
@@ -142,7 +135,8 @@ export class AdminPincodeController {
     try {
       const adminUserId = req.user?.id;
       const id = req.params.id as string;
-      const { pincode, city, state, isActive } = req.body;
+      // validateBody(updatePincodeSchema)
+      const { pincode, city, state, isActive } = validatedBody(res, updatePincodeSchema);
 
       const existing = await prisma.supportedPincode.findUnique({
         where: { id },
@@ -159,15 +153,7 @@ export class AdminPincodeController {
 
       let normalizedPincode = existing.pincode;
       if (pincode !== undefined) {
-        if (typeof pincode !== 'string' || !/^\d{6}$/.test(pincode.trim())) {
-          res.status(400).json({
-            success: false,
-            message: 'A valid 6-digit numeric pincode is required.',
-            errorCode: 'INVALID_PINCODE_FORMAT',
-          });
-          return;
-        }
-        normalizedPincode = pincode.trim();
+        normalizedPincode = pincode;
         if (normalizedPincode !== existing.pincode) {
           const duplicate = await prisma.supportedPincode.findUnique({
             where: { pincode: normalizedPincode },
@@ -187,9 +173,10 @@ export class AdminPincodeController {
         where: { id },
         data: {
           pincode: normalizedPincode,
-          ...(city !== undefined ? { city: city.trim() } : {}),
-          ...(state !== undefined ? { state: state.trim() } : {}),
-          ...(isActive !== undefined ? { isActive: Boolean(isActive) } : {}),
+          // null/empty city/state are ignored rather than clearing required columns
+          ...(city ? { city } : {}),
+          ...(state ? { state } : {}),
+          ...(isActive !== undefined ? { isActive } : {}),
         },
       });
 
@@ -220,7 +207,8 @@ export class AdminPincodeController {
     try {
       const adminUserId = req.user?.id;
       const id = req.params.id as string;
-      const { isActive } = req.body;
+      // validateBody(togglePincodeStatusSchema)
+      const { isActive } = validatedBody(res, togglePincodeStatusSchema);
 
       const existing = await prisma.supportedPincode.findUnique({
         where: { id },
@@ -235,7 +223,7 @@ export class AdminPincodeController {
         return;
       }
 
-      const targetStatus = isActive !== undefined ? Boolean(isActive) : !existing.isActive;
+      const targetStatus = isActive ?? !existing.isActive;
 
       const updated = await prisma.supportedPincode.update({
         where: { id },

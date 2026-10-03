@@ -4,7 +4,7 @@ import { prisma } from '../config/db';
 import { OtpService, isOtpBypassEnabled } from '../services/otpService';
 import { generateAccessToken } from '../utils/jwt';
 import { validatedBody } from '../middlewares/validate';
-import { sendOtpSchema, verifyOtpSchema } from '../validation/schemas';
+import { adminLoginSchema, sendOtpSchema, verifyOtpSchema } from '../validation/schemas';
 import { issueRefreshToken, validateRefreshToken, revokeRefreshSession } from '../services/sessionService';
 
 export class AuthController {
@@ -120,16 +120,8 @@ export class AuthController {
    */
   static async adminLogin(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { email, password } = req.body;
-
-      if (!email || !password) {
-        res.status(400).json({
-          success: false,
-          message: 'Email and password are required.',
-          errorCode: 'MISSING_CREDENTIALS',
-        });
-        return;
-      }
+      // validateBody(adminLoginSchema): both credentials present
+      const { email, password } = validatedBody(res, adminLoginSchema);
 
       const admin = await prisma.adminUser.findUnique({
         where: { email },

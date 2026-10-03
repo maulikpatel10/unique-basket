@@ -1,6 +1,8 @@
 import { Response, NextFunction } from 'express';
 import { prisma } from '../config/db';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
+import { validatedBody } from '../middlewares/validate';
+import { createBannerSchema, updateBannerSchema } from '../validation/schemas';
 
 export class AdminBannerController {
   /**
@@ -64,23 +66,15 @@ export class AdminBannerController {
    */
   static async createBanner(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { title, imageUrl, displayOrder, isActive } = req.body;
-
-      if (!imageUrl || typeof imageUrl !== 'string' || !imageUrl.trim()) {
-        res.status(400).json({
-          success: false,
-          message: 'Banner image URL is required.',
-          errorCode: 'IMAGE_URL_REQUIRED',
-        });
-        return;
-      }
+      // validateBody(createBannerSchema)
+      const { title, imageUrl, displayOrder, isActive } = validatedBody(res, createBannerSchema);
 
       const banner = await prisma.banner.create({
         data: {
-          title: title ? title.trim() : null,
-          imageUrl: imageUrl.trim(),
-          displayOrder: displayOrder !== undefined ? parseInt(displayOrder) : 0,
-          isActive: isActive !== undefined ? !!isActive : true,
+          title: title ?? null,
+          imageUrl,
+          displayOrder: displayOrder ?? 0,
+          isActive: isActive ?? true,
         },
       });
 
@@ -161,7 +155,8 @@ export class AdminBannerController {
         return;
       }
 
-      const { title, imageUrl, displayOrder, isActive } = req.body;
+      // validateBody(updateBannerSchema)
+      const { title, imageUrl, displayOrder, isActive } = validatedBody(res, updateBannerSchema);
 
       const existing = await prisma.banner.findUnique({
         where: { id },
@@ -177,20 +172,10 @@ export class AdminBannerController {
       }
 
       const updateData: any = {};
-      if (title !== undefined) updateData.title = title ? title.trim() : null;
-      if (imageUrl !== undefined) {
-        if (!imageUrl.trim()) {
-          res.status(400).json({
-            success: false,
-            message: 'Banner image URL cannot be empty.',
-            errorCode: 'IMAGE_URL_REQUIRED',
-          });
-          return;
-        }
-        updateData.imageUrl = imageUrl.trim();
-      }
-      if (displayOrder !== undefined) updateData.displayOrder = parseInt(displayOrder);
-      if (isActive !== undefined) updateData.isActive = !!isActive;
+      if (title !== undefined) updateData.title = title;
+      if (imageUrl !== undefined) updateData.imageUrl = imageUrl;
+      if (displayOrder != null) updateData.displayOrder = displayOrder;
+      if (isActive !== undefined) updateData.isActive = isActive;
 
       const updated = await prisma.banner.update({
         where: { id },

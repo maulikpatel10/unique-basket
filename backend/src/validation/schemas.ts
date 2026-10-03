@@ -1,4 +1,4 @@
-import { ProductUnit } from '@prisma/client';
+import { OrderStatus, ProductUnit } from '@prisma/client';
 import { normalizeIndianPhone } from '../utils/phone';
 import { Parser, Schema, v } from './validator';
 
@@ -215,4 +215,210 @@ export const updateProductSchema = {
   unit: v.oneOf(PRODUCT_UNITS, INVALID_VALUES),
   price: v.number({ ...INVALID_VALUES, positive: true }),
   ...productShared,
+} satisfies Schema;
+
+// =====================================================================
+// Admin endpoints (P2-01 part 2)
+// =====================================================================
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const strictBoolean = (issue: { errorCode: string; message: string }) => v.optionalBoolean(issue);
+
+// ---------- Admin auth ----------
+
+const CREDENTIALS = { errorCode: 'MISSING_CREDENTIALS', message: 'Email and password are required.' };
+export const adminLoginSchema = {
+  email: v.requiredString(CREDENTIALS),
+  // Passwords are not trimmed: accept any non-empty string as given.
+  password: ((value) =>
+    typeof value === 'string' && value.length > 0 ? { ok: true, value } : { ok: false, issue: CREDENTIALS }) as Parser<string>,
+} satisfies Schema;
+
+// ---------- Orders ----------
+
+const ORDER_STATUSES = Object.values(OrderStatus);
+const INVALID_STATUS = { errorCode: 'INVALID_STATUS', message: 'Invalid order status value provided.' };
+export const updateOrderStatusSchema = {
+  status: v.oneOf(ORDER_STATUSES, { ...INVALID_STATUS, required: INVALID_STATUS }) as Parser<OrderStatus>,
+} satisfies Schema;
+
+const PICKUP_MISSING = { errorCode: 'MISSING_PARAMETERS', message: 'Order number and registered mobile number are required.' };
+export const verifyPickupSchema = {
+  orderNumber: v.requiredString(PICKUP_MISSING),
+  // Normalised to +91XXXXXXXXXX when possible (D-008); otherwise matched as entered.
+  phone: ((value) => {
+    if (typeof value !== 'string' || !value.trim()) return { ok: false, issue: PICKUP_MISSING };
+    return { ok: true, value: normalizeIndianPhone(value) ?? value.trim() };
+  }) as Parser<string>,
+} satisfies Schema;
+
+// ---------- Fare & COD settings ----------
+
+const INVALID_SETTINGS = { errorCode: 'INVALID_SETTINGS_VALUES', message: 'Invalid numerical values provided in settings.' };
+// Negative values and the COD range are cross-field rules checked in the controller (existing precedence).
+const settingsAmount = () => v.number(INVALID_SETTINGS);
+export const updateFareCodSettingsSchema = {
+  deliveryFee: settingsAmount(),
+  freeDeliveryThreshold: settingsAmount(),
+  minimumOrderAmount: settingsAmount(),
+  codCharge: settingsAmount(),
+  minimumCodOrderAmount: settingsAmount(),
+  maximumCodOrderAmount: settingsAmount(),
+  deliveryEnabled: strictBoolean(INVALID_SETTINGS),
+  codEnabled: strictBoolean(INVALID_SETTINGS),
+  pickupCodEnabled: strictBoolean(INVALID_SETTINGS),
+} satisfies Schema;
+
+// ---------- Store managers ----------
+
+const MANAGER_MISSING = { errorCode: 'MISSING_PARAMETERS', message: 'All fields (name, email, password, storeId) are required.' };
+const MANAGER_EMAIL = { errorCode: 'INVALID_EMAIL', message: 'Invalid email format.', pattern: EMAIL_PATTERN };
+const password = (missing?: { errorCode: string; message: string }): Parser<string | undefined> => (value) => {
+  if (value === undefined || value === null || value === '') {
+    return missing ? { ok: false, issue: missing } : { ok: true, value: undefined };
+  }
+  return typeof value === 'string' ? { ok: true, value } : { ok: false, issue: INVALID_VALUES };
+};
+
+export const createManagerSchema = {
+  name: v.requiredString(MANAGER_MISSING),
+  email: v.requiredString({ ...MANAGER_EMAIL, missing: MANAGER_MISSING }),
+  password: password(MANAGER_MISSING) as Parser<string>,
+  storeId: v.requiredString(MANAGER_MISSING),
+  isActive: strictBoolean(INVALID_VALUES),
+} satisfies Schema;
+
+export const updateManagerSchema = {
+  name: v.optionalString(INVALID_VALUES),
+  email: v.optionalString(MANAGER_EMAIL),
+  password: password(),
+  storeId: v.optionalString(INVALID_VALUES),
+  isActive: strictBoolean(INVALID_VALUES),
+} satisfies Schema;
+
+// ---------- Customers ----------
+
+const CUSTOMER_STATUS = { errorCode: 'INVALID_PARAMETERS', message: 'isActive boolean parameter is required.' };
+export const updateCustomerStatusSchema = {
+  isActive: ((value) =>
+    typeof value === 'boolean' ? { ok: true, value } : { ok: false, issue: CUSTOMER_STATUS }) as Parser<boolean>,
+} satisfies Schema;
+
+// ---------- Stores ----------
+
+const STORE_MISSING = { errorCode: 'MISSING_PARAMETERS', message: 'All fields are required, including coordinate values.' };
+const STORE_PINCODE = { errorCode: 'INVALID_PINCODE', message: 'Pincode must be exactly 6 digits.', pattern: /^\d{6}$/ };
+// Store contact numbers are not customer accounts (D-008 does not apply); same E.164 shape the admin form checks.
+const STORE_PHONE = { errorCode: 'VALIDATION_ERROR', message: 'Invalid store phone number.', pattern: /^\+?[1-9][\d\s\-()]{1,20}$/ };
+const STORE_EMAIL = { errorCode: 'INVALID_EMAIL', message: 'Invalid email format.', pattern: EMAIL_PATTERN };
+const STORE_RADIUS = { errorCode: 'VALIDATION_ERROR', message: 'Delivery radius must be a positive number.', positive: true };
+const storeText = (missing?: typeof STORE_MISSING) =>
+  missing ? v.requiredString({ ...INVALID_VALUES, missing }) : v.optionalString(INVALID_VALUES);
+
+export const createStoreSchema = {
+  storeId: storeText(STORE_MISSING) as Parser<string>,
+  name: storeText(STORE_MISSING) as Parser<string>,
+  address: storeText(STORE_MISSING) as Parser<string>,
+  city: storeText(STORE_MISSING) as Parser<string>,
+  state: storeText(STORE_MISSING) as Parser<string>,
+  pincode: v.requiredString({ ...STORE_PINCODE, missing: STORE_MISSING }),
+  latitude: v.number({ ...COORDINATES, min: -90, max: 90, required: STORE_MISSING }) as Parser<number>,
+  longitude: v.number({ ...COORDINATES, min: -180, max: 180, required: STORE_MISSING }) as Parser<number>,
+  deliveryRadiusKm: v.number({ ...STORE_RADIUS, required: STORE_MISSING }) as Parser<number>,
+  phone: v.requiredString({ ...STORE_PHONE, missing: STORE_MISSING }),
+  openingTime: storeText(STORE_MISSING) as Parser<string>,
+  closingTime: storeText(STORE_MISSING) as Parser<string>,
+  email: v.nullableString(STORE_EMAIL),
+} satisfies Schema;
+
+export const updateStoreSchema = {
+  name: storeText(),
+  address: storeText(),
+  city: storeText(),
+  state: storeText(),
+  pincode: v.optionalString(STORE_PINCODE),
+  latitude: v.number({ ...COORDINATES, min: -90, max: 90 }),
+  longitude: v.number({ ...COORDINATES, min: -180, max: 180 }),
+  deliveryRadiusKm: v.number(STORE_RADIUS),
+  phone: v.optionalString(STORE_PHONE),
+  openingTime: storeText(),
+  closingTime: storeText(),
+  email: v.nullableString(STORE_EMAIL),
+  isActive: strictBoolean(INVALID_VALUES),
+} satisfies Schema;
+
+// ---------- Banners ----------
+
+const displayOrder = v.number({ errorCode: 'VALIDATION_ERROR', message: 'Display order must be a whole number.', min: 0 });
+const wholeDisplayOrder: Parser<number | null | undefined> = (value) => {
+  const result = displayOrder(value);
+  if (result.ok && typeof result.value === 'number' && !Number.isInteger(result.value)) {
+    return { ok: false, issue: { errorCode: 'VALIDATION_ERROR', message: 'Display order must be a whole number.' } };
+  }
+  return result;
+};
+
+const BANNER_IMAGE = { errorCode: 'IMAGE_URL_REQUIRED', message: 'Banner image URL is required.' };
+export const createBannerSchema = {
+  title: v.optionalText(INVALID_VALUES),
+  imageUrl: v.requiredString(BANNER_IMAGE),
+  displayOrder: wholeDisplayOrder,
+  isActive: strictBoolean(INVALID_VALUES),
+} satisfies Schema;
+
+export const updateBannerSchema = {
+  title: v.optionalText(INVALID_VALUES),
+  imageUrl: v.optionalString({ errorCode: 'IMAGE_URL_REQUIRED', message: 'Banner image URL cannot be empty.' }),
+  displayOrder: wholeDisplayOrder,
+  isActive: strictBoolean(INVALID_VALUES),
+} satisfies Schema;
+
+// ---------- Supported pincodes ----------
+
+const PINCODE_FORMAT = { errorCode: 'INVALID_PINCODE_FORMAT', message: 'A valid 6-digit numeric pincode is required.', pattern: /^\d{6}$/ };
+export const createPincodeSchema = {
+  pincode: v.requiredString(PINCODE_FORMAT),
+  city: v.optionalText(INVALID_VALUES),
+  state: v.optionalText(INVALID_VALUES),
+  isActive: strictBoolean(INVALID_VALUES),
+} satisfies Schema;
+
+export const updatePincodeSchema = {
+  pincode: v.optionalString(PINCODE_FORMAT),
+  city: v.optionalText(INVALID_VALUES),
+  state: v.optionalText(INVALID_VALUES),
+  isActive: strictBoolean(INVALID_VALUES),
+} satisfies Schema;
+
+export const togglePincodeStatusSchema = {
+  isActive: strictBoolean(INVALID_VALUES),
+} satisfies Schema;
+
+// ---------- Categories ----------
+
+export const createCategorySchema = {
+  name: v.requiredString({ ...INVALID_VALUES, missing: { errorCode: 'MISSING_PARAMETERS', message: 'Category name is required.' }, max: { length: 100, ...INVALID_VALUES } }),
+  description: v.optionalText(INVALID_VALUES),
+  imageUrl: v.optionalText(INVALID_VALUES),
+  displayOrder: wholeDisplayOrder,
+} satisfies Schema;
+
+export const updateCategorySchema = {
+  name: v.optionalString({ ...INVALID_VALUES, max: { length: 100, ...INVALID_VALUES } }),
+  description: v.optionalText(INVALID_VALUES),
+  imageUrl: v.optionalText(INVALID_VALUES),
+  displayOrder: wholeDisplayOrder,
+  isActive: strictBoolean(INVALID_VALUES),
+} satisfies Schema;
+
+// ---------- Store inventory ----------
+
+export const updateStoreInventorySchema = {
+  adjustmentType: v.oneOf(['ADD', 'REMOVE', 'SET'] as const, { errorCode: 'INVALID_ADJUSTMENT_TYPE', message: 'Invalid adjustment type.' }),
+  // Required when adjustmentType is set (checked in the controller, existing message).
+  quantity: v.number({ errorCode: 'INVALID_QUANTITY', message: 'Quantity must be a positive number.', min: 0 }),
+  stockQuantity: v.number({ errorCode: 'INVALID_QUANTITY', message: 'Stock Quantity must be a number.' }),
+  lowStockThreshold: v.number({ ...INVALID_VALUES, min: 0 }),
+  isAvailable: strictBoolean(INVALID_VALUES),
+  reason: v.optionalText({ ...INVALID_VALUES, maxLength: 500 }),
 } satisfies Schema;

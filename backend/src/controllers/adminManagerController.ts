@@ -4,6 +4,8 @@ import { prisma } from '../config/db';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 import { getParam } from '../utils/request';
 import { paginationMeta, parsePagination } from '../utils/pagination';
+import { validatedBody } from '../middlewares/validate';
+import { createManagerSchema, updateManagerSchema } from '../validation/schemas';
 
 export class AdminManagerController {
   /**
@@ -87,27 +89,8 @@ export class AdminManagerController {
    */
   static async createManager(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { name, email, password, storeId, isActive } = req.body;
-
-      if (!name || !email || !password || !storeId) {
-        res.status(400).json({
-          success: false,
-          message: 'All fields (name, email, password, storeId) are required.',
-          errorCode: 'MISSING_PARAMETERS',
-        });
-        return;
-      }
-
-      // Check if email format is valid
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        res.status(400).json({
-          success: false,
-          message: 'Invalid email format.',
-          errorCode: 'INVALID_EMAIL',
-        });
-        return;
-      }
+      // validateBody(createManagerSchema): required fields + email format
+      const { name, email, password, storeId, isActive } = validatedBody(res, createManagerSchema);
 
       // Validate store assignment
       const targetStore = await prisma.store.findUnique({
@@ -197,7 +180,8 @@ export class AdminManagerController {
   static async updateManager(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const id = getParam(req, 'id');
-      const { name, email, password, storeId, isActive } = req.body;
+      // validateBody(updateManagerSchema): field types + email format
+      const { name, email, password, storeId, isActive } = validatedBody(res, updateManagerSchema);
 
       const admin = await prisma.adminUser.findUnique({
         where: { id },
