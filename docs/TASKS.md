@@ -300,7 +300,14 @@
     - `services/cartService.ts`: `getCartSummary`.
     - **Controllers** now orchestrate request → service → response: `orderController` 615→429 lines, `cartController` 295→227, `productController` 597→509. The Razorpay block inside order creation is unchanged (payment code is frozen until P-001).
     - **Behaviour:** HTTP contracts and error codes are unchanged; all 449 existing tests pass. New unit tests in `backend/tests/order_services.test.ts` cover the pure rules without HTTP or a database.
-    - **Remaining candidates:** customer addresses/profile (`customerController`, 647 lines), admin order status (`adminOrderController`), manager CRUD.
+  - **Service extraction (part 2, `customerController` 647→167 lines):**
+    - `services/customerService.ts`: profile get/update.
+    - `services/addressService.ts`: list/create/update/set-default/delete. The single-default invariant now runs in one transaction per flow; the Rajkot coordinate fallback is unchanged (P1-01).
+    - `services/favoriteService.ts`: list/add/remove, idempotent.
+    - `services/serviceabilityService.ts`: the active-pincode checks, shared by address create/update and the public endpoints (the serviceability model is still pending, P4-05).
+    - `utils/request.ts`: `requireUserId` replaces the repeated 401 blocks (same `UNAUTHORIZED` response).
+    - **Behaviour:** responses and error codes are unchanged; all 461 existing tests pass. New tests in `backend/tests/customer_services.test.ts`.
+    - **Remaining candidates:** admin order status (`adminOrderController`), manager CRUD.
 - **Problem:** Orders, cart, inventory and pricing live in 300–800-line controllers with `any`-typed `whereClause`es and ad-hoc parsing.
 - **Evidence:** `customerController.ts` 800 lines, `orderController.ts` 627, `productController.ts` 535.
 - **Required fix:** Extract services (orders, inventory, pricing) and a validation layer; keep the HTTP contracts unchanged.
