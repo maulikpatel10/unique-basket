@@ -121,5 +121,5 @@ All items below are **DECISION REQUIRED**. Do not implement or change these area
 | P-018 | Admin features: reports, broadcast notifications | Not implemented | PDF lists them | DECISION REQUIRED |
 | P-019 | Saved payment methods in app | Stored locally in SharedPreferences (UI only) | — | DECISION REQUIRED |
 | P-020 | Customer-app scope rule in `apps/customer_app/AGENTS.md` ("never modify backend/admin/root") | Existing doc | — | DECIDED (D-011: root rules take precedence) |
-| P-021 | CI pipeline and required checks | No CI config in repo | — | DECISION REQUIRED |
+| P-021 | CI pipeline and required checks | No CI config in repo | — | DEFERRED by owner (2026-10-03): no CI for now; provider decided later |
 | P-022 | Customer app Clean Architecture `domain/` layer | No `domain/` folders exist | — | DECIDED (D-010: no domain layer) |

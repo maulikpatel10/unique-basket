@@ -395,7 +395,7 @@
 ## P3 — Production readiness
 
 ### P3-01 — No CI pipeline
-- **Priority:** P3 · **Area:** CI/CD · **Status:** DECISION REQUIRED (P-021: CI provider). Ready to implement once chosen: backend `tsc --noEmit`, `npm run build`, `npm test` against a PostgreSQL service + `prisma migrate deploy` + `prisma migrate diff --exit-code`; admin `npm test`, `npm run lint`, `npm run build`; Flutter `flutter analyze`, `flutter test`.)
+- **Priority:** P3 · **Area:** CI/CD · **Status:** DEFERRED. On 2026-10-03 the owner decided not to set up CI for now; it will be implemented later (provider still P-021). Ready to implement once chosen: backend `tsc --noEmit`, `npm run build`, `npm test` against a PostgreSQL service + `prisma migrate deploy` + `prisma migrate diff --exit-code`; admin `npm test`, `npm run lint`, `npm run build`; Flutter `flutter analyze`, `flutter test`.)
 - **Problem:** Nothing runs build, lint or tests automatically; `develop`/`main` protection can't require checks.
 - **Evidence:** No `.github/workflows` (or other CI config) in the repo.
 - **Required fix:** CI jobs: backend tsc + tests against a PostgreSQL service + `prisma migrate diff` drift check; Flutter analyze/test; admin lint/build.
