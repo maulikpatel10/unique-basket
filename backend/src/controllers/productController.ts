@@ -4,6 +4,7 @@ import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 import { getParam } from '../utils/request';
 import { lockInventoryRow } from '../services/inventoryService';
 import { AppError } from '../utils/errors';
+import { paginationMeta, parsePagination } from '../utils/pagination';
 
 export class ProductController {
   /**
@@ -31,23 +32,31 @@ export class ProductController {
           whereClause.categoryId = categoryId as string;
         }
         if (search) {
-          whereClause.name = { contains: search as string, mode: 'insensitive' };
+          whereClause.OR = [
+            { name: { contains: search as string, mode: 'insensitive' } },
+            { description: { contains: search as string, mode: 'insensitive' } },
+          ];
         }
       }
 
-      const products = await prisma.product.findMany({
-        where: whereClause,
-        include: {
-          category: {
-            select: { name: true },
+      const paging = parsePagination(req.query);
+      const [products, total] = await Promise.all([
+        prisma.product.findMany({
+          where: whereClause,
+          include: {
+            category: {
+              select: { name: true },
+            },
           },
-        },
-        orderBy: { name: 'asc' },
-      });
+          orderBy: [{ name: 'asc' }, { id: 'asc' }],
+          ...(paging ? { skip: paging.skip, take: paging.limit } : {}),
+        }),
+        paging ? prisma.product.count({ where: whereClause }) : Promise.resolve(0),
+      ]);
 
       res.status(200).json({
         success: true,
-        data: products,
+        data: paging ? { products, pagination: paginationMeta(total, paging) } : products,
       });
     } catch (error) {
       next(error);

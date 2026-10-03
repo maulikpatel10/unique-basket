@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { Pagination } from '../components/Pagination';
+import { ADMIN_PAGE_SIZE, emptyPagination, type PaginationMeta } from '../utils/pagination';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { api } from '../services/api';
 import type { Category } from '../types';
 import { useAuth } from '../context/authContextStore';
@@ -44,6 +47,9 @@ export const Products: React.FC = () => {
 
   // Search & Filters
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebouncedValue(searchTerm.trim());
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState<PaginationMeta>(emptyPagination);
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
 
@@ -77,11 +83,16 @@ export const Products: React.FC = () => {
       setLoading(true);
       setError(null);
       // Fetch both products and active categories in parallel
+      const params: Record<string, unknown> = { page, limit: ADMIN_PAGE_SIZE };
+      if (debouncedSearch) params.search = debouncedSearch;
+      if (statusFilter !== 'ALL') params.isActive = statusFilter === 'ACTIVE' ? 'true' : 'false';
+      if (categoryFilter !== 'ALL') params.categoryId = categoryFilter;
       const [productsRes, categoriesRes] = await Promise.all([
-        api.get('/products'),
+        api.get('/products', { params }),
         api.get('/categories'),
       ]);
-      setProducts(productsRes.data.data);
+      setProducts(productsRes.data.data.products);
+      setPagination(productsRes.data.data.pagination);
       setCategories(categoriesRes.data.data);
     } catch (caught: unknown) {
       const err = asApiError(caught);
@@ -94,7 +105,8 @@ export const Products: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, debouncedSearch, statusFilter, categoryFilter]);
 
   const showToast = (type: 'success' | 'error', message: string) => {
     setToast({ type, message });
@@ -247,20 +259,7 @@ export const Products: React.FC = () => {
   };
 
   // Filter Search
-  const filteredProducts = products.filter((prod) => {
-    const matchesSearch =
-      prod.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (prod.description && prod.description.toLowerCase().includes(searchTerm.toLowerCase()));
-
-    const matchesStatus =
-      statusFilter === 'ALL' ||
-      (statusFilter === 'ACTIVE' && prod.isActive) ||
-      (statusFilter === 'INACTIVE' && !prod.isActive);
-
-    const matchesCategory = categoryFilter === 'ALL' || prod.categoryId === categoryFilter;
-
-    return matchesSearch && matchesStatus && matchesCategory;
-  });
+  const filteredProducts = products;
 
   return (
     <div className="relative space-y-6">
@@ -305,7 +304,7 @@ export const Products: React.FC = () => {
             type="text"
             placeholder="Search products by name or description..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
             className="w-full rounded-lg bg-slate-900 border border-slate-700 text-slate-200 pl-10 pr-4 py-2.5 text-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500 outline-none transition-all duration-150"
           />
         </div>
@@ -316,7 +315,7 @@ export const Products: React.FC = () => {
             <span className="text-xs text-slate-400 uppercase font-semibold tracking-wider">Status:</span>
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+              onChange={(e) => { setStatusFilter(e.target.value as typeof statusFilter); setPage(1); }}
               className="rounded-lg bg-slate-900 border border-slate-700 text-slate-300 px-3 py-2 text-xs font-semibold focus:border-brand-500 outline-none"
             >
               <option value="ALL">All Statuses</option>
@@ -329,7 +328,7 @@ export const Products: React.FC = () => {
             <span className="text-xs text-slate-400 uppercase font-semibold tracking-wider">Category:</span>
             <select
               value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
+              onChange={(e) => { setCategoryFilter(e.target.value); setPage(1); }}
               className="rounded-lg bg-slate-900 border border-slate-700 text-slate-300 px-3 py-2 text-xs font-semibold focus:border-brand-500 outline-none"
             >
               <option value="ALL">All Categories</option>
@@ -443,6 +442,7 @@ export const Products: React.FC = () => {
               </tbody>
             </table>
           </div>
+          <Pagination pagination={pagination} itemLabel="products" onPageChange={setPage} />
         </div>
       )}
 

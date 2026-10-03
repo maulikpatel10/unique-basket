@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../config/db';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 import { getParam } from '../utils/request';
+import { paginationMeta, parsePagination } from '../utils/pagination';
 
 export class CategoryController {
   /**
@@ -32,14 +33,19 @@ export class CategoryController {
         }
       }
 
-      const categories = await prisma.category.findMany({
-        where: whereClause,
-        orderBy: { displayOrder: 'asc' },
-      });
+      const paging = parsePagination(req.query);
+      const [categories, total] = await Promise.all([
+        prisma.category.findMany({
+          where: whereClause,
+          orderBy: [{ displayOrder: 'asc' }, { id: 'asc' }],
+          ...(paging ? { skip: paging.skip, take: paging.limit } : {}),
+        }),
+        paging ? prisma.category.count({ where: whereClause }) : Promise.resolve(0),
+      ]);
 
       res.status(200).json({
         success: true,
-        data: categories,
+        data: paging ? { categories, pagination: paginationMeta(total, paging) } : categories,
       });
     } catch (error) {
       next(error);

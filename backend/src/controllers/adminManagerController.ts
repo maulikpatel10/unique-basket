@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '../config/db';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 import { getParam } from '../utils/request';
+import { paginationMeta, parsePagination } from '../utils/pagination';
 
 export class AdminManagerController {
   /**
@@ -37,19 +38,22 @@ export class AdminManagerController {
         };
       }
 
-      const managers = await prisma.adminUser.findMany({
-        where: whereClause,
-        include: {
-          managers: {
-            include: {
-              store: true,
+      const paging = parsePagination(req.query);
+      const [managers, total] = await Promise.all([
+        prisma.adminUser.findMany({
+          where: whereClause,
+          include: {
+            managers: {
+              include: {
+                store: true,
+              },
             },
           },
-        },
-        orderBy: {
-          name: 'asc',
-        },
-      });
+          orderBy: [{ name: 'asc' }, { id: 'asc' }],
+          ...(paging ? { skip: paging.skip, take: paging.limit } : {}),
+        }),
+        paging ? prisma.adminUser.count({ where: whereClause }) : Promise.resolve(0),
+      ]);
 
       // Map database schema response to a clean API response contract
       const mapped = managers.map((m) => {
@@ -70,7 +74,7 @@ export class AdminManagerController {
 
       res.status(200).json({
         success: true,
-        data: mapped,
+        data: paging ? { managers: mapped, pagination: paginationMeta(total, paging) } : mapped,
       });
     } catch (error) {
       next(error);

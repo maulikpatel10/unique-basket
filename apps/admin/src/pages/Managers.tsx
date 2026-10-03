@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { Pagination } from '../components/Pagination';
+import { ADMIN_PAGE_SIZE, emptyPagination, type PaginationMeta } from '../utils/pagination';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import type { Store } from '../types';
@@ -40,6 +43,9 @@ export const Managers: React.FC = () => {
 
   // Search & Filter controls
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebouncedValue(searchTerm.trim());
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState<PaginationMeta>(emptyPagination);
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
   const [storeFilter, setStoreFilter] = useState('ALL');
 
@@ -71,12 +77,17 @@ export const Managers: React.FC = () => {
       setError(null);
 
       // Parallel fetch of store managers and stores list
+      const params: Record<string, unknown> = { page, limit: ADMIN_PAGE_SIZE };
+      if (debouncedSearch) params.search = debouncedSearch;
+      if (statusFilter !== 'ALL') params.isActive = statusFilter === 'ACTIVE' ? 'true' : 'false';
+      if (storeFilter !== 'ALL') params.storeId = storeFilter;
       const [managersRes, storesRes] = await Promise.all([
-        api.get('/admin/managers'),
+        api.get('/admin/managers', { params }),
         api.get('/stores'),
       ]);
 
-      setManagers(managersRes.data.data);
+      setManagers(managersRes.data.data.managers);
+      setPagination(managersRes.data.data.pagination);
       setStores(storesRes.data.data);
     } catch (caught: unknown) {
       const err = asApiError(caught);
@@ -89,7 +100,8 @@ export const Managers: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, debouncedSearch, statusFilter, storeFilter]);
 
   const showToast = (type: 'success' | 'error', message: string) => {
     setToast({ type, message });
@@ -228,20 +240,7 @@ export const Managers: React.FC = () => {
   };
 
   // Filter search outcomes
-  const filteredManagers = managers.filter((m) => {
-    const matchesSearch =
-      m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      m.email.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesStatus =
-      statusFilter === 'ALL' ||
-      (statusFilter === 'ACTIVE' && m.isActive) ||
-      (statusFilter === 'INACTIVE' && !m.isActive);
-
-    const matchesStore = storeFilter === 'ALL' || m.storeId === storeFilter;
-
-    return matchesSearch && matchesStatus && matchesStore;
-  });
+  const filteredManagers = managers;
 
   return (
     <div className="relative space-y-6">
@@ -284,7 +283,7 @@ export const Managers: React.FC = () => {
             type="text"
             placeholder="Search managers by name or email..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
             className="w-full rounded-lg bg-slate-900 border border-slate-700 text-slate-200 pl-10 pr-4 py-2.5 text-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500 outline-none transition-all duration-150"
           />
         </div>
@@ -295,7 +294,7 @@ export const Managers: React.FC = () => {
             <span className="text-xs text-slate-400 uppercase font-semibold tracking-wider">Status:</span>
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+              onChange={(e) => { setStatusFilter(e.target.value as typeof statusFilter); setPage(1); }}
               className="rounded-lg bg-slate-900 border border-slate-700 text-slate-300 px-3 py-2 text-xs font-semibold focus:border-brand-500 outline-none"
             >
               <option value="ALL">All Statuses</option>
@@ -308,7 +307,7 @@ export const Managers: React.FC = () => {
             <span className="text-xs text-slate-400 uppercase font-semibold tracking-wider">Store:</span>
             <select
               value={storeFilter}
-              onChange={(e) => setStoreFilter(e.target.value)}
+              onChange={(e) => { setStoreFilter(e.target.value); setPage(1); }}
               className="rounded-lg bg-slate-900 border border-slate-700 text-slate-300 px-3 py-2 text-xs font-semibold focus:border-brand-500 outline-none"
             >
               <option value="ALL">All Stores</option>
@@ -410,6 +409,7 @@ export const Managers: React.FC = () => {
               </tbody>
             </table>
           </div>
+          <Pagination pagination={pagination} itemLabel="managers" onPageChange={setPage} />
         </div>
       )}
 

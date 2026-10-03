@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { Pagination } from '../components/Pagination';
+import { ADMIN_PAGE_SIZE, emptyPagination, type PaginationMeta } from '../utils/pagination';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { api } from '../services/api';
 import { useAuth } from '../context/authContextStore';
 import {
@@ -35,6 +38,9 @@ export const Categories: React.FC = () => {
 
   // Search & Filters
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebouncedValue(searchTerm.trim());
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState<PaginationMeta>(emptyPagination);
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
 
   // Modal / Drawer states
@@ -64,8 +70,12 @@ export const Categories: React.FC = () => {
       setLoading(true);
       setError(null);
       // Fetch categories. Passing isActive='all' to override default customer active-only return
-      const res = await api.get('/categories');
-      setCategories(res.data.data);
+      const params: Record<string, unknown> = { page, limit: ADMIN_PAGE_SIZE };
+      if (debouncedSearch) params.search = debouncedSearch;
+      if (statusFilter !== 'ALL') params.isActive = statusFilter === 'ACTIVE' ? 'true' : 'false';
+      const res = await api.get('/categories', { params });
+      setCategories(res.data.data.categories);
+      setPagination(res.data.data.pagination);
     } catch (caught: unknown) {
       const err = asApiError(caught);
       console.error('Error fetching categories:', err);
@@ -77,7 +87,8 @@ export const Categories: React.FC = () => {
 
   useEffect(() => {
     fetchCategories();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, debouncedSearch, statusFilter]);
 
   const showToast = (type: 'success' | 'error', message: string) => {
     setToast({ type, message });
@@ -198,18 +209,7 @@ export const Categories: React.FC = () => {
   };
 
   // Filter Search
-  const filteredCategories = categories.filter((cat) => {
-    const matchesSearch =
-      cat.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (cat.description && cat.description.toLowerCase().includes(searchTerm.toLowerCase()));
-
-    const matchesStatus =
-      statusFilter === 'ALL' ||
-      (statusFilter === 'ACTIVE' && cat.isActive) ||
-      (statusFilter === 'INACTIVE' && !cat.isActive);
-
-    return matchesSearch && matchesStatus;
-  });
+  const filteredCategories = categories;
 
   return (
     <div className="relative space-y-6">
@@ -254,7 +254,7 @@ export const Categories: React.FC = () => {
             type="text"
             placeholder="Search categories by name or description..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
             className="w-full rounded-lg bg-slate-900 border border-slate-700 text-slate-200 pl-10 pr-4 py-2.5 text-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500 outline-none transition-all duration-150"
           />
         </div>
@@ -264,7 +264,7 @@ export const Categories: React.FC = () => {
           <span className="text-xs text-slate-400 uppercase font-semibold tracking-wider">Status:</span>
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+            onChange={(e) => { setStatusFilter(e.target.value as typeof statusFilter); setPage(1); }}
             className="rounded-lg bg-slate-900 border border-slate-700 text-slate-300 px-3 py-2 text-xs font-semibold focus:border-brand-500 outline-none"
           >
             <option value="ALL">All Categories</option>
@@ -372,6 +372,7 @@ export const Categories: React.FC = () => {
               </tbody>
             </table>
           </div>
+          <Pagination pagination={pagination} itemLabel="categories" onPageChange={setPage} />
         </div>
       )}
 

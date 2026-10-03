@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { Pagination } from '../components/Pagination';
+import { ADMIN_PAGE_SIZE, emptyPagination, type PaginationMeta } from '../utils/pagination';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/authContextStore';
 import { api } from '../services/api';
@@ -25,6 +28,10 @@ export const Stores: React.FC = () => {
 
   // Search & Filter state
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebouncedValue(searchTerm.trim());
+  const [page, setPage] = useState(1);
+  const [cityOptions, setCityOptions] = useState<string[]>([]);
+  const [pagination, setPagination] = useState<PaginationMeta>(emptyPagination);
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
   const [cityFilter, setCityFilter] = useState('ALL');
 
@@ -63,8 +70,14 @@ export const Stores: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const res = await api.get('/admin/stores');
-      setStores(res.data.data);
+      const params: Record<string, unknown> = { page, limit: ADMIN_PAGE_SIZE };
+      if (debouncedSearch) params.search = debouncedSearch;
+      if (statusFilter !== 'ALL') params.isActive = statusFilter === 'ACTIVE' ? 'true' : 'false';
+      if (cityFilter !== 'ALL') params.city = cityFilter;
+      const res = await api.get('/admin/stores', { params });
+      setStores(res.data.data.stores);
+      setPagination(res.data.data.pagination);
+      setCityOptions(res.data.data.cities ?? []);
     } catch (caught: unknown) {
       const err = asApiError(caught);
       console.error('Error fetching stores:', err);
@@ -80,7 +93,8 @@ export const Stores: React.FC = () => {
 
   useEffect(() => {
     fetchStores();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, debouncedSearch, statusFilter, cityFilter]);
 
   const showToast = (type: 'success' | 'error', message: string) => {
     setToast({ type, message });
@@ -88,7 +102,7 @@ export const Stores: React.FC = () => {
   };
 
   // Unique city list extraction
-  const cities = ['ALL', ...Array.from(new Set(stores.map((s) => s.city.trim()))).filter(Boolean)];
+  const cities = ['ALL', ...cityOptions];
 
   // Input Change handler
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -307,21 +321,7 @@ export const Stores: React.FC = () => {
   };
 
   // Filtering search outcomes
-  const filteredStores = stores.filter((store) => {
-    const matchesSearch =
-      store.storeId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      store.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      store.pincode.includes(searchTerm);
-
-    const matchesStatus =
-      statusFilter === 'ALL' ||
-      (statusFilter === 'ACTIVE' && store.isActive) ||
-      (statusFilter === 'INACTIVE' && !store.isActive);
-
-    const matchesCity = cityFilter === 'ALL' || store.city.trim() === cityFilter;
-
-    return matchesSearch && matchesStatus && matchesCity;
-  });
+  const filteredStores = stores;
 
   return (
     <div className="relative space-y-6">
@@ -366,7 +366,7 @@ export const Stores: React.FC = () => {
             type="text"
             placeholder="Search stores by ID, name, or pincode..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
             className="w-full rounded-lg bg-slate-900 border border-slate-700 text-slate-200 pl-10 pr-4 py-2.5 text-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500 outline-none transition-all duration-150"
           />
         </div>
@@ -377,7 +377,7 @@ export const Stores: React.FC = () => {
             <span className="text-xs text-slate-400 uppercase font-semibold tracking-wider">Status:</span>
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+              onChange={(e) => { setStatusFilter(e.target.value as typeof statusFilter); setPage(1); }}
               className="rounded-lg bg-slate-900 border border-slate-700 text-slate-300 px-3 py-2 text-xs font-semibold focus:border-brand-500 outline-none"
             >
               <option value="ALL">All Statuses</option>
@@ -390,7 +390,7 @@ export const Stores: React.FC = () => {
             <span className="text-xs text-slate-400 uppercase font-semibold tracking-wider">City:</span>
             <select
               value={cityFilter}
-              onChange={(e) => setCityFilter(e.target.value)}
+              onChange={(e) => { setCityFilter(e.target.value); setPage(1); }}
               className="rounded-lg bg-slate-900 border border-slate-700 text-slate-300 px-3 py-2 text-xs font-semibold focus:border-brand-500 outline-none"
             >
               {cities.map((city) => (
@@ -508,6 +508,7 @@ export const Stores: React.FC = () => {
               </tbody>
             </table>
           </div>
+          <Pagination pagination={pagination} itemLabel="stores" onPageChange={setPage} />
         </div>
       )}
 

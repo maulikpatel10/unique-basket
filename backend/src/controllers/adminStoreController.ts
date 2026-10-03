@@ -3,6 +3,7 @@ import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 import { prisma } from '../config/db';
 import { StoreController } from './storeController';
 import { getParam } from '../utils/request';
+import { paginationMeta, parsePagination } from '../utils/pagination';
 
 /**
  * Admin Store Controller – wraps existing StoreController with admin‑specific isolation.
@@ -13,6 +14,42 @@ export class AdminStoreController {
   /** List stores for admin dashboard */
   static async listStores(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
+      const paging = parsePagination(req.query);
+
+      if (req.user?.role === 'SUPER_ADMIN' && paging) {
+        // Paginated admin list with server-side search/status/city filters
+        const { search, isActive, city } = req.query;
+        const whereClause: any = {};
+        if (isActive !== undefined) whereClause.isActive = isActive === 'true';
+        if (typeof city === 'string' && city.trim()) whereClause.city = { equals: city.trim(), mode: 'insensitive' };
+        if (typeof search === 'string' && search.trim()) {
+          const term = search.trim();
+          whereClause.OR = [
+            { storeId: { contains: term, mode: 'insensitive' } },
+            { name: { contains: term, mode: 'insensitive' } },
+            { pincode: { contains: term } },
+          ];
+        }
+
+        const [stores, total, cityRows] = await Promise.all([
+          prisma.store.findMany({
+            where: whereClause,
+            orderBy: [{ storeId: 'asc' }, { id: 'asc' }],
+            skip: paging.skip,
+            take: paging.limit,
+          }),
+          prisma.store.count({ where: whereClause }),
+          prisma.store.findMany({ select: { city: true }, distinct: ['city'], orderBy: { city: 'asc' } }),
+        ]);
+        const cities = Array.from(new Set(cityRows.map((r) => r.city.trim()).filter(Boolean)));
+
+        res.status(200).json({
+          success: true,
+          data: { stores, pagination: paginationMeta(total, paging), cities },
+        });
+        return;
+      }
+
       if (req.user?.role === 'SUPER_ADMIN') {
         // Delegate to existing controller (handles optional distance query etc.)
         await StoreController.listStores(req as any, res, next);
@@ -34,7 +71,12 @@ export class AdminStoreController {
           return;
         }
         // Return as an array to keep response shape consistent with list endpoint
-        res.status(200).json({ success: true, data: [store] });
+        res.status(200).json({
+          success: true,
+          data: paging
+            ? { stores: paging.skip === 0 ? [store] : [], pagination: paginationMeta(1, paging), cities: [store.city.trim()] }
+            : [store],
+        });
         return;
       }
 
