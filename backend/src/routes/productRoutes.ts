@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { ProductController } from '../controllers/productController';
 import { authenticate, requireRole, requireStoreAccess, restrictManagerAccess } from '../middlewares/authMiddleware';
+import { validateBody } from '../middlewares/validate';
+import { createProductSchema, updateProductSchema } from '../validation/schemas';
 
 const router = Router();
 
@@ -9,8 +11,8 @@ router.get('/', authenticate, ProductController.listProducts);
 router.get('/:id', authenticate, ProductController.getProductById);
 
 // Super Admin global product configuration
-router.post('/', authenticate, requireRole(['SUPER_ADMIN']), ProductController.createProduct);
-router.put('/:id', authenticate, requireRole(['SUPER_ADMIN']), ProductController.updateProduct);
+router.post('/', authenticate, requireRole(['SUPER_ADMIN']), validateBody(createProductSchema), ProductController.createProduct);
+router.put('/:id', authenticate, requireRole(['SUPER_ADMIN']), validateBody(updateProductSchema), ProductController.updateProduct);
 router.delete('/:id', authenticate, requireRole(['SUPER_ADMIN']), ProductController.deleteProduct);
 
 // Store-specific inventory endpoints

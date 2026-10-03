@@ -272,7 +272,19 @@
 ## P2 — Architecture/maintainability
 
 ### P2-01 — Business logic in controllers; no request validation layer
-- **Priority:** P2 · **Area:** Backend / Architecture · **Status:** TODO
+- **Priority:** P2 · **Area:** Backend / Architecture · **Status:** IN PROGRESS. The request validation layer is done; extracting services (orders, inventory, pricing) remains.
+  - **Validator:** `backend/src/validation/validator.ts`, an in-house typed schema/parsers module with no new dependency (`zod` is still awaiting approval).
+  - **Middleware:** `middlewares/validate.ts` (`validateBody`/`validatedBody`).
+  - **Schemas:** `validation/schemas.ts`, covering auth send/verify OTP, customer profile, add/update address, cart add/update, order creation, and admin product create/update.
+  - **Contracts:** existing errorCodes and messages are preserved, and the 430 existing tests pass unchanged.
+  - **Bugs fixed along the way:**
+    - `email: null` on a profile update caused a 500.
+    - A non-numeric cart update quantity deleted the line; it now returns `INVALID_QUANTITY`.
+    - Bad address coordinates were stored or caused a 500; they now return `INVALID_COORDINATES`.
+    - A malformed order item reached Prisma; it now returns `MISSING_PARAMETERS`/`INVALID_QUANTITY`.
+    - A non-numeric product price/mrp or a non-boolean `isActive` reached Prisma; it now returns `VALIDATION_ERROR`.
+    - Null address title/city/state on update caused a 500; null values are now ignored.
+  - **Tests:** `backend/tests/request_validation.test.ts`.
 - **Problem:** Orders, cart, inventory and pricing live in 300–800-line controllers with `any`-typed `whereClause`es and ad-hoc parsing.
 - **Evidence:** `customerController.ts` 800 lines, `orderController.ts` 627, `productController.ts` 535.
 - **Required fix:** Extract services (orders, inventory, pricing) and a validation layer; keep the HTTP contracts unchanged.

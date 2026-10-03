@@ -9,6 +9,8 @@ import { generateNextOrderNumber } from '../utils/orderNumber';
 import { AppError } from '../utils/errors';
 import { snapshotDeliveryAddress, withDeliveryAddress } from '../utils/orderAddress';
 import { validateProductQuantity } from '../utils/quantity';
+import { validatedBody } from '../middlewares/validate';
+import { createOrderSchema } from '../validation/schemas';
 import { fromPaise, lineTotalPaise, toPaise } from '../utils/money';
 import { loadFareSettings, calculateDeliveryFee } from '../services/pricingService';
 import { claimOrderStatus, restoreOrderStock, ORDER_STATUS_CHANGED } from '../services/inventoryService';
@@ -29,25 +31,9 @@ export class OrderController {
       return;
     }
 
-    const { fulfillmentType, addressId, storeId, paymentMethod, items } = req.body;
-
-    if (!fulfillmentType || !paymentMethod || !items || !Array.isArray(items) || items.length === 0) {
-      res.status(400).json({
-        success: false,
-        message: 'Fulfillment type, payment method, and items are required.',
-        errorCode: 'MISSING_PARAMETERS',
-      });
-      return;
-    }
-
-    if (paymentMethod !== 'COD' && paymentMethod !== 'ONLINE') {
-      res.status(400).json({
-        success: false,
-        message: 'Payment method must be COD or ONLINE.',
-        errorCode: 'INVALID_PAYMENT_METHOD',
-      });
-      return;
-    }
+    // Request shape validated by validateBody(createOrderSchema): required fields, payment method,
+    // and every item has a productId and a positive quantity. Business rules run in the transaction.
+    const { fulfillmentType, addressId, storeId, paymentMethod, items } = validatedBody(res, createOrderSchema);
 
     try {
       // Execute entire order creation within a database transaction
@@ -140,12 +126,7 @@ export class OrderController {
         const orderItemsToCreate = [];
 
         for (const item of items) {
-          const { productId, quantity } = item;
-          const qtyVal = parseFloat(quantity);
-
-          if (isNaN(qtyVal) || qtyVal <= 0) {
-            throw new AppError(400, 'INVALID_QUANTITY', 'Quantity must be a positive decimal.');
-          }
+          const { productId, quantity: qtyVal } = item;
 
           // Get global product details
           const product = await tx.product.findUnique({

@@ -2,6 +2,8 @@ import { Response, NextFunction } from 'express';
 import { prisma } from '../config/db';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 import { validateProductQuantity } from '../utils/quantity';
+import { validatedBody } from '../middlewares/validate';
+import { addCartItemSchema, updateCartItemSchema } from '../validation/schemas';
 import { loadFareSettings, calculateDeliveryFee } from '../services/pricingService';
 import { fromPaise, lineTotalPaise, toPaise } from '../utils/money';
 import { getParam } from '../utils/request';
@@ -106,32 +108,14 @@ export class CartController {
   static async addItem(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = req.user?.id;
-      const { productId, quantity } = req.body;
+      // Shape validated by validateBody(addCartItemSchema); product quantity rules are checked below.
+      const { productId, quantity: targetQty } = validatedBody(res, addCartItemSchema);
 
       if (!userId) {
         res.status(401).json({
           success: false,
           message: 'Unauthorized.',
           errorCode: 'UNAUTHORIZED',
-        });
-        return;
-      }
-
-      if (!productId || quantity === undefined) {
-        res.status(400).json({
-          success: false,
-          message: 'Product ID and quantity are required.',
-          errorCode: 'MISSING_PARAMETERS',
-        });
-        return;
-      }
-
-      const targetQty = parseFloat(quantity);
-      if (isNaN(targetQty) || targetQty <= 0) {
-        res.status(400).json({
-          success: false,
-          message: 'Quantity must be a positive decimal number.',
-          errorCode: 'INVALID_QUANTITY',
         });
         return;
       }
@@ -197,7 +181,8 @@ export class CartController {
     try {
       const userId = req.user?.id;
       const id = getParam(req, 'id');
-      const { quantity } = req.body;
+      // validateBody(updateCartItemSchema): quantity is a number; 0 or less removes the line.
+      const { quantity: targetQty } = validatedBody(res, updateCartItemSchema);
 
       if (!userId) {
         res.status(401).json({
@@ -208,16 +193,6 @@ export class CartController {
         return;
       }
 
-      if (quantity === undefined) {
-        res.status(400).json({
-          success: false,
-          message: 'Quantity is required.',
-          errorCode: 'MISSING_PARAMETERS',
-        });
-        return;
-      }
-
-      const targetQty = parseFloat(quantity);
 
       const cartItem = await prisma.cartItem.findUnique({
         where: { id },
@@ -233,7 +208,7 @@ export class CartController {
         return;
       }
 
-      if (isNaN(targetQty) || targetQty <= 0) {
+      if (targetQty <= 0) {
         // If quantity is 0 or less, remove item
         await prisma.cartItem.delete({
           where: { id },

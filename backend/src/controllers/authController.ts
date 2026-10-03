@@ -3,7 +3,8 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '../config/db';
 import { OtpService, isOtpBypassEnabled } from '../services/otpService';
 import { generateAccessToken } from '../utils/jwt';
-import { normalizeIndianPhone } from '../utils/phone';
+import { validatedBody } from '../middlewares/validate';
+import { sendOtpSchema, verifyOtpSchema } from '../validation/schemas';
 import { issueRefreshToken, validateRefreshToken, revokeRefreshSession } from '../services/sessionService';
 
 export class AuthController {
@@ -12,16 +13,8 @@ export class AuthController {
    */
   static async sendOtp(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const phone = normalizeIndianPhone(req.body?.phone);
-
-      if (!phone) {
-        res.status(400).json({
-          success: false,
-          message: 'Invalid mobile number. Please enter a valid 10-digit Indian mobile number.',
-          errorCode: 'INVALID_PHONE_FORMAT',
-        });
-        return;
-      }
+      // Body validated and phone normalised to +91XXXXXXXXXX by validateBody(sendOtpSchema)
+      const { phone } = validatedBody(res, sendOtpSchema);
 
       const result = await OtpService.sendOtp(phone);
       if (!result.success) {
@@ -50,26 +43,8 @@ export class AuthController {
    */
   static async verifyOtp(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { phone: rawPhone, otp } = req.body;
-
-      if (!rawPhone || !otp) {
-        res.status(400).json({
-          success: false,
-          message: 'Phone number and OTP are required.',
-          errorCode: 'MISSING_PARAMETERS',
-        });
-        return;
-      }
-
-      const phone = normalizeIndianPhone(rawPhone);
-      if (!phone) {
-        res.status(400).json({
-          success: false,
-          message: 'Invalid mobile number. Please enter a valid 10-digit Indian mobile number.',
-          errorCode: 'INVALID_PHONE_FORMAT',
-        });
-        return;
-      }
+      // Body validated and phone normalised by validateBody(verifyOtpSchema)
+      const { phone, otp } = validatedBody(res, verifyOtpSchema);
 
       const otpResult = await OtpService.verifyOtp(phone, otp);
       if (!otpResult.success) {

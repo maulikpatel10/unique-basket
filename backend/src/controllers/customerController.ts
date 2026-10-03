@@ -2,6 +2,8 @@ import { Response, NextFunction } from 'express';
 import { prisma } from '../config/db';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 import { getParam } from '../utils/request';
+import { validatedBody } from '../middlewares/validate';
+import { addAddressSchema, updateAddressSchema, updateProfileSchema } from '../validation/schemas';
 import { loadFareSettings } from '../services/pricingService';
 
 export class CustomerController {
@@ -70,139 +72,16 @@ export class CustomerController {
         return;
       }
 
-      const { name, email, dob, gender } = req.body;
-
-      // Validate name if provided
-      if (name !== undefined) {
-        if (typeof name !== 'string' || name.trim().length === 0) {
-          res.status(400).json({
-            success: false,
-            message: 'Name cannot be empty.',
-            errorCode: 'INVALID_NAME',
-          });
-          return;
-        }
-        if (name.trim().length > 100) {
-          res.status(400).json({
-            success: false,
-            message: 'Name cannot exceed 100 characters.',
-            errorCode: 'NAME_TOO_LONG',
-          });
-          return;
-        }
-      }
-
-      // Validate email if provided
-      if (email !== undefined && email !== null && email !== '') {
-        if (typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-          res.status(400).json({
-            success: false,
-            message: 'Invalid email address format.',
-            errorCode: 'INVALID_EMAIL',
-          });
-          return;
-        }
-      }
-
-      // Validate and parse date of birth if provided
-      let parsedDob: Date | null | undefined = undefined;
-      if (dob !== undefined) {
-        if (dob === null || dob === '') {
-          parsedDob = null;
-        } else if (typeof dob === 'string') {
-          const trimmedDob = dob.trim();
-          const dateMatch = trimmedDob.match(/^(\d{4})-(\d{2})-(\d{2})/);
-          if (!dateMatch) {
-            res.status(400).json({
-              success: false,
-              message: 'Invalid date of birth format. Expected YYYY-MM-DD or ISO 8601 string.',
-              errorCode: 'INVALID_DOB',
-            });
-            return;
-          }
-
-          const year = parseInt(dateMatch[1], 10);
-          const month = parseInt(dateMatch[2], 10);
-          const day = parseInt(dateMatch[3], 10);
-
-          if (month < 1 || month > 12 || day < 1 || day > 31 || year < 1900) {
-            res.status(400).json({
-              success: false,
-              message: 'Invalid date of birth value.',
-              errorCode: 'INVALID_DOB',
-            });
-            return;
-          }
-
-          parsedDob = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
-          if (isNaN(parsedDob.getTime())) {
-            res.status(400).json({
-              success: false,
-              message: 'Invalid date of birth.',
-              errorCode: 'INVALID_DOB',
-            });
-            return;
-          }
-
-          if (parsedDob.getTime() > Date.now()) {
-            res.status(400).json({
-              success: false,
-              message: 'Date of birth cannot be in the future.',
-              errorCode: 'FUTURE_DOB',
-            });
-            return;
-          }
-        } else {
-          res.status(400).json({
-            success: false,
-            message: 'Date of birth must be a string or null.',
-            errorCode: 'INVALID_DOB',
-          });
-          return;
-        }
-      }
-
-      // Validate and parse gender if provided
-      let parsedGender: string | null | undefined = undefined;
-      if (gender !== undefined) {
-        if (gender === null || gender === '') {
-          parsedGender = null;
-        } else if (typeof gender === 'string') {
-          const normalized = gender.trim();
-          const upper = normalized.toUpperCase();
-          if (upper === 'MALE' || normalized === 'Male') {
-            parsedGender = 'Male';
-          } else if (upper === 'FEMALE' || normalized === 'Female') {
-            parsedGender = 'Female';
-          } else if (upper === 'OTHER' || normalized === 'Other') {
-            parsedGender = 'Other';
-          } else if (upper === 'PREFER_NOT_TO_SAY' || normalized === 'Prefer not to say') {
-            parsedGender = 'Prefer not to say';
-          } else {
-            res.status(400).json({
-              success: false,
-              message: 'Invalid gender value. Allowed values: Male, Female, Other, Prefer not to say.',
-              errorCode: 'INVALID_GENDER',
-            });
-            return;
-          }
-        } else {
-          res.status(400).json({
-            success: false,
-            message: 'Gender must be a string or null.',
-            errorCode: 'INVALID_GENDER',
-          });
-          return;
-        }
-      }
+      // Validated and normalised by validateBody(updateProfileSchema)
+      const { name, email, dob, gender } = validatedBody(res, updateProfileSchema);
 
       const updatedUser = await prisma.user.update({
         where: { id: userId },
         data: {
-          ...(name !== undefined ? { name: name.trim() } : {}),
-          ...(email !== undefined ? { email: email === '' ? null : email.trim() } : {}),
-          ...(parsedDob !== undefined ? { dob: parsedDob } : {}),
-          ...(parsedGender !== undefined ? { gender: parsedGender } : {}),
+          ...(name !== undefined ? { name } : {}),
+          ...(email !== undefined ? { email } : {}),
+          ...(dob !== undefined ? { dob } : {}),
+          ...(gender !== undefined ? { gender } : {}),
         },
         select: {
           id: true,
@@ -275,27 +154,9 @@ export class CustomerController {
         return;
       }
 
-      const { title, addressLine, city, state, pincode, latitude, longitude, isDefault } = req.body;
-
-      if (!addressLine || typeof addressLine !== 'string' || addressLine.trim().length === 0) {
-        res.status(400).json({
-          success: false,
-          message: 'Address line is required.',
-          errorCode: 'MISSING_ADDRESS_LINE',
-        });
-        return;
-      }
-
-      if (!pincode || typeof pincode !== 'string' || !/^\d{6}$/.test(pincode.trim())) {
-        res.status(400).json({
-          success: false,
-          message: 'A valid 6-digit pincode is required.',
-          errorCode: 'INVALID_PINCODE',
-        });
-        return;
-      }
-
-      const normalizedPincode = pincode.trim();
+      // Field shapes validated by validateBody(addAddressSchema); serviceability is checked here.
+      const { title, addressLine, city, state, pincode, latitude, longitude, isDefault } = validatedBody(res, addAddressSchema);
+      const normalizedPincode = pincode;
       const supportedPincode = await prisma.supportedPincode.findFirst({
         where: { pincode: normalizedPincode, isActive: true },
       });
@@ -322,16 +183,16 @@ export class CustomerController {
       }
 
       // Rajkot default coordinates: 22.3039° N, 70.8022° E
-      const lat = latitude !== undefined && latitude !== null ? Number(latitude) : 22.3039;
-      const lng = longitude !== undefined && longitude !== null ? Number(longitude) : 70.8022;
+      const lat = latitude ?? 22.3039;
+      const lng = longitude ?? 70.8022;
 
       const address = await prisma.userAddress.create({
         data: {
           userId,
-          title: (title && typeof title === 'string') ? title.trim() : 'Home',
-          addressLine: addressLine.trim(),
-          city: (city && typeof city === 'string') ? city.trim() : supportedPincode.city,
-          state: (state && typeof state === 'string') ? state.trim() : supportedPincode.state,
+          title: title || 'Home',
+          addressLine,
+          city: city || supportedPincode.city,
+          state: state || supportedPincode.state,
           pincode: normalizedPincode,
           latitude: lat,
           longitude: lng,
@@ -367,7 +228,8 @@ export class CustomerController {
       }
 
       const id = getParam(req, 'id');
-      const { title, addressLine, city, state, pincode, latitude, longitude, isDefault } = req.body;
+      // Field shapes validated by validateBody(updateAddressSchema); ownership and serviceability are checked here.
+      const { title, addressLine, city, state, pincode, latitude, longitude, isDefault } = validatedBody(res, updateAddressSchema);
 
       const existing = await prisma.userAddress.findFirst({
         where: { id, userId },
@@ -382,29 +244,9 @@ export class CustomerController {
         return;
       }
 
-      if (addressLine !== undefined && (typeof addressLine !== 'string' || addressLine.trim().length === 0)) {
-        res.status(400).json({
-          success: false,
-          message: 'Address line cannot be empty.',
-          errorCode: 'MISSING_ADDRESS_LINE',
-        });
-        return;
-      }
-
-      let validatedPincode: string | undefined = undefined;
       if (pincode !== undefined) {
-        if (typeof pincode !== 'string' || !/^\d{6}$/.test(pincode.trim())) {
-          res.status(400).json({
-            success: false,
-            message: 'A valid 6-digit pincode is required.',
-            errorCode: 'INVALID_PINCODE',
-          });
-          return;
-        }
-
-        const normalizedPincode = pincode.trim();
         const supportedPincode = await prisma.supportedPincode.findFirst({
-          where: { pincode: normalizedPincode, isActive: true },
+          where: { pincode, isActive: true },
         });
 
         if (!supportedPincode) {
@@ -415,7 +257,6 @@ export class CustomerController {
           });
           return;
         }
-        validatedPincode = normalizedPincode;
       }
 
       // If updating to default, unset other defaults
@@ -429,13 +270,14 @@ export class CustomerController {
       const updated = await prisma.userAddress.update({
         where: { id },
         data: {
-          ...(title !== undefined ? { title: title.trim() } : {}),
-          ...(addressLine !== undefined ? { addressLine: addressLine.trim() } : {}),
-          ...(city !== undefined ? { city: city.trim() } : {}),
-          ...(state !== undefined ? { state: state.trim() } : {}),
-          ...(pincode !== undefined ? { pincode: pincode.trim() } : {}),
-          ...(latitude !== undefined ? { latitude: Number(latitude) } : {}),
-          ...(longitude !== undefined ? { longitude: Number(longitude) } : {}),
+          // null/empty title/city/state are ignored rather than clearing required columns
+          ...(title ? { title } : {}),
+          ...(addressLine !== undefined ? { addressLine } : {}),
+          ...(city ? { city } : {}),
+          ...(state ? { state } : {}),
+          ...(pincode !== undefined ? { pincode } : {}),
+          ...(latitude != null ? { latitude } : {}),
+          ...(longitude != null ? { longitude } : {}),
           ...(isDefault !== undefined ? { isDefault } : {}),
         },
       });

@@ -19,7 +19,8 @@ src/app.ts            route mounting, 404, global error handler
 src/routes/*.ts       URL → middleware → controller
 src/controllers/*.ts  request handling + business logic (static class methods)
 src/middlewares/      authenticate, requireRole, requireStoreAccess
-src/services/         otpService, notificationService
+src/services/         otpService, notificationService, pricing/inventory/session services
+src/validation/       request body schemas + validator (use validateBody(schema) in routes)
 src/utils/            jwt, distance (Haversine), orderNumber
 src/config/           db (Prisma client), razorpay
 prisma/               schema.prisma, migrations/, seed.ts
@@ -50,7 +51,7 @@ Payment provider (Razorpay code exists; not a decision), OTP/SMS provider and OT
 ## Security
 - Secrets from env only. Don't add new fallback secrets; flag existing ones (`utils/jwt.ts`, `config/razorpay.ts`, webhook secret) rather than relying on them.
 - Never log tokens, passwords, payment signatures, or OTPs outside the dev mock.
-- Validate and sanitize all input; check ownership (`userId`) on customer resources.
+- Validate and sanitize all input with a `validation/schemas.ts` schema + `validateBody` (keep existing errorCodes); check ownership (`userId`) on customer resources.
 - Payment status changes only after server-side signature verification.
 
 ## Testing

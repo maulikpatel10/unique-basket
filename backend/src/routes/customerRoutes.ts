@@ -1,17 +1,19 @@
 import { Router } from 'express';
 import { CustomerController } from '../controllers/customerController';
 import { authenticate, requireRole } from '../middlewares/authMiddleware';
+import { validateBody } from '../middlewares/validate';
+import { addAddressSchema, updateAddressSchema, updateProfileSchema } from '../validation/schemas';
 
 const router = Router();
 
 // Profile endpoints
 router.get('/profile', authenticate, requireRole(['customer']), CustomerController.getProfile);
-router.put('/profile', authenticate, requireRole(['customer']), CustomerController.updateProfile);
+router.put('/profile', authenticate, requireRole(['customer']), validateBody(updateProfileSchema), CustomerController.updateProfile);
 
 // Address endpoints
 router.get('/addresses', authenticate, requireRole(['customer']), CustomerController.getAddresses);
-router.post('/addresses', authenticate, requireRole(['customer']), CustomerController.addAddress);
-router.put('/addresses/:id', authenticate, requireRole(['customer']), CustomerController.updateAddress);
+router.post('/addresses', authenticate, requireRole(['customer']), validateBody(addAddressSchema), CustomerController.addAddress);
+router.put('/addresses/:id', authenticate, requireRole(['customer']), validateBody(updateAddressSchema), CustomerController.updateAddress);
 router.patch('/addresses/:id/default', authenticate, requireRole(['customer']), CustomerController.setDefaultAddress);
 router.delete('/addresses/:id', authenticate, requireRole(['customer']), CustomerController.deleteAddress);
 

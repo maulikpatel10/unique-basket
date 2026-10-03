@@ -76,6 +76,7 @@ No CI configuration exists. Branch protection status on GitHub: not verified fro
 - `GET /health`
 
 ### 2.2 Auth
+- Request bodies for auth, profile, addresses, cart, orders and admin products are validated by `validateBody(schema)` (`src/validation/`, P2-01) with the existing errorCodes.
 - Customer: phone OTP → access token (15m) + refresh token (7d). Phone numbers are India-only and normalized to `+91XXXXXXXXXX` (`utils/phone.ts`, D-008); 10-digit input is accepted.
 - Admin: email + bcrypt password.
 - Roles: `customer`, `SUPER_ADMIN`, `STORE_MANAGER`. `requireRole`, `requireStoreAccess` enforce RBAC/store isolation. Active status re-checked from DB per request.

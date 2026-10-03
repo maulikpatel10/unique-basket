@@ -154,6 +154,3 @@ export function parseQuantityConfig(
   if (error) return { error };
   return { data: { minQuantity: rule.min, maxQuantity: rule.max, quantityStep: rule.step } };
 }
-
-export const isProductUnit = (value: unknown): value is ProductUnit =>
-  typeof value === 'string' && (Object.values(ProductUnit) as string[]).includes(value);

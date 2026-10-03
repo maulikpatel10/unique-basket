@@ -4,7 +4,9 @@ import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 import { getParam } from '../utils/request';
 import { lockInventoryRow } from '../services/inventoryService';
 import { AppError } from '../utils/errors';
-import { isProductUnit, parseQuantityConfig } from '../utils/quantity';
+import { parseQuantityConfig } from '../utils/quantity';
+import { validatedBody } from '../middlewares/validate';
+import { createProductSchema, updateProductSchema } from '../validation/schemas';
 import { paginationMeta, parsePagination } from '../utils/pagination';
 
 export class ProductController {
@@ -105,20 +107,11 @@ export class ProductController {
    */
   static async createProduct(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { name, description, imageUrl, categoryId, unit, price, mrp } = req.body;
+      // Shape validated by validateBody(createProductSchema) (unknown unit → VALIDATION_ERROR)
+      const { name, description, imageUrl, categoryId, unit, price, mrp } = validatedBody(res, createProductSchema);
 
-      if (!name || !categoryId || !unit || price === undefined) {
-        res.status(400).json({
-          success: false,
-          message: 'Product name, categoryId, unit, and price are required.',
-          errorCode: 'MISSING_PARAMETERS',
-        });
-        return;
-      }
-
-      // D-012: optional product-level quantity rules (all three together).
-      // An unknown unit is rejected by Prisma below with VALIDATION_ERROR (P1-12).
-      const quantityConfig = isProductUnit(unit) ? parseQuantityConfig(req.body, unit) : {};
+      // D-012: optional product-level quantity rules (all three together)
+      const quantityConfig = parseQuantityConfig(req.body, unit);
       if (quantityConfig.error) {
         res.status(400).json({ success: false, message: quantityConfig.error, errorCode: 'INVALID_QUANTITY_CONFIG' });
         return;
@@ -141,12 +134,12 @@ export class ProductController {
       const product = await prisma.product.create({
         data: {
           name,
-          description: description || null,
-          imageUrl: imageUrl || null,
+          description: description ?? null,
+          imageUrl: imageUrl ?? null,
           categoryId,
           unit,
-          price: parseFloat(price),
-          mrp: mrp !== undefined ? parseFloat(mrp) : null,
+          price,
+          mrp: mrp ?? null,
           ...(quantityConfig.data ?? {}),
         },
       });
@@ -176,7 +169,8 @@ export class ProductController {
   static async updateProduct(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const id = getParam(req, 'id');
-      const { name, description, imageUrl, categoryId, unit, price, mrp, isActive } = req.body;
+      // Shape validated by validateBody(updateProductSchema)
+      const { name, description, imageUrl, categoryId, unit, price, mrp, isActive } = validatedBody(res, updateProductSchema);
 
       const product = await prisma.product.findUnique({
         where: { id },
@@ -191,8 +185,7 @@ export class ProductController {
         return;
       }
 
-      // An unknown unit is rejected by Prisma below with VALIDATION_ERROR (P1-12).
-      const targetUnit = isProductUnit(unit) ? unit : product.unit;
+      const targetUnit = unit ?? product.unit;
 
       // D-012: quantity rules are validated against the resulting unit. When only the unit
       // changes, the existing configuration must still be valid for the new unit.
@@ -214,20 +207,20 @@ export class ProductController {
       }
 
       // Check if price is changing to record price change audit
-      const targetPrice = price !== undefined ? parseFloat(price) : undefined;
+      const targetPrice = price ?? undefined;
       const isPriceChanged = targetPrice !== undefined && targetPrice !== Number(product.price);
 
       const updated = await prisma.product.update({
         where: { id },
         data: {
-          name: name || undefined,
-          description: description !== undefined ? description : undefined,
-          imageUrl: imageUrl !== undefined ? imageUrl : undefined,
-          categoryId: categoryId || undefined,
-          unit: unit || undefined,
+          name,
+          description,
+          imageUrl,
+          categoryId,
+          unit,
           price: targetPrice,
-          mrp: mrp !== undefined ? parseFloat(mrp) : undefined,
-          isActive: isActive !== undefined ? !!isActive : undefined,
+          mrp,
+          isActive,
           ...(quantityConfig.data ?? {}),
         },
       });
