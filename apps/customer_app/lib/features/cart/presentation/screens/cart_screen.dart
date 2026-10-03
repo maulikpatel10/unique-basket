@@ -218,6 +218,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     }
     final List<ProductModel> storeProducts =
         _cachedProducts ?? productsAsync.valueOrNull ?? const [];
+    // Out-of-stock detection needs the loaded store catalogue (it lists only in-stock products for customers).
+    final bool catalogueLoaded = _cachedProducts != null || productsAsync.hasValue;
 
     // Distinguish initial loading (no items known and initial sync running) from refresh
     final bool isInitialLoading = syncStatus == CartSyncStatus.initialLoading && totalCount == 0;
@@ -268,6 +270,14 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         continue;
       }
 
+      // OUT OF STOCK: the product still exists (known to the server) but the store has no stock —
+      // the customer catalogue lists only in-stock products, or the listed product is not purchasable.
+      final bool isOutOfStock = catalogueLoaded && (matchedProduct == null || !matchedProduct.isPurchasable);
+      // Insufficient stock: listed, but less stock than the cart quantity.
+      final String? stockIssue = !isOutOfStock && matchedProduct != null && matchedProduct.stockQuantity < quantity
+          ? 'Only ${product.quantityRule.formatWithUnit(matchedProduct.stockQuantity)} left. Reduce the quantity.'
+          : null;
+
       final itemTotal = product.price * quantity;
       calculatedSubtotal += itemTotal;
 
@@ -276,7 +286,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         product: product,
         quantity: quantity,
         itemTotal: itemTotal,
-        quantityIssue: product.quantityRule.validate(quantity),
+        isOutOfStock: isOutOfStock,
+        stockIssue: stockIssue,
+        quantityIssue: isOutOfStock ? null : product.quantityRule.validate(quantity),
       ));
     }
 
@@ -335,7 +347,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 iconPosition: IconPosition.trailing,
                 // D-012: lines that break the product's quantity rule must be fixed first
                 // Unavailable lines must be removed first; checkout blocks them as well (P1-06)
-                onPressed: cartItems.any((item) => item.quantityIssue != null || item.isUnavailable)
+                onPressed: cartItems.any((item) => item.blocksCheckout)
                     ? null
                     : _handleProceedToCheckout,
               ),
@@ -495,12 +507,13 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   Widget _buildCartItemCard(_CartItemData item, bool isDark) {
     final product = item.product;
     final quantity = item.quantity;
-    // Unavailable lines reuse the Out of Stock treatment from AppProductCard: dimmed image,
-    // stock-variant pill badge, muted text and a disabled control in place of +/−.
+    // Out of Stock and Unavailable lines reuse the Out of Stock treatment from AppProductCard:
+    // dimmed image, stock-variant pill badge, muted text and a disabled control in place of +/−.
     final bool isUnavailable = product == null;
+    final bool isInactive = isUnavailable || item.isOutOfStock;
     final Color mutedText = isDark ? AppColors.textSecondaryDark : const Color(0xFF64748B);
 
-    final unitSubtitle = isUnavailable
+    final unitSubtitle = isInactive
         ? 'Remove it to continue to checkout'
         : (product.categoryName != null && product.categoryName!.isNotEmpty
             ? '${product.categoryName} • ${product.unit}'
@@ -534,7 +547,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               height: context.r(68.0).clamp(56.0, 72.0),
               color: isDark ? AppColors.surfaceDark : const Color(0xFFF1F5F9),
               child: Opacity(
-                opacity: isUnavailable ? 0.45 : 1.0,
+                opacity: isInactive ? 0.45 : 1.0,
                 child: product?.imageUrl != null && product!.imageUrl!.isNotEmpty
                     ? Image.network(
                         product.imageUrl!,
@@ -553,10 +566,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (isUnavailable) ...[
-                  const AppBadge(
-                    key: Key('cart_item_unavailable_badge'),
-                    text: 'UNAVAILABLE',
+                if (isInactive) ...[
+                  AppBadge(
+                    key: Key(isUnavailable ? 'cart_item_unavailable_badge' : 'cart_item_out_of_stock_badge'),
+                    text: isUnavailable ? 'UNAVAILABLE' : 'OUT OF STOCK',
                     variant: BadgeVariant.stock,
                   ),
                   const SizedBox(height: 6.0),
@@ -568,7 +581,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   style: TextStyle(
                     fontSize: context.sp(isUnavailable ? 14.0 : 15.5),
                     fontWeight: FontWeight.w700,
-                    color: isUnavailable
+                    color: isInactive
                         ? mutedText
                         : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimary),
                     fontFamily: AppTextStyles.fontFamily,
@@ -586,11 +599,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     fontFamily: AppTextStyles.fontFamily,
                   ),
                 ),
-                if (item.quantityIssue != null) ...[
+                if (item.stockIssue != null || item.quantityIssue != null) ...[
                   const SizedBox(height: 3.0),
                   Text(
-                    item.quantityIssue!,
-                    key: ValueKey('quantity_issue_${item.productId}'),
+                    item.stockIssue ?? item.quantityIssue!,
+                    key: ValueKey(item.stockIssue != null ? 'stock_issue_${item.productId}' : 'quantity_issue_${item.productId}'),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -608,7 +621,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     style: TextStyle(
                       fontSize: context.sp(17.0),
                       fontWeight: FontWeight.w800,
-                      color: const Color(0xFF014D40),
+                      // Muted like the catalogue Out of Stock price
+                      color: item.isOutOfStock
+                          ? (isDark ? AppColors.textMutedDark : const Color(0xFF739B93))
+                          : const Color(0xFF014D40),
                       fontFamily: AppTextStyles.fontFamily,
                       letterSpacing: -0.3,
                     ),
@@ -642,8 +658,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
 
               const SizedBox(height: 14.0),
 
-              // Unavailable: same disabled control as Out of Stock (no quantity changes)
-              if (isUnavailable)
+              // Out of Stock / Unavailable: the catalogue's disabled control (no quantity changes)
+              if (isInactive)
                 Container(
                   key: ValueKey('cart_item_disabled_control_${item.productId}'),
                   width: 32.0,
@@ -660,7 +676,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 // Reused Shared ProductQuantityControl
                 ProductQuantityControl(
                   quantity: quantity,
-                  canIncrement: product.quantityRule.canIncrement(quantity),
+                  // Insufficient stock: the customer may only reduce the quantity
+                  canIncrement: item.stockIssue == null && product.quantityRule.canIncrement(quantity),
                   collapsedWidth: 32.0,
                   expandedWidth: 84.0,
                   height: 32.0,
@@ -948,19 +965,32 @@ class _CartItemData {
   /// Message when the quantity breaks the product's quantity rule (D-012).
   final String? quantityIssue;
 
+  /// The product exists but the current store has no stock for it.
+  final bool isOutOfStock;
+
+  /// Listed, but with less stock than the cart quantity (e.g. "Only 2 kg left").
+  final String? stockIssue;
+
   const _CartItemData({
     required this.productId,
     required this.product,
     required this.quantity,
     required this.itemTotal,
     this.quantityIssue,
+    this.isOutOfStock = false,
+    this.stockIssue,
   });
 
   /// A line that cannot be resolved from the store catalogue or the server cart.
   const _CartItemData.unavailable({required this.productId, required this.quantity})
       : product = null,
         itemTotal = 0,
-        quantityIssue = null;
+        quantityIssue = null,
+        isOutOfStock = false,
+        stockIssue = null;
 
   bool get isUnavailable => product == null;
+
+  /// Lines the customer must fix before proceeding to checkout.
+  bool get blocksCheckout => isUnavailable || isOutOfStock || stockIssue != null || quantityIssue != null;
 }
