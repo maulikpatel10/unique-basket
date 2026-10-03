@@ -74,4 +74,17 @@ describe('Orders page', () => {
     await page.settle();
     expect(page.text()).toContain('Order status was changed by another request.');
   });
+
+  it('does not refetch stores when the user object is recreated with the same values', async () => {
+    const storesBefore = api.get.mock.calls.filter(([url]) => url === '/admin/stores').length;
+    const ordersBefore = ordersCalls().length;
+    // Swap in a new but equal user object and force re-renders by typing in the search box
+    auth.user = { ...auth.user };
+    const search = page.field('input[placeholder^="Search by order #"]');
+    for (const value of ['A', 'As']) page.type(search, value);
+    await page.settle();
+
+    expect(api.get.mock.calls.filter(([url]) => url === '/admin/stores')).toHaveLength(storesBefore);
+    expect(ordersCalls()).toHaveLength(ordersBefore);
+  });
 });

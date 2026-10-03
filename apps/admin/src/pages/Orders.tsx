@@ -54,6 +54,7 @@ export const Orders: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+  const managerStoreId = user?.storeId;
 
   const [stores, setStores] = useState<Store[]>([]);
   const [selectedStoreId, setSelectedStoreId] = useState('');
@@ -114,14 +115,16 @@ export const Orders: React.FC = () => {
         if (isSuperAdmin) {
           setSelectedStoreId('');
         } else {
-          setSelectedStoreId(user?.storeId || '');
+          setSelectedStoreId(managerStoreId || '');
         }
       } catch (err) {
         console.error('Error fetching stores:', err);
       }
     };
     fetchStores();
-  }, [user, isSuperAdmin]);
+    // Depend on the values used, not the `user` object: a new object with the same
+    // store must not refetch stores or reset the selected store.
+  }, [managerStoreId, isSuperAdmin]);
 
   // Search is applied on submit; the page resets to 1 whenever filters or the applied search change
   const [appliedSearch, setAppliedSearch] = useState('');

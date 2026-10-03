@@ -44,7 +44,8 @@ export const Dashboard: React.FC = () => {
     };
 
     fetchDashboardData();
-  }, [user]);
+    // Refetch when a different admin is signed in (not on every new `user` object)
+  }, [user?.id]);
 
   // Metrics from the server-side summary
   const { totalOrders, pendingOrders, revenue } = summary;
