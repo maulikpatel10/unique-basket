@@ -76,7 +76,7 @@ No CI configuration exists. Branch protection status on GitHub: not verified fro
 - `GET /health`
 
 ### 2.2 Auth
-- Customer: phone OTP → access token (15m) + refresh token (7d).
+- Customer: phone OTP → access token (15m) + refresh token (7d). Phone numbers are India-only and normalized to `+91XXXXXXXXXX` (`utils/phone.ts`, D-008); 10-digit input is accepted.
 - Admin: email + bcrypt password.
 - Roles: `customer`, `SUPER_ADMIN`, `STORE_MANAGER`. `requireRole`, `requireStoreAccess` enforce RBAC/store isolation. Active status re-checked from DB per request.
 - JWT secrets fall back to hard-coded strings (`fallback_access_secret`, `fallback_refresh_secret`) if env missing — **security risk**.
@@ -91,7 +91,7 @@ No CI configuration exists. Branch protection status on GitHub: not verified fro
 - Single DB transaction: load `DeliverySettings` → fulfillment check → per-item stock CAS decrement + `InventoryTransaction` → totals → order + items → cart clear.
 - DELIVERY: address must belong to user; nearest active store within its `deliveryRadiusKm` is auto-assigned (Haversine). Error `NO_DELIVERY_AVAILABLE`.
 - PICKUP: client supplies `storeId`; store must be active. Delivery fee 0.
-- Fees/COD rules come from `DeliverySettings` (code defaults if row missing: fee ₹30, free ≥ ₹499, min order ₹199, COD charge ₹20, COD ₹100–₹5000).
+- Fees/COD rules come from `DeliverySettings` (confirmed values D-009, also the schema/code/seed defaults: fee ₹30, free ≥ ₹200, min order ₹199, COD charge ₹20, COD ₹100–₹5000).
 - ONLINE: creates a Razorpay order (mock in test or with mock key).
 - Order number via `DailyOrderSequence` (`utils/orderNumber.ts`).
 - Store managers notified via NotificationService.
@@ -139,7 +139,7 @@ Enums: FulfillmentType (DELIVERY, PICKUP), PaymentMethod (COD, ONLINE), PaymentS
 
 Features: address, authentication, cart, checkout, explore, favorites, home, legal, notifications, onboarding, orders, payment, product, profile, profile_setup, search, splash, store.
 
-No `domain/` layers exist, although `ARCHITECTURE.md` / `AGENTS.md` describe Clean Architecture with a domain layer.
+No `domain/` layers exist, and none is planned (D-010). `ARCHITECTURE.md` and `AGENTS.md` describe this data + presentation structure.
 
 ### 3.2 Behavior
 - Auth: phone + OTP screen with **4-digit** OTP (`verify_otp_screen.dart` `_otpLength = 4`). Tokens in secure storage; interceptor refreshes on 401 and retries.
@@ -156,7 +156,7 @@ No `domain/` layers exist, although `ARCHITECTURE.md` / `AGENTS.md` describe Cle
 49 test files in `test/` (widget, flow, interceptor, router, responsive/theme). Verified 2026-10-02 (P1-17): `flutter analyze` → no issues; `flutter test` → 584/584 pass.
 
 ### 3.4 Existing app docs (reference)
-`AGENTS.md`, `ARCHITECTURE.md`, `ARCHITECTURE_MIGRATION_PLAN.md`, `DEVELOPMENT_GUIDELINES.md`, `MOBILE_TODO.md`, `README.md`. `AGENTS.md` forbids agents from editing outside `customer_app/`; this conflicts with root-level docs work (DECISIONS P-020).
+`AGENTS.md`, `ARCHITECTURE.md`, `ARCHITECTURE_MIGRATION_PLAN.md`, `DEVELOPMENT_GUIDELINES.md`, `MOBILE_TODO.md`, `README.md`. `AGENTS.md` defers to the root `CLAUDE.md` and allows required backend/admin changes (D-011).
 
 ---
 
@@ -184,6 +184,6 @@ React + TypeScript + Vite + Tailwind. Pages: Login, Dashboard, Stores, Managers,
 2. **Online payment:** backend creates Razorpay order; app never opens a checkout or calls `/payments/verify`; ONLINE orders stay `PENDING`.
 3. **Payment provider:** backend Razorpay vs PDF Cashfree.
 4. **Pickup:** supported in backend/admin, absent from customer app.
-5. **Architecture docs** describe `domain/` layers and features (`categories`, `products`, `payments`) that do not match folder names.
+5. ~~Architecture docs describe `domain/` layers~~ — resolved: `ARCHITECTURE.md` updated to the current structure (D-010).
 6. **Status docs** (`docs/task.md`, `MOBILE_TODO.md`) are stale.
 7. **Security:** fallback JWT/Razorpay/webhook secrets; OTP logged in all environments; open CORS; in-memory OTP store.

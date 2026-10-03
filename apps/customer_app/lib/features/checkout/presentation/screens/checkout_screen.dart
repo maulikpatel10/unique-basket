@@ -329,9 +329,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     // Delivery settings from backend
     final deliverySettingsAsync = ref.watch(deliverySettingsProvider);
     final deliverySettings = deliverySettingsAsync.asData?.value;
-    final double backendDeliveryFeeConfig = deliverySettings?.deliveryFee ?? 30.0;
+    final double backendDeliveryFeeConfig = deliverySettings?.deliveryFee ?? DeliverySettingsModel.defaultDeliveryFee;
     final double freeDeliveryThreshold = cartSummary?.freeDeliveryThreshold ??
-        (deliverySettings?.freeDeliveryThreshold ?? 499.0);
+        (deliverySettings?.freeDeliveryThreshold ?? DeliverySettingsModel.defaultFreeDeliveryThreshold);
 
     // Authoritative pricing values derived from backend source of truth
     final double authoritativeSubtotal = (cartSummary != null && cartSummary.subtotal > 0)

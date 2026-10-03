@@ -40,6 +40,9 @@ Rules:
 - Unpaid ONLINE orders can only be cancelled until a payment provider is integrated (D-005).
 - PICKUP orders are completed only via pickup verification, never the generic status update (D-006).
 - Baseline confirmed in D-007: OTP login, no guest checkout, backend-authoritative pricing/stock, PIECE quantities must be whole numbers, admin-managed delivery (no live tracking/slots in Phase 1), multi-store, inventory concurrency safety.
+- Phone numbers are India-only, stored as `+91XXXXXXXXXX`; 10-digit input accepted (D-008).
+- Delivery fee ₹30, free delivery ≥ ₹200, minimum order ₹199, COD charge ₹20, COD allowed ₹100–₹5000 (D-009; admin-configurable, backend authoritative).
+- Customer app has no separate domain layer (D-010); `apps/customer_app/AGENTS.md` defers to this file (D-011).
 - No other product/business rules are confirmed yet. See `docs/DECISIONS.md`.
 - Payment provider: **DECISION REQUIRED** (backend has Razorpay code; PDF mentions Cashfree; app has no payment SDK). Do not change payment code without approval.
 

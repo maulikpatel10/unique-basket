@@ -4,12 +4,12 @@ type Db = PrismaClient | Prisma.TransactionClient;
 
 /**
  * Code defaults used when no DeliverySettings row exists.
- * These mirror the existing schema defaults; the business values themselves are pending (P4-07).
+ * These mirror the schema defaults and the owner-confirmed values (D-009).
  */
 const DEFAULTS = {
   deliveryEnabled: true,
   deliveryFee: 30.0,
-  freeDeliveryThreshold: 499.0,
+  freeDeliveryThreshold: 200.0,
   minimumOrderAmount: 199.0,
   codEnabled: true,
   codCharge: 20.0,

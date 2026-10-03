@@ -205,7 +205,7 @@
 - **Verification:** Tests: invalid UUID → 400/404; missing addressId → 400; CONCURRENCY_ERROR → 409; no 500 for client errors.
 
 ### P1-13 — Phone numbers not normalized server-side
-- **Priority:** P1 · **Area:** Backend / Auth · **Status:** BLOCKED — DECISION REQUIRED (supported phone countries / canonical format). The backend cannot safely decide whether a bare 10-digit number means +91 without that decision; the app already sends +91 numbers.
+- **Priority:** P1 · **Area:** Backend / Auth · **Status:** DONE (D-008: India-only, stored as `+91XXXXXXXXXX`. `backend/src/utils/phone.ts` normalizes send-otp, verify-otp and pickup verification, and accepts 10-digit input. Non-Indian or invalid numbers return `INVALID_PHONE_FORMAT`. Migration `20261003120000_free_delivery_threshold_200_and_canonical_phones` normalizes legacy stored numbers where safe and never deletes rows. Tests: `backend/tests/phone_normalization.test.ts`, plus a 10-digit pickup-verify case in `admin_order.test.ts`.)
 - **Problem:** `send-otp` accepts any E.164-ish string, with or without `+`. `9876543210` and `+919876543210` become two different users. Only the Flutter app normalizes to `+91`.
 - **Evidence:** `authController.sendOtp` regex `^\+?[1-9]\d{1,14}$`; `User.phone` unique on the raw value; Flutter `auth_provider.dart` adds `+91`.
 - **Required fix:** Normalize to one canonical format server-side for OTP, users and pickup verification. The allowed country set is a decision (default to what the app sends today only after confirmation).
@@ -282,7 +282,7 @@
 
 ### P2-02 — Duplicated pricing and stock-restore logic
 - **Priority:** P2 · **Area:** Backend · **Status:** DONE (fare/COD defaults live only in `backend/src/services/pricingService.ts`, used by cart, checkout, customer delivery-settings and admin fare/COD settings; stock restore lives in `backend/src/services/inventoryService.ts`; removed unrouted duplicate `AdminOrderController.get/updateDeliverySettings`. Admin store CRUD still delegates to `StoreController` (no duplication).)
-- **Problem:** Fare/COD defaults are duplicated in `cartController`, `orderController` and `adminSettingsController` (₹30/₹499/₹199/₹20/₹100/₹5000). Cancellation stock restore is duplicated in `orderController.cancelOrder` and `adminOrderController.updateOrderStatus`. The admin store controller delegates to the customer-facing `StoreController`.
+- **Problem:** Fare/COD defaults are duplicated in `cartController`, `orderController` and `adminSettingsController` (₹30/₹200/₹199/₹20/₹100/₹5000, D-009). Cancellation stock restore is duplicated in `orderController.cancelOrder` and `adminOrderController.updateOrderStatus`. The admin store controller delegates to the customer-facing `StoreController`.
 - **Evidence:** Files cited.
 - **Required fix:** Single pricing service and single inventory service.
 - **Files:** `backend/src/controllers/*`
@@ -308,12 +308,12 @@
 - **Verification:** Clients still work; no unused handlers.
 
 ### P2-05 — Flutter architecture docs don't match the code
-- **Priority:** P2 · **Area:** Flutter / Docs · **Status:** TODO
+- **Priority:** P2 · **Area:** Flutter / Docs · **Status:** DONE (D-010/D-011: `apps/customer_app/ARCHITECTURE.md` rewritten to the current data + presentation structure with no domain layer. `AGENTS.md` now defers to the root `CLAUDE.md` and allows required backend/admin changes. No Flutter code was refactored.)
 - **Problem:** `ARCHITECTURE.md`/`AGENTS.md` require `domain/` layers, `route_guards.dart`, feature names (`categories`, `products`, `payments`) and auth redirects that don't exist; repositories return raw `Map<String,dynamic>` for addresses/orders.
 - **Evidence:** No `domain/` directories; `customer_address_repository.dart` and order providers return maps.
-- **Required fix:** Decide the target structure (P4-15 / pending P-022), then align docs or code; introduce typed models for orders/addresses.
+- **Required fix:** Align the docs with the code (decided: D-010, no domain layer). Typed models for orders/addresses remain a separate improvement.
 - **Files:** `apps/customer_app/ARCHITECTURE.md`, `AGENTS.md`, `lib/features/**`
-- **Dependencies:** Pending decision P-022.
+- **Dependencies:** None (D-010).
 - **Verification:** Docs describe the actual structure.
 
 ### P2-06 — Admin lint errors
@@ -485,8 +485,8 @@
 - **Dependencies:** Owner decision. **Verification:** After the decision.
 
 ### P4-07 — Delivery fee, minimum order and COD values
-- **Priority:** P4 · **Area:** Pricing · **Status:** DECISION REQUIRED
-- **Problem:** Values are admin-configurable, with code defaults (₹30 / ₹499 / ₹199 / COD ₹20 / ₹100–₹5000) that nobody has confirmed (pending P-011).
+- **Priority:** P4 · **Area:** Pricing · **Status:** DONE (D-009: fee ₹30, free delivery ≥ ₹200, minimum order ₹199, COD charge ₹20, COD ₹100–₹5000. Applied to the schema default + migration, seed, `pricingService` defaults, the admin settings form and customer-app fallbacks (`DeliverySettingsModel` constants). Tests: `backend/tests/fare_defaults.test.ts`, updated `admin_fares_cod_settings`/`cart_totals`, and `apps/customer_app/test/delivery_settings_defaults_test.dart`.)
+- **Problem:** Values are admin-configurable, with code defaults that had not been confirmed (formerly pending P-011; old free-delivery default ₹499).
 - **Evidence:** `schema.prisma` `DeliverySettings` defaults; controller fallbacks.
 - **Required fix:** Confirm defaults/rules.
 - **Dependencies:** Owner decision. **Verification:** After the decision.
@@ -542,7 +542,7 @@
 
 ### P4-15 — Remaining pending decisions affecting existing code
 - **Priority:** P4 · **Area:** Various · **Status:** DECISION REQUIRED
-- **Problem:** Existing code or docs depend on these undecided items: delivery personnel/management (P-015; admin has none); saved payment methods stored only on device (P-019, `payment_methods_provider.dart`); the `apps/customer_app/AGENTS.md` "never edit outside customer_app" rule (P-020); CI provider (P-021); the Flutter `domain/` layer (P-022); one vs many stores per manager (P1-10); supported phone countries (P1-13).
+- **Problem:** Existing code or docs depend on these undecided items: delivery personnel/management (P-015; admin has none); saved payment methods stored only on device (P-019, `payment_methods_provider.dart`); CI provider (P-021); one vs many stores per manager (P1-10). (Resolved 2026-10-03: AGENTS.md rule → D-011, `domain/` layer → D-010, phone countries → D-008.)
 - **Evidence:** `docs/DECISIONS.md` pending table; files cited.
 - **Required fix:** Owner decisions.
 - **Dependencies:** Owner. **Verification:** Recorded in `docs/DECISIONS.md`.

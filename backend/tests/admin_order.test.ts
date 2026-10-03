@@ -146,6 +146,29 @@ describe('Admin Order Operations & Payment Verification Integration Tests', () =
       expect(res.body.data).toHaveProperty('paymentStatus', 'PAID');
     });
 
+    it('accepts the registered mobile number as 10 digits for pickup verification (D-008)', async () => {
+      const orderRes = await request(app)
+        .post('/api/v1/orders')
+        .set('Authorization', `Bearer ${customerToken}`)
+        .send({
+          fulfillmentType: 'PICKUP',
+          storeId: centralStoreId,
+          paymentMethod: 'COD',
+          items: [{ productId: appleProductId, quantity: 1.0 }],
+        });
+      expect(orderRes.statusCode).toEqual(201);
+      const tenDigitOrder = orderRes.body.data.order.orderNumber;
+      await prisma.order.update({ where: { orderNumber: tenDigitOrder }, data: { orderStatus: 'READY_FOR_PICKUP' } });
+
+      const res = await request(app)
+        .post('/api/v1/admin/orders/pickup-verify')
+        .set('Authorization', `Bearer ${manager1Token}`)
+        .send({ orderNumber: tenDigitOrder, phone: '99999 99999' });
+
+      expect(res.statusCode).toEqual(200);
+      expect(res.body.data).toHaveProperty('orderStatus', 'PICKED_UP');
+    });
+
     it('should reject Store Manager 2 attempting to verify pickup for STORE-001', async () => {
       // Place another PICKUP order for STORE-001
       const orderRes = await request(app)

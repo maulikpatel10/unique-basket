@@ -89,7 +89,7 @@ describe('Fares & COD Settings Integration Tests', () => {
       update: {
         deliveryEnabled: true,
         deliveryFee: 30.0,
-        freeDeliveryThreshold: 499.0,
+        freeDeliveryThreshold: 200.0,
         minimumOrderAmount: 199.0,
         codEnabled: true,
         codCharge: 20.0,
@@ -100,7 +100,7 @@ describe('Fares & COD Settings Integration Tests', () => {
       create: {
         deliveryEnabled: true,
         deliveryFee: 30.0,
-        freeDeliveryThreshold: 499.0,
+        freeDeliveryThreshold: 200.0,
         minimumOrderAmount: 199.0,
         codEnabled: true,
         codCharge: 20.0,
@@ -123,7 +123,7 @@ describe('Fares & COD Settings Integration Tests', () => {
       data: {
         deliveryEnabled: true,
         deliveryFee: 30.0,
-        freeDeliveryThreshold: 499.0,
+        freeDeliveryThreshold: 200.0,
         minimumOrderAmount: 199.0,
         codEnabled: true,
         codCharge: 20.0,
@@ -145,7 +145,7 @@ describe('Fares & COD Settings Integration Tests', () => {
       expect(res.body.success).toBe(true);
       expect(res.body.data).toHaveProperty('deliveryEnabled', true);
       expect(res.body.data).toHaveProperty('deliveryFee', 30);
-      expect(res.body.data).toHaveProperty('freeDeliveryThreshold', 499);
+      expect(res.body.data).toHaveProperty('freeDeliveryThreshold', 200);
       expect(res.body.data).toHaveProperty('minimumOrderAmount', 199);
       expect(res.body.data).toHaveProperty('codEnabled', true);
       expect(res.body.data).toHaveProperty('codCharge', 20);
@@ -290,7 +290,7 @@ describe('Fares & COD Settings Integration Tests', () => {
     });
 
     it('9. Free delivery threshold applies correctly (subtotal >= threshold -> deliveryFee = 0)', async () => {
-      // Free threshold is 499. 3 Apples = 3 * 180 = 540 (>= 499)
+      // Free threshold is 200 (D-009). 3 Apples = 3 * 180 = 540 (>= 200)
       const res = await request(app)
         .post('/api/v1/orders')
         .set('Authorization', `Bearer ${customerToken}`)
@@ -308,7 +308,9 @@ describe('Fares & COD Settings Integration Tests', () => {
     });
 
     it('10. Delivery fee applies when subtotal is below free delivery threshold', async () => {
-      // 2 Apples = 360 (>= 199 minimum, but < 499 threshold). Delivery fee = 30.
+      // Fee mechanism with an admin-configured higher threshold:
+      // 2 Apples = 360 (>= 199 minimum, but < 1000 threshold). Delivery fee = 30.
+      await prisma.deliverySettings.updateMany({ data: { freeDeliveryThreshold: 1000 } });
       const res = await request(app)
         .post('/api/v1/orders')
         .set('Authorization', `Bearer ${customerToken}`)
@@ -422,7 +424,7 @@ describe('Fares & COD Settings Integration Tests', () => {
     });
 
     it('16. COD charge applied correctly to total order amount', async () => {
-      // Subtotal 360, DeliveryFee 30, COD Charge 20 -> Total 410
+      // Confirmed defaults (D-009): subtotal 360 >= ₹200 -> free delivery; COD charge 20 -> Total 380
       const res = await request(app)
         .post('/api/v1/orders')
         .set('Authorization', `Bearer ${customerToken}`)
@@ -435,13 +437,13 @@ describe('Fares & COD Settings Integration Tests', () => {
 
       expect(res.statusCode).toEqual(201);
       expect(res.body.data.order.subtotal).toBe(360);
-      expect(res.body.data.order.deliveryFee).toBe(30);
+      expect(res.body.data.order.deliveryFee).toBe(0);
       expect(res.body.data.order.codCharge).toBe(20);
-      expect(res.body.data.order.total).toBe(410); // 360 + 30 + 20
+      expect(res.body.data.order.total).toBe(380); // 360 + 0 + 20
     });
 
     it('17. Online payment does not receive COD charge', async () => {
-      // Subtotal 360, DeliveryFee 30, COD Charge 0 -> Total 390
+      // Subtotal 360 (free delivery at the ₹200 threshold), COD Charge 0 -> Total 360
       const res = await request(app)
         .post('/api/v1/orders')
         .set('Authorization', `Bearer ${customerToken}`)
@@ -454,7 +456,7 @@ describe('Fares & COD Settings Integration Tests', () => {
 
       expect(res.statusCode).toEqual(201);
       expect(res.body.data.order.codCharge).toBe(0);
-      expect(res.body.data.order.total).toBe(390);
+      expect(res.body.data.order.total).toBe(360);
     });
 
     it('18. Final order amount is calculated server-side regardless of client input', async () => {
@@ -473,11 +475,12 @@ describe('Fares & COD Settings Integration Tests', () => {
         });
 
       expect(res.statusCode).toEqual(201);
-      expect(res.body.data.order.total).toBe(410); // Server-calculated 360 + 30 + 20
+      expect(res.body.data.order.total).toBe(380); // Server-calculated 360 + 0 (free delivery) + 20
     });
 
     it('19. Existing order totals and fees remain immutable when settings change later', async () => {
-      // Place order under current settings (DeliveryFee: 30, COD Charge: 20)
+      // Place order under settings that charge a delivery fee (DeliveryFee: 30, COD Charge: 20)
+      await prisma.deliverySettings.updateMany({ data: { freeDeliveryThreshold: 1000 } });
       const orderRes = await request(app)
         .post('/api/v1/orders')
         .set('Authorization', `Bearer ${customerToken}`)
@@ -515,7 +518,7 @@ describe('Fares & COD Settings Integration Tests', () => {
         .set('Authorization', `Bearer ${superAdminToken}`)
         .send({
           deliveryFee: 50,
-          freeDeliveryThreshold: 499,
+          freeDeliveryThreshold: 200.0,
           minimumOrderAmount: 199,
           deliveryEnabled: true,
         });
@@ -525,7 +528,7 @@ describe('Fares & COD Settings Integration Tests', () => {
       expect(res.statusCode).toEqual(200);
       expect(res.body.success).toBe(true);
       expect(res.body.data.deliveryFee).toBe(50);
-      expect(res.body.data.freeDeliveryThreshold).toBe(499);
+      expect(res.body.data.freeDeliveryThreshold).toBe(200);
       expect(res.body.data.deliveryEnabled).toBe(true);
     });
 
@@ -536,7 +539,7 @@ describe('Fares & COD Settings Integration Tests', () => {
         .set('Authorization', `Bearer ${superAdminToken}`)
         .send({
           deliveryFee: 50,
-          freeDeliveryThreshold: 499,
+          freeDeliveryThreshold: 200.0,
           minimumOrderAmount: 199,
         });
 

@@ -1,6 +1,6 @@
 # Customer App (Flutter) — Claude Code Conventions
 
-Read root `/CLAUDE.md` and `docs/DECISIONS.md` first. Existing `AGENTS.md`, `ARCHITECTURE.md`, `DEVELOPMENT_GUIDELINES.md` are reference; where they disagree with current code, the code is the CURRENT IMPLEMENTATION and the conflict needs an owner decision.
+Read root `/CLAUDE.md` and `docs/DECISIONS.md` first. `ARCHITECTURE.md` describes the current structure (no `domain/` layer, D-010) and `AGENTS.md` follows the root rules (D-011). Other app docs (`DEVELOPMENT_GUIDELINES.md`, `ARCHITECTURE_MIGRATION_PLAN.md`, `MOBILE_TODO.md`) are reference; where they disagree with current code, the code is the CURRENT IMPLEMENTATION and the conflict needs an owner decision.
 
 ## Stack (current)
 Flutter, Riverpod 2 (StateNotifier/providers), GoRouter, Dio, flutter_secure_storage, shared_preferences, intl, equatable, google_fonts, flutter_svg, image_picker.

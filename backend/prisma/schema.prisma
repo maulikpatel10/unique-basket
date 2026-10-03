@@ -273,7 +273,7 @@ model DeliverySettings {
   id                    String   @id @default(uuid()) @db.Uuid
   deliveryEnabled       Boolean  @default(true) @map("delivery_enabled")
   deliveryFee           Decimal  @default(30.00) @map("delivery_fee") @db.Decimal(10, 2)
-  freeDeliveryThreshold Decimal  @default(499.00) @map("free_delivery_threshold") @db.Decimal(10, 2)
+  freeDeliveryThreshold Decimal  @default(200.00) @map("free_delivery_threshold") @db.Decimal(10, 2)
   minimumOrderAmount    Decimal  @default(199.00) @map("minimum_order_amount") @db.Decimal(10, 2)
   codEnabled            Boolean  @default(true) @map("cod_enabled")
   codCharge             Decimal  @default(20.00) @map("cod_charge") @db.Decimal(10, 2)

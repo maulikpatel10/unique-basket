@@ -1,4 +1,5 @@
 import 'cart_item_model.dart';
+import 'delivery_settings_model.dart';
 
 /// Model representing backend-calculated authoritative cart summary and pricing.
 class CartSummaryModel {
@@ -15,7 +16,7 @@ class CartSummaryModel {
     this.deliveryFee = 0.0,
     this.discount = 0.0,
     this.total = 0.0,
-    this.freeDeliveryThreshold = 499.0,
+    this.freeDeliveryThreshold = DeliverySettingsModel.defaultFreeDeliveryThreshold,
   });
 
   factory CartSummaryModel.fromJson(Map<String, dynamic> json) {
@@ -33,7 +34,7 @@ class CartSummaryModel {
     final deliveryFee = _parseDouble(json['deliveryFee'], 0.0);
     final discount = _parseDouble(json['discount'], 0.0);
     final total = _parseDouble(json['total'], subtotal + deliveryFee - discount);
-    final freeDeliveryThreshold = _parseDouble(json['freeDeliveryThreshold'], 499.0);
+    final freeDeliveryThreshold = _parseDouble(json['freeDeliveryThreshold'], DeliverySettingsModel.defaultFreeDeliveryThreshold);
 
     return CartSummaryModel(
       items: parsedItems,

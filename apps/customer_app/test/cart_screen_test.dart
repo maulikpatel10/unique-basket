@@ -101,7 +101,7 @@ Widget _createCartTestWidget({
             deliverySettings ??
             const DeliverySettingsModel(
               deliveryFee: 30.0,
-              freeDeliveryThreshold: 499.0,
+              freeDeliveryThreshold: 200.0,
             ),
       ),
       servingStoreProvider.overrideWith(
@@ -274,8 +274,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('2 items in your basket'), findsOneWidget);
-      expect(find.text('₹360'), findsOneWidget); // Subtotal
-      expect(find.text('₹390'), findsOneWidget); // 360 + 30
+      // 360 >= ₹200 free-delivery threshold (D-009): subtotal and To Pay are both ₹360
+      expect(find.text('₹360'), findsNWidgets(2));
+      expect(find.text('₹390'), findsNothing);
+      expect(find.text('FREE'), findsWidgets);
 
       // Tap − to decrement Kale back to 1
       final minusButton = find.byIcon(Icons.remove_rounded);
@@ -681,7 +683,7 @@ void main() {
           deliverySettingsProvider.overrideWith(
             (ref) async => const DeliverySettingsModel(
               deliveryFee: 30.0,
-              freeDeliveryThreshold: 499.0,
+              freeDeliveryThreshold: 200.0,
             ),
           ),
         ],
@@ -753,7 +755,7 @@ void main() {
           deliverySettingsProvider.overrideWith(
             (ref) async => const DeliverySettingsModel(
               deliveryFee: 30.0,
-              freeDeliveryThreshold: 499.0,
+              freeDeliveryThreshold: 200.0,
             ),
           ),
         ],
@@ -819,7 +821,7 @@ void main() {
           deliverySettingsProvider.overrideWith(
             (ref) async => const DeliverySettingsModel(
               deliveryFee: 30.0,
-              freeDeliveryThreshold: 499.0,
+              freeDeliveryThreshold: 200.0,
             ),
           ),
         ],
@@ -877,7 +879,7 @@ void main() {
           deliverySettingsProvider.overrideWith(
             (ref) async => const DeliverySettingsModel(
               deliveryFee: 30.0,
-              freeDeliveryThreshold: 499.0,
+              freeDeliveryThreshold: 200.0,
             ),
           ),
         ],
@@ -928,7 +930,7 @@ void main() {
           deliverySettingsProvider.overrideWith(
             (ref) async => const DeliverySettingsModel(
               deliveryFee: 30.0,
-              freeDeliveryThreshold: 499.0,
+              freeDeliveryThreshold: 200.0,
             ),
           ),
         ],
@@ -984,7 +986,7 @@ void main() {
           deliverySettingsProvider.overrideWith(
             (ref) async => const DeliverySettingsModel(
               deliveryFee: 30.0,
-              freeDeliveryThreshold: 499.0,
+              freeDeliveryThreshold: 200.0,
             ),
           ),
         ],

@@ -6,6 +6,7 @@ import { NotificationService } from '../services/notificationService';
 import { withDeliveryAddress } from '../utils/orderAddress';
 import { claimOrderStatus, restoreOrderStock, ORDER_STATUS_CHANGED } from '../services/inventoryService';
 import { getParam } from '../utils/request';
+import { normalizeIndianPhone } from '../utils/phone';
 
 const ALLOWED_PAYMENT_STATUSES: PaymentStatus[] = [
   PaymentStatus.PENDING,
@@ -355,10 +356,13 @@ export class AdminOrderController {
         return;
       }
 
+      // Registered numbers are stored as +91XXXXXXXXXX; accept 10-digit input too.
+      const registeredPhone = normalizeIndianPhone(phone) ?? phone;
+
       const order = await prisma.order.findFirst({
         where: {
           orderNumber,
-          user: { phone },
+          user: { phone: registeredPhone },
           fulfillmentType: 'PICKUP',
         },
         include: {

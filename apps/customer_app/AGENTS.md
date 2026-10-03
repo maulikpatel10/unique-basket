@@ -1,23 +1,38 @@
 # UNIQUE BASKET Customer App — Agent Guidelines & Invariants
 
-This file defines the mandatory engineering rules, architectural invariants, and constraints for all AI coding agents working on the `customer_app/` repository.
+This file defines the mandatory engineering rules, architectural invariants, and constraints for all AI coding agents working on the customer app (`apps/customer_app/`). It supplements, and never overrides, the root `CLAUDE.md`.
 
 ---
 
-## 1. Scope & Isolation
-- **Customer App Boundary**: All modifications, creations, and deletions MUST be strictly confined within `customer_app/`.
-- **Protected Directories**: NEVER modify or create files in `backend/`, `admin/`, or repository root level (such as root `ARCHITECTURE.md` or root configuration).
+## 1. Precedence & Scope
+- **Root rules apply first.** Read the repository root `CLAUDE.md`, `docs/DECISIONS.md` and `apps/customer_app/CLAUDE.md`.
+  If this file conflicts with the root `CLAUDE.md`, the root `CLAUDE.md` wins (decision D-011).
+- **Default scope**: customer-app tasks are made inside `apps/customer_app/`.
+- **Cross-app changes when required**: if a task legitimately needs a backend or admin change (for example an API
+  contract, validation or shared business rule), make it in `backend/` or `apps/admin/`. Follow that area's
+  `CLAUDE.md`, keep the change scoped to the task, and update both sides and their tests together.
+  Never break an existing API contract silently.
+- **Still requires explicit owner approval**: Prisma schema or migration changes, new third-party
+  providers/SDKs/packages, and any area marked **DECISION REQUIRED** in `docs/DECISIONS.md` (payment, OTP/SMS,
+  pickup scope, location/maps, notifications, and others). Never invent a business decision.
 - **Inspect Before Modifying**: Always read and understand existing files, contracts, and providers before creating new implementations.
+- **Git** (from root rules): work on feature branches; never push to `main`/`develop` directly; never force-push
+  shared branches; do not commit unless asked; never commit secrets (`.env`, keys, keystores, `key.properties`).
 
 ---
 
 ## 2. Architectural Invariants
-- **Feature-First**: All domain, data, and presentation code for a given business capability MUST reside within `lib/features/<feature_name>/`.
-- **Clean Architecture Boundaries**:
-  - `Domain` defines business entities and repository contracts. Domain MUST NOT depend on Flutter UI, Dio, or platform plugins.
-  - `Data` implements data sources, DTOs/models, and repository implementations.
-  - `Presentation` contains screens, widgets, and Riverpod StateNotifiers/ViewModels.
-  - `Presentation` MUST NEVER invoke Dio or raw RemoteDataSources directly.
+- **Feature-First**: data and presentation code for a business capability lives in `lib/features/<feature_name>/`.
+- **No separate domain layer** (D-010): features use `data/` (datasources, models, repositories) and
+  `presentation/` (providers, screens, widgets). Repository contracts are `abstract class`es in
+  `data/repositories/`. Do not add `domain/` folders or refactor working code to introduce one.
+  See `ARCHITECTURE.md`.
+- **Layer boundaries**:
+  - `Data` implements remote data sources, JSON models and repository implementations.
+  - `Presentation` contains screens, widgets and Riverpod providers/StateNotifiers.
+  - `Presentation` MUST NEVER invoke Dio, `ApiClient` or RemoteDataSources directly. It goes through repositories.
+- **Backend is authoritative** for prices, totals, fees, stock, store assignment and order/payment state.
+  Display server values. Local defaults are fallbacks only.
 - **Cross-Cutting Core**: `lib/core/` is reserved ONLY for app-wide infrastructure (Network client, Storage abstractions, Core Failures, Utility formatters, Validators).
 - **Reusable Shared UI**: `lib/shared/` holds genuinely shared, multi-feature UI components (`AppButton`, `AppPrice`, `AppEmptyState`, etc.). Do NOT place feature-specific widgets in shared.
 - **Routing & Navigation**: GoRouter is the single navigation framework. Route paths and names are centralized in `lib/app/router/`.
@@ -132,7 +147,8 @@ If a screen has a legitimate reason to use a custom responsive rule, document th
 ---
 
 ## 4. Testing & Verification Rules
-- **Non-Destructive Testing**: NEVER delete or disable existing tests to resolve migration or build failures.
+- **Non-Destructive Testing**: NEVER delete, skip, disable or weaken existing tests to make a change pass.
+- **Add tests for every behavior change**, including the backend/admin side of a cross-app change (`cd backend && npm test`; `cd apps/admin && npm test && npm run lint && npm run build`).
 - **Responsive Viewport Coverage**: Verify responsive behavior across representative viewport sizes:
   - Small phone (e.g. `320 × 568`, `360 × 640`)
   - Baseline phone (`390 × 844`, `393 × 852`, `412 × 915`, `430 × 932`)
@@ -155,4 +171,4 @@ If a screen has a legitimate reason to use a custom responsive rule, document th
   - Android Emulator: `http://10.0.2.2:5001/api/v1`
   - iOS Simulator: `http://localhost:5001/api/v1`
   - Custom / Production: Configurable via `--dart-define=API_BASE_URL=...`
-- **Security & Tokens**: Never log or print full JWT access/refresh tokens in console output.
+- **Security & Tokens**: Never log or print JWT access/refresh tokens or OTPs. Tokens are stored only in `SecureStorageService`. No secrets in Dart code.

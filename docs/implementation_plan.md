@@ -445,7 +445,7 @@ CREATE TABLE device_tokens (
 CREATE TABLE delivery_settings (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     delivery_fee DECIMAL(10, 2) NOT NULL DEFAULT 30.00,
-    free_delivery_threshold DECIMAL(10, 2) NOT NULL DEFAULT 499.00,
+    free_delivery_threshold DECIMAL(10, 2) NOT NULL DEFAULT 200.00, -- D-009 (was 499.00 in this plan)
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 

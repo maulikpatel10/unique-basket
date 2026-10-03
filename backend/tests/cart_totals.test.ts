@@ -59,7 +59,7 @@ describe('Cart totals consistency (P1-05)', () => {
     });
     addressId = address.id;
 
-    // Cart: 2 kg mango (subtotal 200, below the default 499 free-delivery threshold) + a hidden-category item
+    // Cart: 2 kg mango (subtotal 200) + a hidden-category item
     await prisma.cartItem.createMany({
       data: [
         { userId: customerId, productId, quantity: 2 },
@@ -108,7 +108,7 @@ describe('Cart totals consistency (P1-05)', () => {
 
   it('charges the same delivery fee in the cart as at checkout', async () => {
     await prisma.deliverySettings.updateMany({
-      data: { deliveryEnabled: true, deliveryFee: 35, freeDeliveryThreshold: 499, minimumOrderAmount: 100 },
+      data: { deliveryEnabled: true, deliveryFee: 35, freeDeliveryThreshold: 1000, minimumOrderAmount: 100 },
     });
 
     const cart = await getCart();

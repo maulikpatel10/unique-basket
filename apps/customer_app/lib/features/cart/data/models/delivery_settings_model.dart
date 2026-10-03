@@ -1,24 +1,30 @@
 class DeliverySettingsModel {
+  /// Fallbacks used only when the backend omits a value (D-009). The backend
+  /// remains authoritative for the fees charged on an order.
+  static const double defaultDeliveryFee = 30.0;
+  static const double defaultFreeDeliveryThreshold = 200.0;
+  static const double defaultMinimumOrderAmount = 199.0;
+
   final double deliveryFee;
   final bool deliveryEnabled;
   final double freeDeliveryThreshold;
   final double minimumOrderAmount;
 
   const DeliverySettingsModel({
-    this.deliveryFee = 30.0,
+    this.deliveryFee = defaultDeliveryFee,
     this.deliveryEnabled = true,
-    this.freeDeliveryThreshold = 499.0,
-    this.minimumOrderAmount = 199.0,
+    this.freeDeliveryThreshold = defaultFreeDeliveryThreshold,
+    this.minimumOrderAmount = defaultMinimumOrderAmount,
   });
 
   factory DeliverySettingsModel.fromJson(Map<String, dynamic> json) {
     return DeliverySettingsModel(
-      deliveryFee: _parseDouble(json['deliveryFee'], 30.0),
+      deliveryFee: _parseDouble(json['deliveryFee'], defaultDeliveryFee),
       deliveryEnabled: json['deliveryEnabled'] is bool
           ? json['deliveryEnabled'] as bool
           : true,
-      freeDeliveryThreshold: _parseDouble(json['freeDeliveryThreshold'], 499.0),
-      minimumOrderAmount: _parseDouble(json['minimumOrderAmount'], 199.0),
+      freeDeliveryThreshold: _parseDouble(json['freeDeliveryThreshold'], defaultFreeDeliveryThreshold),
+      minimumOrderAmount: _parseDouble(json['minimumOrderAmount'], defaultMinimumOrderAmount),
     );
   }
 

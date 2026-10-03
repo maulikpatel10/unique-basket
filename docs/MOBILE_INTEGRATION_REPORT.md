@@ -49,7 +49,7 @@ The customer mobile application will act strictly as a client consuming the exis
      - Calculates Haversine distance and automatically assigns nearest eligible store for `DELIVERY`.
      - Validates store existence for `PICKUP`.
      - Enforces Delivery minimum order threshold (`minimumOrderAmount`, default ₹199).
-     - Applies free delivery threshold (`freeDeliveryThreshold`, default ₹499) vs standard fee (`deliveryFee`, default ₹30).
+     - Applies free delivery threshold (`freeDeliveryThreshold`, default ₹200 per D-009) vs standard fee (`deliveryFee`, default ₹30).
      - Sets delivery fee to ₹0 for `PICKUP`.
      - Enforces COD rules (`codEnabled`, `pickupCodEnabled`, `minimumCodOrderAmount`, `maximumCodOrderAmount`) and applies COD charge (`codCharge`, default ₹20).
      - Sets COD charge to ₹0 for `ONLINE`.

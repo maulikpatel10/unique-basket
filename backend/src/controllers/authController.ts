@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '../config/db';
 import { OtpService, isOtpBypassEnabled } from '../services/otpService';
 import { generateAccessToken } from '../utils/jwt';
+import { normalizeIndianPhone } from '../utils/phone';
 import { issueRefreshToken, validateRefreshToken, revokeRefreshSession } from '../services/sessionService';
 
 export class AuthController {
@@ -11,12 +12,12 @@ export class AuthController {
    */
   static async sendOtp(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { phone } = req.body;
+      const phone = normalizeIndianPhone(req.body?.phone);
 
-      if (!phone || typeof phone !== 'string' || !/^\+?[1-9]\d{1,14}$/.test(phone)) {
+      if (!phone) {
         res.status(400).json({
           success: false,
-          message: 'Invalid mobile number format. Please provide a valid phone number with country code.',
+          message: 'Invalid mobile number. Please enter a valid 10-digit Indian mobile number.',
           errorCode: 'INVALID_PHONE_FORMAT',
         });
         return;
@@ -49,13 +50,23 @@ export class AuthController {
    */
   static async verifyOtp(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { phone, otp } = req.body;
+      const { phone: rawPhone, otp } = req.body;
 
-      if (!phone || !otp) {
+      if (!rawPhone || !otp) {
         res.status(400).json({
           success: false,
           message: 'Phone number and OTP are required.',
           errorCode: 'MISSING_PARAMETERS',
+        });
+        return;
+      }
+
+      const phone = normalizeIndianPhone(rawPhone);
+      if (!phone) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid mobile number. Please enter a valid 10-digit Indian mobile number.',
+          errorCode: 'INVALID_PHONE_FORMAT',
         });
         return;
       }

@@ -147,7 +147,7 @@ Widget _createCheckoutTestWidget({
             deliverySettings ??
             const DeliverySettingsModel(
               deliveryFee: 30.0,
-              freeDeliveryThreshold: 499.0,
+              freeDeliveryThreshold: 200.0,
             ),
       ),
       if (cartSummary != null)
@@ -839,7 +839,7 @@ void main() {
           subtotal: 95.0,
           deliveryFee: 30.0,
           total: 125.0,
-          freeDeliveryThreshold: 499.0,
+          freeDeliveryThreshold: 200.0,
         ),
         initialCart: {'p_server_only': 1},
       ));
@@ -893,7 +893,7 @@ void main() {
           deliveryFee: 30.0,
           discount: 20.0,
           total: 190.0,
-          freeDeliveryThreshold: 499.0,
+          freeDeliveryThreshold: 200.0,
         ),
         initialCart: {'p_kale': 3},
       ));

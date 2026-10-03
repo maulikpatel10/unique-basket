@@ -58,7 +58,7 @@ async function main() {
     data: {
       deliveryEnabled: true,
       deliveryFee: 30.00,
-      freeDeliveryThreshold: 499.00,
+      freeDeliveryThreshold: 200.00,
       minimumOrderAmount: 199.00,
       codEnabled: true,
       codCharge: 20.00,

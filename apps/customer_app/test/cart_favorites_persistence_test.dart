@@ -63,13 +63,13 @@ class MockCartRepository implements CartRepository {
     for (final i in items) {
       subtotal += i.totalPrice;
     }
-    final fee = subtotal > 0 ? (subtotal >= 499.0 ? 0.0 : 30.0) : 0.0;
+    final fee = subtotal > 0 ? (subtotal >= 200.0 ? 0.0 : 30.0) : 0.0;
     return CartSummaryModel(
       items: List.from(items),
       subtotal: subtotal,
       deliveryFee: fee,
       total: subtotal + fee,
-      freeDeliveryThreshold: 499.0,
+      freeDeliveryThreshold: 200.0,
     );
   }
 

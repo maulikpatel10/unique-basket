@@ -31,7 +31,7 @@ export const Settings: React.FC = () => {
   const [formData, setFormData] = useState<DeliverySettings>({
     deliveryEnabled: true,
     deliveryFee: 30,
-    freeDeliveryThreshold: 499,
+    freeDeliveryThreshold: 200,
     minimumOrderAmount: 199,
     codEnabled: true,
     codCharge: 20,

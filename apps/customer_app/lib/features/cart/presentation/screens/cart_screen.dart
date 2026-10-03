@@ -207,9 +207,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       _cachedDeliverySettings = deliverySettingsAsync.value;
     }
     final deliverySettings = _cachedDeliverySettings ?? deliverySettingsAsync.valueOrNull;
-    final double backendDeliveryFee = deliverySettings?.deliveryFee ?? 30.0;
+    final double backendDeliveryFee = deliverySettings?.deliveryFee ?? DeliverySettingsModel.defaultDeliveryFee;
     final double freeDeliveryThreshold = cartSummary?.freeDeliveryThreshold ??
-        (deliverySettings?.freeDeliveryThreshold ?? 499.0);
+        (deliverySettings?.freeDeliveryThreshold ?? DeliverySettingsModel.defaultFreeDeliveryThreshold);
 
     // Retrieve store products to populate details - using cache preserves previous products across AsyncLoading/refresh
     final productsAsync = ref.watch(homeProductsProvider);
