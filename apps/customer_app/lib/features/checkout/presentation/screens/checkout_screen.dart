@@ -165,11 +165,20 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           backgroundColor: const Color(0xFFDC2626),
         ),
       );
+
+      // P1-18: the order was rejected (stock, prices or availability may have
+      // changed) — reconcile the local cart and bill with the server cart.
+      _reconcileWithServerCart();
     } finally {
       if (mounted && !_orderPlaced) {
         setState(() => _isSubmitting = false);
       }
     }
+  }
+
+  void _reconcileWithServerCart() {
+    ref.read(cartNotifierProvider.notifier).loadCart();
+    ref.invalidate(cartSummaryProvider);
   }
 
   @override

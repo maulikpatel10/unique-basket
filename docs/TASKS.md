@@ -250,7 +250,7 @@
 - **Verification:** Recorded results; 0 analyzer issues and all tests pass, or new tasks filed.
 
 ### P1-18 — Missing critical Flutter tests
-- **Priority:** P1 · **Area:** Testing / Flutter · **Status:** IN PROGRESS (cart sync failure/rollback tests added with P1-06 and session-expiry redirect tests with P1-07; decimal quantity round-trip tests are blocked with P1-03 on P4-08)
+- **Priority:** P1 · **Area:** Testing / Flutter · **Status:** IN PROGRESS — remaining part BLOCKED (done: cart sync failure/rollback tests with P1-06; session-expiry redirect tests with P1-07; checkout reconciliation with the server cart — a rejected order now reloads the cart and bill from the server (`CheckoutScreen._reconcileWithServerCart`), returns to the cart if the server cart is empty, and never writes the stale local cart back; a successful order clears the local cart without server writes; tests in `test/checkout_server_cart_reconciliation_test.dart`. Remaining: decimal quantity round-trip tests, blocked with P1-03 on P4-08.)
 - **Problem:** No tests for decimal quantity round-trip, cart sync failure/rollback, session-expiry redirect, or checkout reconciliation with the server cart.
 - **Evidence:** No test references decimal cart quantities (`CartItemModel` is int-only); no router redirect exists to test.
 - **Required fix:** Add tests with P1-03, P1-06, P1-07.
