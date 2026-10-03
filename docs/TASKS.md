@@ -316,7 +316,10 @@
       - `changeOrderStatus`: atomic claim, stock restore on cancel, audit log, customer notification.
       - `verifyPickupHandover`.
     - **Behaviour:** responses and error codes are unchanged; all 468 existing tests pass. New unit tests in `backend/tests/admin_order_service.test.ts`. The status lifecycle itself is still pending owner review (P-012).
-    - **Remaining candidate:** manager CRUD (`adminManagerController`).
+  - **Service extraction (part 4, `adminManagerController` 379→61 lines):**
+    - `services/managerService.ts`: list (filters and paging), details, create (store must exist, unique email, bcrypt hash, transactional account and store assignment, audit) and update (email uniqueness, password re-hash, reassignment only when the store changes, activation and update audits).
+    - **Behaviour:** responses and error codes are unchanged; all 476 existing tests pass. New tests in `backend/tests/manager_service.test.ts`.
+  - **Status of the large controllers:** the order, cart, customer, admin order and manager controllers are now thin. Smaller controllers (store, banner, pincode, category, settings) are under ~300 lines and could follow the same pattern if needed.
 - **Problem:** Orders, cart, inventory and pricing live in 300–800-line controllers with `any`-typed `whereClause`es and ad-hoc parsing.
 - **Evidence:** `customerController.ts` 800 lines, `orderController.ts` 627, `productController.ts` 535.
 - **Required fix:** Extract services (orders, inventory, pricing) and a validation layer; keep the HTTP contracts unchanged.

@@ -19,7 +19,7 @@ src/app.ts            route mounting, 404, global error handler
 src/routes/*.ts       URL → middleware → controller
 src/controllers/*.ts  request handling + business logic (static class methods)
 src/middlewares/      authenticate, requireRole, requireStoreAccess
-src/services/         otp, notification, pricing, inventory, order, adminOrder (status rules, pickup), cart, session, customer (profile), address, favorite, serviceability
+src/services/         otp, notification, pricing, inventory, order, adminOrder (status rules, pickup), manager, cart, session, customer (profile), address, favorite, serviceability
                       controllers stay thin: requireUserId/validatedBody → service → response; services throw AppError
 src/validation/       request body schemas + validator (use validateBody(schema) in routes)
 src/utils/            jwt, distance (Haversine), orderNumber
