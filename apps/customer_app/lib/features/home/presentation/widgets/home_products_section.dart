@@ -10,7 +10,7 @@ import '../../data/models/product_model.dart';
 class HomeProductsSection extends StatelessWidget {
   final String title;
   final List<ProductModel> products;
-  final Map<String, int> cartQuantities;
+  final Map<String, double> cartQuantities;
   final Set<String> favoriteIds;
   final ValueChanged<ProductModel>? onProductTap;
   final ValueChanged<ProductModel>? onAddToCart;
@@ -76,6 +76,7 @@ class HomeProductsSection extends StatelessWidget {
                       imageUrl: product.imageUrl,
                       isPurchasable: product.isPurchasable,
                       quantity: quantity,
+                      canIncrement: product.quantityRule.canIncrement(quantity),
                       isFavorite: isFav,
                       onTap: () => onProductTap?.call(product),
                       onAddToCart: () => onAddToCart?.call(product),

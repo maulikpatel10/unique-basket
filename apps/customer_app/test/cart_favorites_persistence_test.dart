@@ -79,7 +79,7 @@ class MockCartRepository implements CartRepository {
   }
 
   @override
-  Future<Map<String, dynamic>> addItem({required String productId, required int quantity}) async {
+  Future<Map<String, dynamic>> addItem({required String productId, required double quantity}) async {
     lastAddPayload = {'productId': productId, 'quantity': quantity};
     final existingIndex = items.indexWhere((i) => i.productId == productId);
     final itemId = existingIndex >= 0 ? items[existingIndex].id : 'cart_item_$productId';
@@ -99,7 +99,7 @@ class MockCartRepository implements CartRepository {
   }
 
   @override
-  Future<Map<String, dynamic>> updateItem({required String cartItemId, required int quantity}) async {
+  Future<Map<String, dynamic>> updateItem({required String cartItemId, required double quantity}) async {
     lastUpdatePayload = {'cartItemId': cartItemId, 'quantity': quantity};
     final index = items.indexWhere((i) => i.id == cartItemId);
     if (index >= 0) {
@@ -237,7 +237,7 @@ void main() {
       cartNotifier1.increment('p_bread');
 
       expect(container1.read(cartNotifierProvider), equals({'p_avocado': 2, 'p_bread': 1}));
-      expect(cartNotifier1.totalItemCount, equals(3));
+      expect(cartNotifier1.totalItemCount, equals(2));  // D-012: counts product lines, not total quantity
       expect(cartNotifier1.getQuantity('p_avocado'), equals(2));
       expect(cartNotifier1.getQuantity('p_bread'), equals(1));
 
@@ -256,7 +256,7 @@ void main() {
       final cartNotifier2 = container2.read(cartNotifierProvider.notifier);
 
       expect(cartState2, equals({'p_avocado': 2, 'p_bread': 1}));
-      expect(cartNotifier2.totalItemCount, equals(3));
+      expect(cartNotifier2.totalItemCount, equals(2));  // D-012: counts product lines, not total quantity
       expect(cartNotifier2.getQuantity('p_avocado'), equals(2));
       expect(cartNotifier2.getQuantity('p_bread'), equals(1));
 
@@ -352,7 +352,7 @@ void main() {
 
       final cartState = container.read(cartNotifierProvider);
       expect(cartState, equals({'p_avocado': 3, 'p_kale': 2}));
-      expect(container.read(cartNotifierProvider.notifier).totalItemCount, equals(5));
+      expect(container.read(cartNotifierProvider.notifier).totalItemCount, equals(2));  // D-012: counts product lines, not total quantity
 
       container.dispose();
     });
@@ -407,7 +407,7 @@ void main() {
 
       // Verify Cart and Favourites are restored directly from backend
       expect(container.read(cartNotifierProvider), equals({'p_apple': 2, 'p_banana': 1}));
-      expect(container.read(cartNotifierProvider.notifier).totalItemCount, equals(3));
+      expect(container.read(cartNotifierProvider.notifier).totalItemCount, equals(2));  // D-012: counts product lines, not total quantity
       expect(container.read(favoritesNotifierProvider), equals({'p_apple', 'p_tomato'}));
       expect(container.read(favoritesNotifierProvider.notifier).isFavorite('p_apple'), isTrue);
       expect(container.read(favoritesNotifierProvider.notifier).isFavorite('p_tomato'), isTrue);

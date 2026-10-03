@@ -269,22 +269,23 @@ class _CategoryProductListingScreenState
                             badge: product.resolvedBadge,
                             imageUrl: product.imageUrl,
                             quantity: quantity,
+                            canIncrement: product.quantityRule.canIncrement(quantity),
                             isFavorite: isFavorite,
                             isPurchasable: product.isPurchasable,
                             onAddToCart: () {
                               ref
                                   .read(cartNotifierProvider.notifier)
-                                  .increment(product.id);
+                                  .increment(product.id, rule: product.quantityRule);
                             },
                             onIncrement: () {
                               ref
                                   .read(cartNotifierProvider.notifier)
-                                  .increment(product.id);
+                                  .increment(product.id, rule: product.quantityRule);
                             },
                             onDecrement: () {
                               ref
                                   .read(cartNotifierProvider.notifier)
-                                  .decrement(product.id);
+                                  .decrement(product.id, rule: product.quantityRule);
                             },
                             onToggleFavorite: () {
                               ref

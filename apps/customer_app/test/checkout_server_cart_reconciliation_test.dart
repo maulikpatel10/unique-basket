@@ -40,7 +40,7 @@ class _TokenStorage implements SecureStorageService {
 }
 
 class _ServerCart implements CartRepository {
-  final Map<String, int> server;
+  final Map<String, double> server;
   int getCartCalls = 0;
   int summaryCalls = 0;
   int writes = 0;
@@ -66,14 +66,14 @@ class _ServerCart implements CartRepository {
   Future<DeliverySettingsModel> getDeliverySettings() async => const DeliverySettingsModel();
 
   @override
-  Future<Map<String, dynamic>> addItem({required String productId, required int quantity}) async {
+  Future<Map<String, dynamic>> addItem({required String productId, required double quantity}) async {
     writes++;
     server[productId] = quantity;
     return {'id': 'ci_$productId'};
   }
 
   @override
-  Future<Map<String, dynamic>> updateItem({required String cartItemId, required int quantity}) async {
+  Future<Map<String, dynamic>> updateItem({required String cartItemId, required double quantity}) async {
     writes++;
     server[cartItemId.replaceFirst('ci_', '')] = quantity;
     return {};
@@ -90,6 +90,7 @@ class _ServerCart implements CartRepository {
 class _OrderRepo implements OrderRepository {
   final _ServerCart cart;
   String? failureCode;
+  List<Map<String, dynamic>>? lastItems;
   _OrderRepo(this.cart, {this.failureCode});
 
   @override
@@ -100,6 +101,7 @@ class _OrderRepo implements OrderRepository {
     required String paymentMethod,
     required List<Map<String, dynamic>> items,
   }) async {
+    lastItems = items;
     if (failureCode != null) throw Exception(failureCode);
     // The backend empties the cart in the order transaction.
     cart.server.clear();
@@ -146,7 +148,14 @@ final _address = {
 };
 
 void main() {
-  Future<ProviderContainer> pumpCheckout(WidgetTester tester, _ServerCart cart, _OrderRepo orders) async {
+  const kale = ProductModel(id: 'p_kale', categoryId: 'c', name: 'Fresh Local Kale', price: 60.0, unit: '1 Bunch', stockQuantity: 15.0);
+
+  Future<ProviderContainer> pumpCheckout(
+    WidgetTester tester,
+    _ServerCart cart,
+    _OrderRepo orders, {
+    List<ProductModel> products = const [kale],
+  }) async {
     SharedPreferences.setMockInitialValues({});
     final localStorage = LocalStorageService(await SharedPreferences.getInstance());
 
@@ -159,9 +168,7 @@ void main() {
         localStorageProvider.overrideWithValue(localStorage),
         secureStorageProvider.overrideWithValue(_TokenStorage()),
         cartRepositoryProvider.overrideWithValue(cart),
-        homeProductsProvider.overrideWith((ref) => const [
-              ProductModel(id: 'p_kale', categoryId: 'c', name: 'Fresh Local Kale', price: 60.0, unit: '1 Bunch', stockQuantity: 15.0),
-            ]),
+        homeProductsProvider.overrideWith((ref) => products),
         deliverySettingsProvider.overrideWith((ref) async => const DeliverySettingsModel()),
         customerAddressesProvider.overrideWith((ref) => [_address]),
         defaultCustomerAddressProvider.overrideWith((ref) => AsyncValue.data(_address)),
@@ -237,5 +244,56 @@ void main() {
     expect(container.read(cartNotifierProvider), isEmpty);
     expect(cart.server, isEmpty);
     expect(cart.writes, 0);
+  });
+
+  group('D-012 product quantity rules at checkout', () {
+    const configuredKale = ProductModel(
+      id: 'p_kale',
+      categoryId: 'c',
+      name: 'Fresh Local Kale',
+      price: 60.0,
+      unit: 'KG',
+      stockQuantity: 15.0,
+      minQuantity: 1,
+      maxQuantity: 5,
+      quantityStep: 0.5,
+    );
+
+    testWidgets('a quantity outside the product rule blocks ordering with a clear message', (tester) async {
+      final cart = _ServerCart({'p_kale': 0.75});
+      final orders = _OrderRepo(cart);
+      await pumpCheckout(tester, cart, orders, products: const [configuredKale]);
+
+      expect(find.text('Some item quantities are outside the allowed limits. Please update your cart.'), findsOneWidget);
+      await placeOrder(tester);
+      expect(orders.lastItems, isNull, reason: 'createOrder must not be called');
+    });
+
+    testWidgets('a valid decimal quantity is sent unchanged in the order payload', (tester) async {
+      final cart = _ServerCart({'p_kale': 1.5});
+      final orders = _OrderRepo(cart);
+      await pumpCheckout(tester, cart, orders, products: const [configuredKale]);
+
+      await placeOrder(tester);
+      expect(orders.lastItems, [
+        {'productId': 'p_kale', 'quantity': 1.5},
+      ]);
+      expect(find.text('ORDER SUCCESS'), findsOneWidget);
+    });
+
+    testWidgets('"+" steps by the product step and stops at the configured maximum', (tester) async {
+      final cart = _ServerCart({'p_kale': 4.5});
+      final orders = _OrderRepo(cart);
+      final container = await pumpCheckout(tester, cart, orders, products: const [configuredKale]);
+
+      await tester.tap(find.byIcon(Icons.add_rounded).first);
+      await tester.pumpAndSettle();
+      expect(container.read(cartNotifierProvider)['p_kale'], 5);
+
+      await tester.tap(find.byIcon(Icons.add_rounded).first);
+      await tester.pumpAndSettle();
+      expect(container.read(cartNotifierProvider)['p_kale'], 5);
+      expect(cart.server['p_kale'], 5);
+    });
   });
 }

@@ -175,7 +175,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final cartMap = ref.watch(cartNotifierProvider);
     final favoritesSet = ref.watch(favoritesNotifierProvider);
 
-    final totalCartCount = cartMap.values.fold(0, (sum, q) => sum + q);
+    // D-012: the cart badge counts product lines, not total quantity
+    final totalCartCount = cartMap.length;
     final allProducts = productsAsync.value ?? [];
     final cartTotal = ref.read(cartNotifierProvider.notifier).calculateTotal(allProducts);
 
@@ -513,7 +514,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   Widget _buildSuggestionsView(
     BuildContext context,
     bool isDark,
-    Map<String, int> cartMap,
+    Map<String, double> cartMap,
   ) {
     final suggestions = ref.watch(searchSuggestionsProvider(_currentQuery));
     final productMatches = suggestions.productSuggestions;
@@ -609,7 +610,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     required bool isDark,
     required List<ProductModel> results,
     required List<dynamic> categories,
-    required Map<String, int> cartMap,
+    required Map<String, double> cartMap,
     required Set<String> favoritesSet,
   }) {
     final selectedCategory = ref.watch(searchSelectedCategoryProvider);
@@ -660,12 +661,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 badge: product.resolvedBadge,
                 imageUrl: product.imageUrl,
                 quantity: cartQty,
+                canIncrement: product.quantityRule.canIncrement(cartQty),
                 isFavorite: isFav,
                 isPurchasable: product.isPurchasable,
                 onTap: () => _handleProductTap(product),
-                onAddToCart: () => ref.read(cartNotifierProvider.notifier).increment(product.id),
-                onIncrement: () => ref.read(cartNotifierProvider.notifier).increment(product.id),
-                onDecrement: () => ref.read(cartNotifierProvider.notifier).decrement(product.id),
+                onAddToCart: () => ref.read(cartNotifierProvider.notifier).increment(product.id, rule: product.quantityRule),
+                onIncrement: () => ref.read(cartNotifierProvider.notifier).increment(product.id, rule: product.quantityRule),
+                onDecrement: () => ref.read(cartNotifierProvider.notifier).decrement(product.id, rule: product.quantityRule),
                 onToggleFavorite: () => ref.read(favoritesNotifierProvider.notifier).toggleFavorite(product.id),
               );
             },

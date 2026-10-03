@@ -223,7 +223,7 @@ void main() {
       expect(find.text('Checkout'), findsOneWidget);
     });
 
-    testWidgets('3. Correct dynamic cart item count (4 items)', (tester) async {
+    testWidgets('3. Correct dynamic cart item count (3 product lines)', (tester) async {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
       final localStorage = LocalStorageService(prefs);
@@ -239,7 +239,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('YOUR CART'), findsOneWidget);
-      expect(find.text('(4 items)'), findsOneWidget);
+      expect(find.text('(3 items)'), findsOneWidget);  // D-012: counts product lines, not total quantity
     });
 
     testWidgets('4. Cart items render with name, pack size, price, and ProductQuantityControl', (tester) async {

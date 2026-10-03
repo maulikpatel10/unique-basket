@@ -182,6 +182,22 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                           : const Color(0xFF64748B),
                     ),
                   ),
+                  // D-012: admin-configured purchase limits for this product
+                  if (product.quantityRule.limitsLabel != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      product.quantityRule.limitsLabel!,
+                      key: const Key('product_quantity_limits'),
+                      style: TextStyle(
+                        fontSize: context.sp(12.5),
+                        fontWeight: FontWeight.w600,
+                        fontFamily: AppTextStyles.fontFamily,
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : const Color(0xFF014D40),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 12),
 
                   // 3. Current Price + MRP on same horizontal line (Left aligned)
@@ -689,16 +705,17 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                 badge: sim.resolvedBadge,
                 imageUrl: sim.imageUrl,
                 quantity: simQuantity,
+                canIncrement: sim.quantityRule.canIncrement(simQuantity),
                 isFavorite: simIsFav,
                 isPurchasable: sim.isPurchasable,
                 onAddToCart: () {
-                  ref.read(cartNotifierProvider.notifier).increment(sim.id);
+                  ref.read(cartNotifierProvider.notifier).increment(sim.id, rule: sim.quantityRule);
                 },
                 onIncrement: () {
-                  ref.read(cartNotifierProvider.notifier).increment(sim.id);
+                  ref.read(cartNotifierProvider.notifier).increment(sim.id, rule: sim.quantityRule);
                 },
                 onDecrement: () {
-                  ref.read(cartNotifierProvider.notifier).decrement(sim.id);
+                  ref.read(cartNotifierProvider.notifier).decrement(sim.id, rule: sim.quantityRule);
                 },
                 onToggleFavorite: () {
                   ref
@@ -733,7 +750,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
   Widget _buildStickyBottomBar(
     BuildContext context,
     ProductModel product,
-    int currentQuantity,
+    double currentQuantity,
     bool isDark,
   ) {
     final isPurchasable = product.isPurchasable;
@@ -855,21 +872,22 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
           else if (currentQuantity > 0)
             ProductQuantityControl(
               quantity: currentQuantity,
+              canIncrement: product.quantityRule.canIncrement(currentQuantity),
               isDark: isDark,
               height: 44.0,
               expandedWidth: 132.0,
               collapsedWidth: 44.0,
               onAddToCart: () {
                 HapticFeedback.lightImpact();
-                ref.read(cartNotifierProvider.notifier).increment(product.id);
+                ref.read(cartNotifierProvider.notifier).increment(product.id, rule: product.quantityRule);
               },
               onIncrement: () {
                 HapticFeedback.lightImpact();
-                ref.read(cartNotifierProvider.notifier).increment(product.id);
+                ref.read(cartNotifierProvider.notifier).increment(product.id, rule: product.quantityRule);
               },
               onDecrement: () {
                 HapticFeedback.lightImpact();
-                ref.read(cartNotifierProvider.notifier).decrement(product.id);
+                ref.read(cartNotifierProvider.notifier).decrement(product.id, rule: product.quantityRule);
               },
             )
           else
@@ -880,7 +898,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                   HapticFeedback.lightImpact();
                   ref
                       .read(cartNotifierProvider.notifier)
-                      .increment(product.id);
+                      .increment(product.id, rule: product.quantityRule);
                 },
                 borderRadius: BorderRadius.circular(22),
                 child: Container(

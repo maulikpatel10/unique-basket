@@ -13,6 +13,7 @@ import 'package:customer_app/features/home/presentation/providers/home_provider.
 import 'package:customer_app/features/store/data/models/store_model.dart';
 import 'package:customer_app/features/store/presentation/providers/store_provider.dart';
 import 'package:customer_app/shared/widgets/app_bottom_nav_bar.dart';
+import 'package:customer_app/shared/widgets/app_button.dart';
 import 'package:customer_app/shared/widgets/product_quantity_control.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -221,7 +222,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Header and subtitle
-      expect(find.text('4 items in your basket'), findsOneWidget);
+      expect(find.text('3 items in your basket'), findsOneWidget);  // D-012: counts product lines, not total quantity (3 products)
 
       // Product items
       expect(find.text('Fresh Local Kale'), findsOneWidget);
@@ -273,7 +274,7 @@ void main() {
       await tester.tap(plusButton);
       await tester.pumpAndSettle();
 
-      expect(find.text('2 items in your basket'), findsOneWidget);
+      expect(find.text('1 item in your basket'), findsOneWidget);  // D-012: counts product lines, not total quantity (kale x2 is one line)
       // 360 >= ₹200 free-delivery threshold (D-009): subtotal and To Pay are both ₹360
       expect(find.text('₹360'), findsNWidgets(2));
       expect(find.text('₹390'), findsNothing);
@@ -1058,6 +1059,38 @@ void main() {
       expect(find.text('₹50'), findsOneWidget);
       expect(find.text('₹230'), findsOneWidget);
     });
+
+    testWidgets('D-012: a line outside its product quantity rule shows a warning and blocks checkout', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final localStorage = LocalStorageService(await SharedPreferences.getInstance());
+      tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+      tester.view.devicePixelRatio = 3.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      // Admin configured a 2 kg minimum; the cart still holds 1 kg (e.g. rules changed after adding)
+      const potato = ProductModel(
+        id: 'p_potato',
+        categoryId: 'cat_vegetables',
+        name: 'Potato',
+        price: 30.0,
+        unit: 'KG',
+        stockQuantity: 50.0,
+        minQuantity: 2,
+        maxQuantity: 10,
+        quantityStep: 0.5,
+      );
+
+      await tester.pumpWidget(_createCartTestWidget(
+        localStorage: localStorage,
+        products: const [potato],
+        initialCart: {'p_potato': 1},
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('quantity_issue_p_potato')), findsOneWidget);
+      expect(find.text('Minimum is 2 kg.'), findsOneWidget);
+      final button = tester.widget<AppButton>(find.widgetWithText(AppButton, 'Proceed to Checkout'));
+      expect(button.onPressed, isNull);
+    });
   });
 }
-

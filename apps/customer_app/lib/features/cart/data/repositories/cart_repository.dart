@@ -7,8 +7,8 @@ abstract class CartRepository {
   Future<List<CartItemModel>> getCart();
   Future<CartSummaryModel> getCartSummary();
   Future<DeliverySettingsModel> getDeliverySettings();
-  Future<Map<String, dynamic>> addItem({required String productId, required int quantity});
-  Future<Map<String, dynamic>> updateItem({required String cartItemId, required int quantity});
+  Future<Map<String, dynamic>> addItem({required String productId, required double quantity});
+  Future<Map<String, dynamic>> updateItem({required String cartItemId, required double quantity});
   Future<bool> removeItem(String cartItemId);
 }
 
@@ -33,12 +33,12 @@ class CartRepositoryImpl implements CartRepository {
   }
 
   @override
-  Future<Map<String, dynamic>> addItem({required String productId, required int quantity}) {
+  Future<Map<String, dynamic>> addItem({required String productId, required double quantity}) {
     return _remoteDataSource.addItem(productId: productId, quantity: quantity);
   }
 
   @override
-  Future<Map<String, dynamic>> updateItem({required String cartItemId, required int quantity}) {
+  Future<Map<String, dynamic>> updateItem({required String cartItemId, required double quantity}) {
     return _remoteDataSource.updateItem(cartItemId: cartItemId, quantity: quantity);
   }
 

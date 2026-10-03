@@ -6,7 +6,10 @@ class CartItemModel {
   final String? unit;
   final double price;
   final double? mrp;
-  final int quantity;
+  final double quantity;
+  final double? minQuantity;
+  final double? maxQuantity;
+  final double? quantityStep;
   final double totalPrice;
 
   const CartItemModel({
@@ -18,11 +21,15 @@ class CartItemModel {
     this.mrp,
     required this.quantity,
     required this.totalPrice,
+    this.minQuantity,
+    this.maxQuantity,
+    this.quantityStep,
   });
 
   factory CartItemModel.fromJson(Map<String, dynamic> json) {
     final qtyNum = json['quantity'];
-    final quantity = qtyNum is num ? qtyNum.toInt() : (int.tryParse(qtyNum?.toString() ?? '1') ?? 1);
+    // Decimal quantities are preserved (P1-03): never truncate to an int.
+    final quantity = qtyNum is num ? qtyNum.toDouble() : (double.tryParse(qtyNum?.toString() ?? '1') ?? 1.0);
     
     final priceNum = json['price'];
     final price = priceNum is num ? priceNum.toDouble() : (double.tryParse(priceNum?.toString() ?? '0.0') ?? 0.0);
@@ -42,7 +49,16 @@ class CartItemModel {
       mrp: mrp,
       quantity: quantity,
       totalPrice: totalPrice,
+      minQuantity: _optionalDouble(json['minQuantity']),
+      maxQuantity: _optionalDouble(json['maxQuantity']),
+      quantityStep: _optionalDouble(json['quantityStep']),
     );
+  }
+
+  static double? _optionalDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString());
   }
 
   Map<String, dynamic> toJson() {
@@ -55,6 +71,9 @@ class CartItemModel {
       'mrp': mrp,
       'quantity': quantity,
       'totalPrice': totalPrice,
+      'minQuantity': minQuantity,
+      'maxQuantity': maxQuantity,
+      'quantityStep': quantityStep,
     };
   }
 
@@ -65,7 +84,7 @@ class CartItemModel {
     String? unit,
     double? price,
     double? mrp,
-    int? quantity,
+    double? quantity,
     double? totalPrice,
   }) {
     return CartItemModel(
@@ -77,6 +96,9 @@ class CartItemModel {
       mrp: mrp ?? this.mrp,
       quantity: quantity ?? this.quantity,
       totalPrice: totalPrice ?? this.totalPrice,
+      minQuantity: minQuantity,
+      maxQuantity: maxQuantity,
+      quantityStep: quantityStep,
     );
   }
 }

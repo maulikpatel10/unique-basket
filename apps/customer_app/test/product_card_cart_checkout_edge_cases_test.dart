@@ -388,8 +388,8 @@ void main() {
       container.read(cartNotifierProvider.notifier).increment('p_avocado');
       await tester.pumpAndSettle();
 
-      // 3 items in basket: 3 * 240 = 720 Subtotal + 30 Delivery = 750
-      expect(find.text('3 items in your basket'), findsOneWidget);
+      // One product line (avocado x3): 3 * 240 = 720 Subtotal + 30 Delivery = 750
+      expect(find.text('1 item in your basket'), findsOneWidget);  // D-012: counts product lines, not total quantity
       expect(find.text('₹720'), findsWidgets);
       expect(find.text('₹750'), findsOneWidget);
 

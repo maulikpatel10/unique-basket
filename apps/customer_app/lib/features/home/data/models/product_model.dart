@@ -1,3 +1,7 @@
+import 'quantity_rule.dart';
+
+export 'quantity_rule.dart';
+
 /// Product data model for Unique Basket Customer App.
 class ProductModel {
   final String id;
@@ -16,6 +20,11 @@ class ProductModel {
   final bool isFavorite;
   final bool isActive;
 
+  /// Admin-configured purchase quantity rule values (D-012); null when not configured.
+  final double? minQuantity;
+  final double? maxQuantity;
+  final double? quantityStep;
+
   const ProductModel({
     required this.id,
     required this.categoryId,
@@ -32,7 +41,18 @@ class ProductModel {
     this.isAvailable = true,
     this.isFavorite = false,
     this.isActive = true,
+    this.minQuantity,
+    this.maxQuantity,
+    this.quantityStep,
   });
+
+  /// Purchase quantity rule used by +/- controls and cart validation.
+  QuantityRule get quantityRule => QuantityRule.fromValues(
+        unit: unit,
+        min: minQuantity,
+        max: maxQuantity,
+        step: quantityStep,
+      );
 
   /// True if the product is active, available, and has stock > 0.
   bool get isPurchasable => isActive && isAvailable && stockQuantity > 0;
@@ -65,6 +85,9 @@ class ProductModel {
     bool? isAvailable,
     bool? isFavorite,
     bool? isActive,
+    double? minQuantity,
+    double? maxQuantity,
+    double? quantityStep,
   }) {
     return ProductModel(
       id: id ?? this.id,
@@ -82,6 +105,9 @@ class ProductModel {
       isAvailable: isAvailable ?? this.isAvailable,
       isFavorite: isFavorite ?? this.isFavorite,
       isActive: isActive ?? this.isActive,
+      minQuantity: minQuantity ?? this.minQuantity,
+      maxQuantity: maxQuantity ?? this.maxQuantity,
+      quantityStep: quantityStep ?? this.quantityStep,
     );
   }
 
@@ -118,6 +144,9 @@ class ProductModel {
       isAvailable: json['isAvailable'] as bool? ?? json['is_available'] as bool? ?? true,
       isFavorite: json['isFavorite'] as bool? ?? false,
       isActive: json['isActive'] as bool? ?? json['is_active'] as bool? ?? true,
+      minQuantity: _parseOptionalDouble(json['minQuantity'] ?? json['min_quantity']),
+      maxQuantity: _parseOptionalDouble(json['maxQuantity'] ?? json['max_quantity']),
+      quantityStep: _parseOptionalDouble(json['quantityStep'] ?? json['quantity_step']),
     );
   }
 
@@ -138,6 +167,9 @@ class ProductModel {
       'isAvailable': isAvailable,
       'isFavorite': isFavorite,
       'isActive': isActive,
+      'minQuantity': minQuantity,
+      'maxQuantity': maxQuantity,
+      'quantityStep': quantityStep,
     };
   }
 }

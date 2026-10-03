@@ -4,6 +4,7 @@ import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 import { getParam } from '../utils/request';
 import { lockInventoryRow } from '../services/inventoryService';
 import { AppError } from '../utils/errors';
+import { isProductUnit, parseQuantityConfig } from '../utils/quantity';
 import { paginationMeta, parsePagination } from '../utils/pagination';
 
 export class ProductController {
@@ -115,6 +116,14 @@ export class ProductController {
         return;
       }
 
+      // D-012: optional product-level quantity rules (all three together).
+      // An unknown unit is rejected by Prisma below with VALIDATION_ERROR (P1-12).
+      const quantityConfig = isProductUnit(unit) ? parseQuantityConfig(req.body, unit) : {};
+      if (quantityConfig.error) {
+        res.status(400).json({ success: false, message: quantityConfig.error, errorCode: 'INVALID_QUANTITY_CONFIG' });
+        return;
+      }
+
       // Check category exists
       const category = await prisma.category.findUnique({
         where: { id: categoryId },
@@ -138,6 +147,7 @@ export class ProductController {
           unit,
           price: parseFloat(price),
           mrp: mrp !== undefined ? parseFloat(mrp) : null,
+          ...(quantityConfig.data ?? {}),
         },
       });
 
@@ -181,6 +191,28 @@ export class ProductController {
         return;
       }
 
+      // An unknown unit is rejected by Prisma below with VALIDATION_ERROR (P1-12).
+      const targetUnit = isProductUnit(unit) ? unit : product.unit;
+
+      // D-012: quantity rules are validated against the resulting unit. When only the unit
+      // changes, the existing configuration must still be valid for the new unit.
+      const quantityConfig = parseQuantityConfig(
+        ['minQuantity', 'maxQuantity', 'quantityStep'].some((f) => req.body[f] !== undefined)
+          ? req.body
+          : targetUnit !== product.unit && product.minQuantity != null
+            ? {
+                minQuantity: Number(product.minQuantity),
+                maxQuantity: Number(product.maxQuantity),
+                quantityStep: Number(product.quantityStep),
+              }
+            : {},
+        targetUnit,
+      );
+      if (quantityConfig.error) {
+        res.status(400).json({ success: false, message: quantityConfig.error, errorCode: 'INVALID_QUANTITY_CONFIG' });
+        return;
+      }
+
       // Check if price is changing to record price change audit
       const targetPrice = price !== undefined ? parseFloat(price) : undefined;
       const isPriceChanged = targetPrice !== undefined && targetPrice !== Number(product.price);
@@ -196,8 +228,30 @@ export class ProductController {
           price: targetPrice,
           mrp: mrp !== undefined ? parseFloat(mrp) : undefined,
           isActive: isActive !== undefined ? !!isActive : undefined,
+          ...(quantityConfig.data ?? {}),
         },
       });
+
+      const asNumber = (v: unknown) => (v == null ? null : Number(v));
+      const quantityRulesChanged =
+        quantityConfig.data !== undefined &&
+        (quantityConfig.data.minQuantity !== asNumber(product.minQuantity) ||
+          quantityConfig.data.maxQuantity !== asNumber(product.maxQuantity) ||
+          quantityConfig.data.quantityStep !== asNumber(product.quantityStep));
+
+      if (quantityConfig.data && quantityRulesChanged) {
+        const { minQuantity, maxQuantity, quantityStep } = quantityConfig.data;
+        await prisma.auditLog.create({
+          data: {
+            adminUserId: req.user?.id,
+            action: 'PRODUCT_QUANTITY_RULES_CHANGED',
+            details:
+              minQuantity === null
+                ? `Cleared quantity rules for ${updated.name}`
+                : `Quantity rules for ${updated.name}: min ${minQuantity}, max ${maxQuantity}, step ${quantityStep} ${updated.unit}`,
+          },
+        });
+      }
 
       // Write specialized price audit if changed
       if (isPriceChanged) {
@@ -336,6 +390,9 @@ export class ProductController {
           categoryId: prod.categoryId,
           categoryName: prod.category.name,
           unit: prod.unit,
+          minQuantity: prod.minQuantity,
+          maxQuantity: prod.maxQuantity,
+          quantityStep: prod.quantityStep,
           price: prod.price,
           mrp: prod.mrp,
           stockQuantity: inv ? Number(inv.stockQuantity) : 0,

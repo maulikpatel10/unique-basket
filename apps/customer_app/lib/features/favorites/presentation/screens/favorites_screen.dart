@@ -229,7 +229,7 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
     required String deliveryAddress,
     required String? distanceText,
     required List<ProductModel> favoriteProducts,
-    required Map<String, int> cart,
+    required Map<String, double> cart,
     required int totalCartCount,
     required double totalCartPrice,
   }) {
@@ -318,16 +318,17 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                         badge: product.resolvedBadge,
                         imageUrl: product.imageUrl,
                         quantity: quantity,
+                        canIncrement: product.quantityRule.canIncrement(quantity),
                         isFavorite: true,
                         isPurchasable: product.isPurchasable,
                         onAddToCart: () {
-                          ref.read(cartNotifierProvider.notifier).increment(product.id);
+                          ref.read(cartNotifierProvider.notifier).increment(product.id, rule: product.quantityRule);
                         },
                         onIncrement: () {
-                          ref.read(cartNotifierProvider.notifier).increment(product.id);
+                          ref.read(cartNotifierProvider.notifier).increment(product.id, rule: product.quantityRule);
                         },
                         onDecrement: () {
-                          ref.read(cartNotifierProvider.notifier).decrement(product.id);
+                          ref.read(cartNotifierProvider.notifier).decrement(product.id, rule: product.quantityRule);
                         },
                         onToggleFavorite: () {
                           ref.read(favoritesNotifierProvider.notifier).toggleFavorite(product.id);

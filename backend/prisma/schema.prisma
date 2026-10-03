@@ -131,6 +131,10 @@ model Product {
   unit        ProductUnit      @default(KG)
   price       Decimal          @db.Decimal(10, 2)
   mrp         Decimal?         @db.Decimal(10, 2)
+  /// Purchase quantity rules in `unit` (D-012). Set together, or all null = not configured.
+  minQuantity  Decimal?        @map("min_quantity") @db.Decimal(10, 3)
+  maxQuantity  Decimal?        @map("max_quantity") @db.Decimal(10, 3)
+  quantityStep Decimal?        @map("quantity_step") @db.Decimal(10, 3)
   isActive    Boolean          @default(true) @map("is_active")
   createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt   DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)

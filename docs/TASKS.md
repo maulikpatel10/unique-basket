@@ -115,7 +115,7 @@
 - **Verification:** Delete an address used by an order → order still shows the full address in customer and admin views.
 
 ### P1-03 — Flutter truncates decimal quantities to integers
-- **Priority:** P1 · **Area:** Flutter / Cart · **Status:** BLOCKED — DECISION REQUIRED (P4-08). Decimal quantities are allowed (D-007) but the app only creates whole-number quantities (+1/−1), so truncation only affects carts written by other clients. Supporting decimals in the app requires the step size/min/max for KG/GRAM and how the cart badge counts weight items (e.g. 1.5 kg + 2 pcs). Backend enforcement is done in P1-04.
+- **Priority:** P1 · **Area:** Flutter / Cart · **Status:** DONE (D-012: cart state, `CartItemModel`, cart repository/data source and checkout payload use `double` quantities end-to-end, with no `toInt()` truncation. `ProductQuantityControl` shows decimals such as 1.25. +/- follow each product's `QuantityRule` (min/max/step from the API), and the cart badge counts product lines. Tests: `test/product_quantity_rules_test.dart`, D-012 cases in `checkout_server_cart_reconciliation_test.dart` and `cart_screen_test.dart`.)
 - **Problem:** The backend stores decimal quantities (Decimal(10,3), KG/GRAM units), but the app models cart quantities as `int` and calls `toInt()`, so 1.5 kg shows as 1 and the next change sends a wrong value.
 - **Evidence:** `CartItemModel.quantity` is `int` (`qtyNum.toInt()`); `CartStateNotifier extends StateNotifier<Map<String,int>>`; `increment` uses `+1`; `CartRemoteDataSource.addItem/updateItem` take `int`.
 - **Required fix:** Represent quantities as decimals end-to-end and format per unit. Step sizes are P4-08.
@@ -124,7 +124,7 @@
 - **Verification:** A server cart with 1.5 renders as 1.5 and round-trips unchanged; unit tests for parsing/formatting.
 
 ### P1-04 — Cart/order accept invalid quantities
-- **Priority:** P1 · **Area:** Backend / Cart, Orders · **Status:** DONE (D-007: PIECE quantities must be whole numbers; all units limited to 3 decimals and the DB maximum; enforced on cart add/update and checkout via `backend/src/utils/quantity.ts`; tests in `backend/tests/quantity_rules.test.ts`. Steps/limits for non-PIECE units remain P4-08.)
+- **Priority:** P1 · **Area:** Backend / Cart, Orders · **Status:** DONE (D-007: PIECE quantities must be whole numbers; all units limited to 3 decimals and the DB maximum; enforced on cart add/update and checkout via `backend/src/utils/quantity.ts`; tests in `backend/tests/quantity_rules.test.ts`. Extended by D-012: product-level min/max/step and GRAM whole-number precision, see P4-08.)
 - **Problem:** Any positive float is accepted for any unit (e.g. 2.37 PIECE, 0.0001 KG), with no upper bound; values beyond 3 decimals are silently rounded by the DB. No stock check when adding to cart.
 - **Evidence:** `cartController.addItem/updateItem` and `orderController.createOrder` only check `> 0`.
 - **Required fix:** Validate quantity per unit (integer for countable units, min/step/max for weight) and precision; optionally warn on stock at cart time.
@@ -250,7 +250,7 @@
 - **Verification:** Recorded results; 0 analyzer issues and all tests pass, or new tasks filed.
 
 ### P1-18 — Missing critical Flutter tests
-- **Priority:** P1 · **Area:** Testing / Flutter · **Status:** IN PROGRESS — remaining part BLOCKED (done: cart sync failure/rollback tests with P1-06; session-expiry redirect tests with P1-07; checkout reconciliation with the server cart — a rejected order now reloads the cart and bill from the server (`CheckoutScreen._reconcileWithServerCart`), returns to the cart if the server cart is empty, and never writes the stale local cart back; a successful order clears the local cart without server writes; tests in `test/checkout_server_cart_reconciliation_test.dart`. Remaining: decimal quantity round-trip tests, blocked with P1-03 on P4-08.)
+- **Priority:** P1 · **Area:** Testing / Flutter · **Status:** DONE (done: cart sync failure/rollback tests with P1-06; session-expiry redirect tests with P1-07; checkout reconciliation with the server cart — a rejected order now reloads the cart and bill from the server (`CheckoutScreen._reconcileWithServerCart`), returns to the cart if the server cart is empty, and never writes the stale local cart back; a successful order clears the local cart without server writes; tests in `test/checkout_server_cart_reconciliation_test.dart`. Decimal quantity round-trip tests added with P1-03/P4-08 (D-012): `test/product_quantity_rules_test.dart`.)
 - **Problem:** No tests for decimal quantity round-trip, cart sync failure/rollback, session-expiry redirect, or checkout reconciliation with the server cart.
 - **Evidence:** No test references decimal cart quantities (`CartItemModel` is int-only); no router redirect exists to test.
 - **Required fix:** Add tests with P1-03, P1-06, P1-07.
@@ -492,7 +492,12 @@
 - **Dependencies:** Owner decision. **Verification:** After the decision.
 
 ### P4-08 — Quantity rules per unit
-- **Priority:** P4 · **Area:** Catalog / Cart · **Status:** DECISION REQUIRED
+- **Priority:** P4 · **Area:** Catalog / Cart · **Status:** DONE (D-012: product-level, admin-configurable min/max/step; the unit sets precision. Implemented end to end:
+  - **Backend:** schema, migration, validation of product config and of cart/order quantities.
+  - **Admin:** product form fields with validation, plus a rule summary in the product list.
+  - **Customer app:** reads the rules for +/-, cart/checkout validation and the limits shown on product details.
+  - **Tests:** `backend/tests/product_quantity_rules.test.ts`, `apps/admin/src/utils/quantityRules.test.ts`, Flutter tests listed under P1-03.
+  - **Open (DECISION REQUIRED):** PACK/DOZEN whole-number rule; whether configuration is mandatory for every product.)
 - **Problem:** Step size, minimum, maximum and integer-vs-decimal rules per unit (KG, GRAM, PIECE, PACK, DOZEN) are undefined, and the app and backend disagree (P1-03, P1-04).
 - **Evidence:** `ProductUnit` enum; cart code.
 - **Required fix:** Decide the rules.
@@ -555,7 +560,7 @@
 2. **Build and test baseline:** P0-03, P1-14 (green build, a reproducible test env), P1-17 (run Flutter tests), P3-01 (CI).
 3. **Order and inventory integrity:** P0-06, P0-04, P0-05, P1-12, P1-15.
 4. **Auth and session:** P1-08, P1-07, P1-09, P1-10, P1-11, P1-13.
-5. **Cart and quantity correctness:** get the P4-08 decision, then P1-03, P1-04, P1-05, P1-06, P1-18.
+5. **Cart and quantity correctness:** P4-08 decided (D-012) and done; P1-03, P1-04, P1-05, P1-06, P1-18.
 6. **Address and data integrity:** P1-02, then P1-01 after P4-04/P4-05.
 7. **Maintainability:** P2-01 … P2-08.
 8. **Production readiness:** P3-02 … P3-09 as P4-13 is decided.

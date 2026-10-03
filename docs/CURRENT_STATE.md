@@ -16,7 +16,7 @@
 - Errors: client errors map to 4xx with stable `errorCode`s (invalid JSON/UUID, not found, duplicates, validation, checkout/inventory validation).
 - Orders: fulfillment-aware status rules; PICKED_UP only via pickup verification from READY_FOR_PICKUP (D-006); unpaid ONLINE orders can only be cancelled (D-005); auto-PAID on delivery only for COD; delivery address snapshot stored on orders.
 - Inventory: atomic stock restore, single cancellation wins, row locks for manual adjustments.
-- Quantities: PIECE must be whole numbers (D-007); max 3 decimals and DB maximum for all units.
+- Quantities: product-level admin-configured min/max/step (D-012, `utils/quantity.ts`), enforced on cart add/update and order creation. Unit precision: PIECE and GRAM are whole numbers, KG/PACK/DOZEN allow up to 3 decimals. Unconfigured products get unit precision checks only.
 - Cart and checkout share fare rules (`services/pricingService.ts`).
 - Seed refuses to run outside development/test.
 - Money: cart/checkout totals use exact integer-paise arithmetic (`utils/money.ts`).
@@ -30,7 +30,7 @@
 - Route guard redirects protected routes to login without a token; session expiry (refresh rejected) redirects to login; dev routes debug-only.
 - Logout revokes the backend session (fire-and-forget).
 - Cart write failures are surfaced (SnackBar) and reconciled with the server cart; checkout never shows placeholder items/fake contact data and has no client-only discount.
-- Still open: decimal quantity UI (P1-03, blocked on P4-08), location capture (P1-01, blocked on P4-04/P4-05).
+- Decimal quantity UI done (P1-03/D-012: per-product +/- steps, cart badge counts product lines). Still open: location capture (P1-01, blocked on P4-04/P4-05).
 
 **Admin panel**
 - Refreshes expired access tokens (single-flight) and revokes the session on logout; no token logging.

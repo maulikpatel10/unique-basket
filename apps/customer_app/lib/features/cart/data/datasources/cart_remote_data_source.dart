@@ -9,8 +9,8 @@ abstract class CartRemoteDataSource {
   Future<List<CartItemModel>> getCart();
   Future<CartSummaryModel> getCartSummary();
   Future<DeliverySettingsModel> getDeliverySettings();
-  Future<Map<String, dynamic>> addItem({required String productId, required int quantity});
-  Future<Map<String, dynamic>> updateItem({required String cartItemId, required int quantity});
+  Future<Map<String, dynamic>> addItem({required String productId, required double quantity});
+  Future<Map<String, dynamic>> updateItem({required String cartItemId, required double quantity});
   Future<bool> removeItem(String cartItemId);
 }
 
@@ -82,7 +82,7 @@ class CartRemoteDataSourceImpl implements CartRemoteDataSource {
   @override
   Future<Map<String, dynamic>> addItem({
     required String productId,
-    required int quantity,
+    required double quantity,
   }) async {
     if (kDebugMode) {
       debugPrint('[UB-PERSISTENCE] CART ADD API REQUEST: productId=$productId, quantity=$quantity');
@@ -111,7 +111,7 @@ class CartRemoteDataSourceImpl implements CartRemoteDataSource {
   @override
   Future<Map<String, dynamic>> updateItem({
     required String cartItemId,
-    required int quantity,
+    required double quantity,
   }) async {
     final response = await _apiClient.put(
       '${ApiEndpoints.cart}/items/$cartItemId',

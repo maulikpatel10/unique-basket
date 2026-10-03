@@ -301,7 +301,7 @@ void main() {
     });
 
     testWidgets('11. ProductQuantityControl maintains layout stability across quantity changes', (tester) async {
-      int quantity = 0;
+      double quantity = 0;
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(

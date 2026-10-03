@@ -62,7 +62,9 @@ final cartSyncErrorProvider = StateProvider<String?>((ref) => null);
 const String cartSyncFailedMessage = "Couldn't update your cart. Showing your latest saved cart.";
 
 /// State for active quantities in cart mapped by productId.
-class CartStateNotifier extends StateNotifier<Map<String, int>> {
+///
+/// Quantities are decimals in the product's unit (D-012): e.g. 1.25 (KG), 250 (GRAM), 2 (PIECE).
+class CartStateNotifier extends StateNotifier<Map<String, double>> {
   final Ref? _ref;
   final CartRepository? _cartRepository;
   final LocalStorageService? _localStorage;
@@ -84,15 +86,15 @@ class CartStateNotifier extends StateNotifier<Map<String, int>> {
   }
 
   /// Synchronously extract initial cached cart state from local storage.
-  static Map<String, int> _initialState(LocalStorageService? localStorage) {
+  static Map<String, double> _initialState(LocalStorageService? localStorage) {
     if (localStorage == null) return {};
     try {
       final cachedJson = localStorage.getJson(AppConstants.keyUserCart);
       if (cachedJson != null && cachedJson.isNotEmpty) {
-        final Map<String, int> loaded = {};
+        final Map<String, double> loaded = {};
         for (final entry in cachedJson.entries) {
           final val = entry.value;
-          final qty = val is num ? val.toInt() : int.tryParse(val.toString()) ?? 0;
+          final qty = val is num ? val.toDouble() : double.tryParse(val.toString()) ?? 0;
           if (qty > 0) {
             loaded[entry.key] = qty;
           }
@@ -114,10 +116,10 @@ class CartStateNotifier extends StateNotifier<Map<String, int>> {
     try {
       final cachedJson = _localStorage!.getJson(AppConstants.keyUserCart);
       if (cachedJson != null && cachedJson.isNotEmpty) {
-        final Map<String, int> loaded = {};
+        final Map<String, double> loaded = {};
         for (final entry in cachedJson.entries) {
           final val = entry.value;
-          final qty = val is num ? val.toInt() : int.tryParse(val.toString()) ?? 0;
+          final qty = val is num ? val.toDouble() : double.tryParse(val.toString()) ?? 0;
           if (qty > 0) {
             loaded[entry.key] = qty;
           }
@@ -177,7 +179,7 @@ class CartStateNotifier extends StateNotifier<Map<String, int>> {
       if (kDebugMode) {
         debugPrint('[UB-PERSISTENCE] CART SERVER ITEMS: count=${items.length}');
       }
-      final Map<String, int> remoteCart = {};
+      final Map<String, double> remoteCart = {};
       _productIdToCartItemId.clear();
 
       for (final item in items) {
@@ -208,9 +210,13 @@ class CartStateNotifier extends StateNotifier<Map<String, int>> {
     }
   }
 
-  void increment(String productId) {
+  /// Adds one [rule] step (or the rule minimum when the product is not in the cart).
+  /// No-op when the configured maximum is reached. Without a rule, the
+  /// product's unconfigured behaviour applies (start at 1, step 1).
+  void increment(String productId, {QuantityRule? rule}) {
     final current = state[productId] ?? 0;
-    final newQty = current + 1;
+    final newQty = (rule ?? const QuantityRule.unconfigured('')).next(current);
+    if (newQty == null) return;
     state = {
       ...state,
       productId: newQty,
@@ -219,12 +225,13 @@ class CartStateNotifier extends StateNotifier<Map<String, int>> {
     _syncAddItem(productId, newQty);
   }
 
-  void decrement(String productId) {
+  /// Removes one [rule] step; removes the line when it would drop below the minimum.
+  void decrement(String productId, {QuantityRule? rule}) {
     final current = state[productId] ?? 0;
-    if (current <= 1) {
+    final newQty = (rule ?? const QuantityRule.unconfigured('')).previous(current);
+    if (newQty <= 0) {
       removeItem(productId);
     } else {
-      final newQty = current - 1;
       state = {
         ...state,
         productId: newQty,
@@ -236,25 +243,25 @@ class CartStateNotifier extends StateNotifier<Map<String, int>> {
 
   void removeItem(String productId) {
     if (state.containsKey(productId)) {
-      final updated = Map<String, int>.from(state)..remove(productId);
+      final updated = Map<String, double>.from(state)..remove(productId);
       state = updated;
       _saveToLocalCache();
       _syncRemoveItem(productId);
     }
   }
 
-  void setCart(Map<String, int> cart) {
-    final Map<String, int> clean = {};
+  void setCart(Map<String, num> cart) {
+    final Map<String, double> clean = {};
     for (final entry in cart.entries) {
       if (entry.value > 0) {
-        clean[entry.key] = entry.value;
+        clean[entry.key] = entry.value.toDouble();
       }
     }
     state = clean;
     _saveToLocalCache();
   }
 
-  void setItemQuantity(String productId, int quantity) {
+  void setItemQuantity(String productId, double quantity) {
     if (quantity <= 0) {
       removeItem(productId);
     } else {
@@ -275,9 +282,11 @@ class CartStateNotifier extends StateNotifier<Map<String, int>> {
     }
   }
 
-  int getQuantity(String productId) => state[productId] ?? 0;
+  double getQuantity(String productId) => state[productId] ?? 0;
 
-  int get totalItemCount => state.values.fold(0, (sum, q) => sum + q);
+  /// Number of product lines in the cart (D-012: the badge counts lines, not
+  /// total quantity — 2 kg potatoes + 5 apples = 2 items).
+  int get totalItemCount => state.length;
 
   double calculateTotal(List<ProductModel> products) {
     double total = 0.0;
@@ -295,7 +304,7 @@ class CartStateNotifier extends StateNotifier<Map<String, int>> {
 
   // --- Backend Synchronization Helpers ---
 
-  Future<void> _syncAddItem(String productId, int quantity) async {
+  Future<void> _syncAddItem(String productId, double quantity) async {
     if (_cartRepository == null) return;
     try {
       final token = await _secureStorage?.getAccessToken();
@@ -313,7 +322,7 @@ class CartStateNotifier extends StateNotifier<Map<String, int>> {
     }
   }
 
-  Future<void> _syncUpdateItem(String productId, int quantity) async {
+  Future<void> _syncUpdateItem(String productId, double quantity) async {
     if (_cartRepository == null) return;
     try {
       final token = await _secureStorage?.getAccessToken();
@@ -363,7 +372,7 @@ class CartStateNotifier extends StateNotifier<Map<String, int>> {
 }
 
 final cartNotifierProvider =
-    StateNotifierProvider<CartStateNotifier, Map<String, int>>((ref) {
+    StateNotifierProvider<CartStateNotifier, Map<String, double>>((ref) {
   CartRepository? cartRepository;
   try {
     cartRepository = ref.watch(cartRepositoryProvider);

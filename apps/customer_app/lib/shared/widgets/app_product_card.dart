@@ -26,7 +26,8 @@ class AppProductCard extends StatelessWidget {
   final String? imageUrl;
   final IconData? visualIcon;
   final Color? visualColor;
-  final int quantity;
+  final double quantity;
+  final bool canIncrement;
   final bool isFavorite;
   final bool isPurchasable;
   final VoidCallback? onAddToCart;
@@ -47,6 +48,7 @@ class AppProductCard extends StatelessWidget {
     this.visualIcon,
     this.visualColor,
     this.quantity = 0,
+    this.canIncrement = true,
     this.isFavorite = false,
     this.isPurchasable = true,
     this.onAddToCart,
@@ -272,6 +274,7 @@ class AppProductCard extends StatelessWidget {
                       if (isPurchasable)
                         ProductQuantityControl(
                           quantity: quantity,
+                          canIncrement: canIncrement,
                           isDark: isDark,
                           onAddToCart: onAddToCart,
                           onIncrement: onIncrement,

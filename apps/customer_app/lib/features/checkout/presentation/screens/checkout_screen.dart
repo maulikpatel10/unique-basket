@@ -244,6 +244,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     double subtotal = 0.0;
     // P1-06: items that cannot be resolved from the store catalogue or the server cart block ordering
     int unresolvedItemCount = 0;
+    // D-012: lines whose quantity breaks the product's quantity rule block ordering
+    int invalidQuantityCount = 0;
 
     for (final entry in cart.entries) {
       final productId = entry.key;
@@ -265,6 +267,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   price: serverItem.price,
                   mrp: serverItem.mrp,
                   unit: serverItem.unit ?? '',
+                  minQuantity: serverItem.minQuantity,
+                  maxQuantity: serverItem.maxQuantity,
+                  quantityStep: serverItem.quantityStep,
                 )
               : null);
 
@@ -276,6 +281,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
       final itemTotal = product.price * quantity;
       subtotal += itemTotal;
+      if (product.quantityRule.validate(quantity) != null) invalidQuantityCount++;
 
       cartItems.add(_CheckoutCartItem(
         product: product,
@@ -305,7 +311,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final addressId = defaultAddress?['id'] as String?;
     final addressLine = defaultAddress?['addressLine'] as String? ??
         'Add a delivery address to continue';
-    final bool canPlaceOrder = unresolvedItemCount == 0 && addressId != null;
+    final bool canPlaceOrder = unresolvedItemCount == 0 && invalidQuantityCount == 0 && addressId != null;
 
     // Resolve Serving Store
     final servingStoreAsync = ref.watch(servingStoreProvider);
@@ -513,13 +519,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                             // Product Quantity Control
                             ProductQuantityControl(
                               quantity: item.quantity,
+                              canIncrement: product.quantityRule.canIncrement(item.quantity),
                               isDark: isDark,
                               onIncrement: () => ref
                                   .read(cartNotifierProvider.notifier)
-                                  .increment(product.id),
+                                  .increment(product.id, rule: product.quantityRule),
                               onDecrement: () => ref
                                   .read(cartNotifierProvider.notifier)
-                                  .decrement(product.id),
+                                  .decrement(product.id, rule: product.quantityRule),
                             ),
                           ],
                         );
@@ -1028,7 +1035,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       Text(
                         unresolvedItemCount > 0
                             ? 'Some items in your cart are unavailable. Please review your cart.'
-                            : 'Add a delivery address to place your order.',
+                            : invalidQuantityCount > 0
+                                ? 'Some item quantities are outside the allowed limits. Please update your cart.'
+                                : 'Add a delivery address to place your order.',
                         key: const Key('checkout_blocked_message'),
                         textAlign: TextAlign.center,
                         style: TextStyle(
@@ -1057,8 +1066,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                 storeId: storeId,
                                 paymentMethod: selectedPayment,
                                 toPay: toPay,
-                                itemCount: cartItems.fold<int>(
-                                    0, (sum, i) => sum + i.quantity),
+                                // D-012: item count = product lines
+                                itemCount: cartItems.length,
                                 address: {
                                   'type': addressTitle,
                                   'receiverName': customerName,
@@ -1260,7 +1269,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
 class _CheckoutCartItem {
   final ProductModel product;
-  final int quantity;
+  final double quantity;
   final double itemTotal;
 
   _CheckoutCartItem({

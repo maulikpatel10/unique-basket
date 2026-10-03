@@ -30,7 +30,7 @@ class _TokenStorage implements SecureStorageService {
 }
 
 class _ServerCart implements CartRepository {
-  final Map<String, int> server;
+  final Map<String, double> server;
   bool failWrites;
   _ServerCart(this.server, {this.failWrites = false});
 
@@ -45,14 +45,14 @@ class _ServerCart implements CartRepository {
   @override
   Future<DeliverySettingsModel> getDeliverySettings() async => const DeliverySettingsModel();
   @override
-  Future<Map<String, dynamic>> addItem({required String productId, required int quantity}) async {
+  Future<Map<String, dynamic>> addItem({required String productId, required double quantity}) async {
     if (failWrites) throw Exception('server rejected');
     server[productId] = quantity;
     return {'id': 'ci_$productId'};
   }
 
   @override
-  Future<Map<String, dynamic>> updateItem({required String cartItemId, required int quantity}) async {
+  Future<Map<String, dynamic>> updateItem({required String cartItemId, required double quantity}) async {
     if (failWrites) throw Exception('server rejected');
     server[cartItemId.replaceFirst('ci_', '')] = quantity;
     return {};
@@ -75,7 +75,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     final localStorage = LocalStorageService(await SharedPreferences.getInstance());
     late CartStateNotifier notifier;
-    final provider = StateNotifierProvider<CartStateNotifier, Map<String, int>>((ref) {
+    final provider = StateNotifierProvider<CartStateNotifier, Map<String, double>>((ref) {
       notifier = CartStateNotifier(
         ref: ref,
         cartRepository: repo,

@@ -1,7 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { prisma } from '../config/db';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
-import { validateQuantityForUnit } from '../utils/quantity';
+import { validateProductQuantity } from '../utils/quantity';
 import { loadFareSettings, calculateDeliveryFee } from '../services/pricingService';
 import { fromPaise, lineTotalPaise, toPaise } from '../utils/money';
 import { getParam } from '../utils/request';
@@ -33,6 +33,9 @@ export class CartController {
               price: true,
               mrp: true,
               unit: true,
+              minQuantity: true,
+              maxQuantity: true,
+              quantityStep: true,
               isActive: true,
               category: { select: { isActive: true } },
             },
@@ -58,6 +61,9 @@ export class CartController {
           productId: item.productId,
           productName: item.product.name,
           unit: item.product.unit,
+          minQuantity: item.product.minQuantity != null ? Number(item.product.minQuantity) : null,
+          maxQuantity: item.product.maxQuantity != null ? Number(item.product.maxQuantity) : null,
+          quantityStep: item.product.quantityStep != null ? Number(item.product.quantityStep) : null,
           price: itemPrice,
           mrp: item.product.mrp ? Number(item.product.mrp) : null,
           quantity: itemQty,
@@ -145,7 +151,7 @@ export class CartController {
         return;
       }
 
-      const quantityError = validateQuantityForUnit(product.unit, targetQty);
+      const quantityError = validateProductQuantity(product, targetQty);
       if (quantityError) {
         res.status(400).json({
           success: false,
@@ -215,7 +221,7 @@ export class CartController {
 
       const cartItem = await prisma.cartItem.findUnique({
         where: { id },
-        include: { product: { select: { unit: true } } },
+        include: { product: { select: { unit: true, minQuantity: true, maxQuantity: true, quantityStep: true } } },
       });
 
       if (!cartItem || cartItem.userId !== userId) {
@@ -240,7 +246,7 @@ export class CartController {
         return;
       }
 
-      const quantityError = validateQuantityForUnit(cartItem.product.unit, targetQty);
+      const quantityError = validateProductQuantity(cartItem.product, targetQty);
       if (quantityError) {
         res.status(400).json({
           success: false,

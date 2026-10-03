@@ -388,11 +388,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               cartQuantities: cartQuantities,
                               favoriteIds: favoriteIds,
                               onAddToCart: (product) =>
-                                  cartNotifier.increment(product.id),
+                                  cartNotifier.increment(product.id, rule: product.quantityRule),
                               onIncrement: (product) =>
-                                  cartNotifier.increment(product.id),
+                                  cartNotifier.increment(product.id, rule: product.quantityRule),
                               onDecrement: (product) =>
-                                  cartNotifier.decrement(product.id),
+                                  cartNotifier.decrement(product.id, rule: product.quantityRule),
                               onToggleFavorite: (product) =>
                                   favoritesNotifier.toggleFavorite(product.id),
                               onProductTap: (product) {

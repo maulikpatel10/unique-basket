@@ -21,6 +21,7 @@ import {
   Briefcase
 } from 'lucide-react';
 import { asApiError } from '../utils/apiError';
+import { describeQuantityRule, quantityConfigPayload, validateQuantityConfig } from '../utils/quantityRules';
 
 interface Product {
   id: string;
@@ -34,6 +35,9 @@ interface Product {
   unit: 'KG' | 'GRAM' | 'PIECE' | 'PACK' | 'DOZEN';
   price: string;
   mrp: string | null;
+  minQuantity: string | null;
+  maxQuantity: string | null;
+  quantityStep: string | null;
   isActive: boolean;
   createdAt: string;
 }
@@ -73,6 +77,9 @@ export const Products: React.FC = () => {
     unit: 'KG' as 'KG' | 'GRAM' | 'PIECE' | 'PACK' | 'DOZEN',
     price: '',
     mrp: '',
+    minQuantity: '',
+    maxQuantity: '',
+    quantityStep: '',
     isActive: true,
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -143,6 +150,7 @@ export const Products: React.FC = () => {
         errors.mrp = 'MRP must be greater than or equal to Base Price';
       }
     }
+    Object.assign(errors, validateQuantityConfig(formData.unit, formData));
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -161,6 +169,9 @@ export const Products: React.FC = () => {
       unit: 'KG',
       price: '',
       mrp: '',
+      minQuantity: '',
+      maxQuantity: '',
+      quantityStep: '',
       isActive: true,
     });
     setFormErrors({});
@@ -181,6 +192,9 @@ export const Products: React.FC = () => {
       unit: prod.unit,
       price: prod.price,
       mrp: prod.mrp || '',
+      minQuantity: prod.minQuantity != null ? String(Number(prod.minQuantity)) : '',
+      maxQuantity: prod.maxQuantity != null ? String(Number(prod.maxQuantity)) : '',
+      quantityStep: prod.quantityStep != null ? String(Number(prod.quantityStep)) : '',
       isActive: prod.isActive,
     });
     setFormErrors({});
@@ -197,6 +211,7 @@ export const Products: React.FC = () => {
         ...formData,
         price: parseFloat(formData.price),
         mrp: formData.mrp ? parseFloat(formData.mrp) : null,
+        ...quantityConfigPayload(formData),
       };
 
       if (editingProduct) {
@@ -407,6 +422,9 @@ export const Products: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 text-xs font-semibold text-slate-300 tracking-wider">
                       {prod.unit}
+                      <div className="mt-1 text-[11px] font-normal normal-case tracking-normal text-slate-400">
+                        {describeQuantityRule(prod.unit, prod) ?? 'Quantity rules not set'}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       {user?.role === 'SUPER_ADMIN' ? (
@@ -532,6 +550,59 @@ export const Products: React.FC = () => {
                   </select>
                 </div>
               </div>
+
+              <fieldset className="rounded-lg border border-slate-700/60 p-4">
+                <legend className="px-1 text-xs font-semibold text-slate-300 uppercase tracking-wider">Purchase Quantity Rules</legend>
+                <p className="text-[11px] text-slate-400 mb-3">
+                  Customers can buy from the minimum up to the maximum in multiples of the step, in the unit above.
+                  {formData.unit === 'PIECE' ? ' PIECE values must be whole numbers.' : formData.unit === 'GRAM' ? ' GRAM values must be whole grams.' : formData.unit === 'KG' ? ' KG values allow up to 3 decimals.' : ''}
+                  {' '}Leave all three empty to keep the product unconfigured.
+                </p>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label htmlFor="minQuantity" className="block text-[11px] font-semibold text-slate-400 mb-1">Min Qty ({formData.unit})</label>
+                    <input
+                      id="minQuantity"
+                      type="text"
+                      inputMode="decimal"
+                      name="minQuantity"
+                      value={formData.minQuantity}
+                      onChange={handleInputChange}
+                      placeholder="e.g. 1"
+                      className="w-full rounded-lg bg-slate-900 border border-slate-700 text-slate-200 px-3 py-2.5 text-sm focus:border-brand-500 outline-none"
+                    />
+                    {formErrors.minQuantity && <p className="text-red-400 text-xs mt-1 font-semibold">{formErrors.minQuantity}</p>}
+                  </div>
+                  <div>
+                    <label htmlFor="maxQuantity" className="block text-[11px] font-semibold text-slate-400 mb-1">Max Qty ({formData.unit})</label>
+                    <input
+                      id="maxQuantity"
+                      type="text"
+                      inputMode="decimal"
+                      name="maxQuantity"
+                      value={formData.maxQuantity}
+                      onChange={handleInputChange}
+                      placeholder="e.g. 10"
+                      className="w-full rounded-lg bg-slate-900 border border-slate-700 text-slate-200 px-3 py-2.5 text-sm focus:border-brand-500 outline-none"
+                    />
+                    {formErrors.maxQuantity && <p className="text-red-400 text-xs mt-1 font-semibold">{formErrors.maxQuantity}</p>}
+                  </div>
+                  <div>
+                    <label htmlFor="quantityStep" className="block text-[11px] font-semibold text-slate-400 mb-1">Step ({formData.unit})</label>
+                    <input
+                      id="quantityStep"
+                      type="text"
+                      inputMode="decimal"
+                      name="quantityStep"
+                      value={formData.quantityStep}
+                      onChange={handleInputChange}
+                      placeholder="e.g. 0.25"
+                      className="w-full rounded-lg bg-slate-900 border border-slate-700 text-slate-200 px-3 py-2.5 text-sm focus:border-brand-500 outline-none"
+                    />
+                    {formErrors.quantityStep && <p className="text-red-400 text-xs mt-1 font-semibold">{formErrors.quantityStep}</p>}
+                  </div>
+                </div>
+              </fieldset>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>

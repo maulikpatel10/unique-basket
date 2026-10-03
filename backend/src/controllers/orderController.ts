@@ -8,7 +8,7 @@ import { NotificationService } from '../services/notificationService';
 import { generateNextOrderNumber } from '../utils/orderNumber';
 import { AppError } from '../utils/errors';
 import { snapshotDeliveryAddress, withDeliveryAddress } from '../utils/orderAddress';
-import { validateQuantityForUnit } from '../utils/quantity';
+import { validateProductQuantity } from '../utils/quantity';
 import { fromPaise, lineTotalPaise, toPaise } from '../utils/money';
 import { loadFareSettings, calculateDeliveryFee } from '../services/pricingService';
 import { claimOrderStatus, restoreOrderStock, ORDER_STATUS_CHANGED } from '../services/inventoryService';
@@ -157,7 +157,7 @@ export class OrderController {
             throw new AppError(400, 'PRODUCT_UNAVAILABLE', `Product with ID ${productId} is not available.`);
           }
 
-          const quantityError = validateQuantityForUnit(product.unit, qtyVal);
+          const quantityError = validateProductQuantity(product, qtyVal);
           if (quantityError) {
             throw new AppError(400, 'INVALID_QUANTITY', quantityError);
           }

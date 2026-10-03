@@ -258,6 +258,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         product: product,
         quantity: quantity,
         itemTotal: itemTotal,
+        quantityIssue: product.quantityRule.validate(quantity),
       ));
     }
 
@@ -314,7 +315,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 size: ButtonSize.large,
                 icon: Icons.arrow_forward_rounded,
                 iconPosition: IconPosition.trailing,
-                onPressed: _handleProceedToCheckout,
+                // D-012: lines that break the product's quantity rule must be fixed first
+                onPressed: cartItems.any((item) => item.quantityIssue != null) ? null : _handleProceedToCheckout,
               ),
             ),
           AppBottomNavBar(
@@ -544,6 +546,21 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     fontFamily: AppTextStyles.fontFamily,
                   ),
                 ),
+                if (item.quantityIssue != null) ...[
+                  const SizedBox(height: 3.0),
+                  Text(
+                    item.quantityIssue!,
+                    key: ValueKey('quantity_issue_${product.id}'),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: context.sp(11.5),
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.error,
+                      fontFamily: AppTextStyles.fontFamily,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 10.0),
                 Text(
                   CurrencyFormatter.format(product.price),
@@ -585,14 +602,15 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               // Reused Shared ProductQuantityControl
               ProductQuantityControl(
                 quantity: quantity,
+                canIncrement: product.quantityRule.canIncrement(quantity),
                 collapsedWidth: 32.0,
                 expandedWidth: 84.0,
                 height: 32.0,
                 onIncrement: () {
-                  ref.read(cartNotifierProvider.notifier).increment(product.id);
+                  ref.read(cartNotifierProvider.notifier).increment(product.id, rule: product.quantityRule);
                 },
                 onDecrement: () {
-                  ref.read(cartNotifierProvider.notifier).decrement(product.id);
+                  ref.read(cartNotifierProvider.notifier).decrement(product.id, rule: product.quantityRule);
                 },
               ),
             ],
@@ -863,12 +881,16 @@ class _CartScreenState extends ConsumerState<CartScreen> {
 /// Helper data holder for resolved cart items
 class _CartItemData {
   final ProductModel product;
-  final int quantity;
+  final double quantity;
   final double itemTotal;
+
+  /// Message when the quantity breaks the product's quantity rule (D-012).
+  final String? quantityIssue;
 
   const _CartItemData({
     required this.product,
     required this.quantity,
     required this.itemTotal,
+    this.quantityIssue,
   });
 }

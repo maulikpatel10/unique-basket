@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_responsive.dart';
 import '../../app/theme/app_text_styles.dart';
+import '../../features/home/data/models/quantity_rule.dart';
 
 /// Reusable morphing Add / Quantity control for Unique Basket product cards and detail views.
 ///
@@ -14,8 +15,11 @@ import '../../app/theme/app_text_styles.dart';
 ///   with a subtle 180ms vertical slide + fade; the outer control never resizes.
 /// - Reverse (1 -> 0): Smoothly collapses horizontally toward the RIGHT back to the 32x32 '+' button.
 /// - Card Safety: Never triggers vertical layout shifts or parent height changes.
+/// - Quantities are decimals in the product unit (D-012), e.g. 1.25; [canIncrement]
+///   is false at the product's configured maximum (the '+' cap is dimmed and inert).
 class ProductQuantityControl extends StatefulWidget {
-  final int quantity;
+  final double quantity;
+  final bool canIncrement;
   final bool? isDark;
   final VoidCallback? onAddToCart;
   final VoidCallback? onIncrement;
@@ -27,6 +31,7 @@ class ProductQuantityControl extends StatefulWidget {
   const ProductQuantityControl({
     super.key,
     required this.quantity,
+    this.canIncrement = true,
     this.isDark,
     this.onAddToCart,
     this.onIncrement,
@@ -42,6 +47,7 @@ class ProductQuantityControl extends StatefulWidget {
 
 class _ProductQuantityControlState extends State<ProductQuantityControl> {
   void _handlePlusTap() {
+    if (widget.quantity > 0 && !widget.canIncrement) return;
     HapticFeedback.lightImpact();
     if (widget.quantity == 0) {
       widget.onAddToCart?.call();
@@ -151,14 +157,19 @@ class _ProductQuantityControlState extends State<ProductQuantityControl> {
                                 child: child,
                               ),
                             ),
-                            child: Text(
-                              '$quantity',
+                            child: FittedBox(
                               key: ValueKey('qty_$quantity'),
-                              style: TextStyle(
-                                fontSize: context.sp(fontSize),
-                                fontWeight: FontWeight.w800,
-                                color: isDark ? AppColors.textPrimaryDark : const Color(0xFF014D40),
-                                fontFamily: AppTextStyles.fontFamily,
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                QuantityRule.format(quantity),
+                                maxLines: 1,
+                                softWrap: false,
+                                style: TextStyle(
+                                  fontSize: context.sp(fontSize),
+                                  fontWeight: FontWeight.w800,
+                                  color: isDark ? AppColors.textPrimaryDark : const Color(0xFF014D40),
+                                  fontFamily: AppTextStyles.fontFamily,
+                                ),
                               ),
                             ),
                           ),
@@ -185,12 +196,13 @@ class _ProductQuantityControlState extends State<ProductQuantityControl> {
                 width: isExpanded ? circleSize + 1.0 : widget.collapsedWidth + 2.0,
                 height: widget.height + 2.0,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF014D40),
+                  color: const Color(0xFF014D40).withValues(alpha: isExpanded && !widget.canIncrement ? 0.4 : 1.0),
                   borderRadius: BorderRadius.circular(widget.height / 2),
                 ),
                 child: Center(
                   child: Icon(
                     Icons.add_rounded,
+                    semanticLabel: isExpanded && !widget.canIncrement ? 'Maximum quantity reached' : null,
                     size: isExpanded ? iconSize : collapsedIconSize,
                     color: Colors.white,
                   ),

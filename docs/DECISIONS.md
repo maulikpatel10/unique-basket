@@ -56,7 +56,7 @@ Each entry should include: date, decision, confirmed by, notes.
   - Global search and category-scoped search remain separate.
   - `main` stays protected; work happens on the current feature branch without merges or force-pushes.
 
-> Other product/business rules (serviceability, quantity steps for non-PIECE units, pickup scope, providers, etc.) are still pending.
+> Other product/business rules (serviceability, pickup scope, providers, etc.) are still pending.
 
 ### D-008 — Phone numbers: India only, stored as +91XXXXXXXXXX
 - **Date:** 2026-10-03
@@ -75,6 +75,18 @@ Each entry should include: date, decision, confirmed by, notes.
 - **Date:** 2026-10-03
 - **Confirmed by:** Project owner
 - **Decision:** The Flutter customer app uses `features/<f>/data` + `features/<f>/presentation` with repository contracts as abstract classes in `data/repositories`. No `domain/` layer is introduced, and working code is not refactored to match outdated docs. `apps/customer_app/ARCHITECTURE.md` and `AGENTS.md` describe the current structure.
+
+### D-012 — Quantity rules are product-level and admin-configurable
+- **Date:** 2026-10-03
+- **Confirmed by:** Project owner
+- **Decision:** "Quantity configuration is product-level and Admin-configurable. The unit determines the valid measurement type, but min/max/step are configurable per product." There is no global minimum or maximum. Examples (illustrative only, not defaults): Potato 1–10 KG step 0.25; Apple 0.5–5 KG step 0.25; Berries 250–2000 GRAM step 250; Coconut 1–10 PIECE step 1. The cart badge counts **product lines**, not total quantity (2 kg potatoes + 5 apples = 2 items).
+- **Implementation:**
+  - Nullable `Product.minQuantity` / `maxQuantity` / `quantityStep` (`Decimal(10,3)`, migration `20261003150000_add_product_quantity_rules`).
+  - Validation lives in `backend/src/utils/quantity.ts` and runs on product create/update (`INVALID_QUANTITY_CONFIG`) and on cart add/update and order creation (`INVALID_QUANTITY`).
+  - Configuration rules: min > 0, max ≥ min, step > 0; the step can be no larger than the range; max must be reachable from min in whole steps.
+  - Unit precision: PIECE and GRAM values are whole numbers; KG allows 3 decimals.
+- **Unconfigured products** (all three null, including every product that existed before this change) keep the earlier behaviour: unit precision only on the backend, start at 1 and step 1 in the app. Admins configure products in the admin product form.
+- **Not covered by this decision:** PACK/DOZEN precision stays at the existing 3 decimals (DECISION REQUIRED if they should be whole numbers). Whether configuration should be mandatory for every product is also DECISION REQUIRED.
 
 ### D-011 — `apps/customer_app/AGENTS.md` follows the root rules
 - **Date:** 2026-10-03
