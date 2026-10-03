@@ -42,11 +42,14 @@ class QuantityRule {
     return QuantityRule(unit: unit, min: min, max: max, step: step, isConfigured: true);
   }
 
-  /// Decimal places allowed for the unit (mirrors the backend).
+  /// Decimal places allowed for the unit (mirrors the backend, D-012):
+  /// KG up to 3 decimals; GRAM, PIECE, PACK and DOZEN whole numbers.
   int get decimals {
     switch (unit.toUpperCase()) {
       case 'PIECE':
       case 'GRAM':
+      case 'PACK':
+      case 'DOZEN':
         return 0;
       default:
         return 3;

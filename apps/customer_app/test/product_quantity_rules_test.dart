@@ -135,6 +135,12 @@ void main() {
       expect(rule.validate(3), isNull);
     });
 
+    test('PACK and DOZEN quantities must be whole numbers, configured or not', () {
+      expect(_product('spinach', 'PACK', min: 1, max: 6, step: 1).quantityRule.validate(1.5), contains('whole number'));
+      expect(_product('banana', 'DOZEN').quantityRule.validate(0.5), contains('whole number'));
+      expect(_product('banana', 'DOZEN').quantityRule.validate(2), isNull);
+    });
+
     test('unconfigured products keep the previous behaviour (start at 1, step 1, no max)', () {
       final rule = _product('legacy', 'KG').quantityRule;
       expect(rule.isConfigured, isFalse);

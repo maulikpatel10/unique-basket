@@ -57,6 +57,15 @@ describe('Product-level quantity rules (D-012)', () => {
       expect(validateProductQuantity(coconut, 11)).toMatch(/Maximum/);
     });
 
+    it('PACK and DOZEN products only accept whole numbers, configured or not', () => {
+      const pack = { unit: 'PACK' as const, minQuantity: 1, maxQuantity: 6, quantityStep: 1 };
+      expect(validateProductQuantity(pack, 2)).toBeNull();
+      expect(validateProductQuantity(pack, 1.5)).toMatch(/whole number/);
+      const dozen = { unit: 'DOZEN' as const, minQuantity: null, maxQuantity: null, quantityStep: null };
+      expect(validateProductQuantity(dozen, 3)).toBeNull();
+      expect(validateProductQuantity(dozen, 0.5)).toMatch(/whole number/);
+    });
+
     it('falls back to unit rules when a product has no configuration', () => {
       const legacy = { unit: 'KG' as const, minQuantity: null, maxQuantity: null, quantityStep: null };
       expect(validateProductQuantity(legacy, 0.3)).toBeNull();
@@ -83,6 +92,8 @@ describe('Product-level quantity rules (D-012)', () => {
       ['GRAM', { min: 250.5, max: 2000, step: 250 }, /whole number/],
       ['PIECE', { min: 1, max: 10, step: 0.5 }, /whole number/],
       ['PIECE', { min: 1.5, max: 10, step: 1 }, /whole number/],
+      ['PACK', { min: 1, max: 5, step: 0.5 }, /whole number/],
+      ['DOZEN', { min: 0.5, max: 4, step: 1 }, /whole number/],
     ] as const)('rejects invalid %s configuration %j', (unit, rule, message) => {
       expect(validateQuantityRule(unit, rule)).toMatch(message);
     });

@@ -4,7 +4,8 @@
  */
 export type ProductUnit = 'KG' | 'GRAM' | 'PIECE' | 'PACK' | 'DOZEN';
 
-const UNIT_DECIMALS: Record<ProductUnit, number> = { KG: 3, GRAM: 0, PIECE: 0, PACK: 3, DOZEN: 3 };
+// PIECE / PACK / DOZEN / GRAM: whole numbers; KG: up to 3 decimals (D-012).
+const UNIT_DECIMALS: Record<ProductUnit, number> = { KG: 3, GRAM: 0, PIECE: 0, PACK: 0, DOZEN: 0 };
 
 export interface QuantityConfigInput {
   minQuantity: string;

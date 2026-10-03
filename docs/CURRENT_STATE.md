@@ -16,7 +16,7 @@
 - Errors: client errors map to 4xx with stable `errorCode`s (invalid JSON/UUID, not found, duplicates, validation, checkout/inventory validation).
 - Orders: fulfillment-aware status rules; PICKED_UP only via pickup verification from READY_FOR_PICKUP (D-006); unpaid ONLINE orders can only be cancelled (D-005); auto-PAID on delivery only for COD; delivery address snapshot stored on orders.
 - Inventory: atomic stock restore, single cancellation wins, row locks for manual adjustments.
-- Quantities: product-level admin-configured min/max/step (D-012, `utils/quantity.ts`), enforced on cart add/update and order creation. Unit precision: PIECE and GRAM are whole numbers, KG/PACK/DOZEN allow up to 3 decimals. Unconfigured products get unit precision checks only.
+- Quantities: product-level admin-configured min/max/step (D-012, `utils/quantity.ts`), enforced on cart add/update and order creation. Unit precision: PIECE, PACK, DOZEN and GRAM are whole numbers; KG allows up to 3 decimals. Rules are optional per product. Unconfigured products get unit precision checks only.
 - Cart and checkout share fare rules (`services/pricingService.ts`).
 - Seed refuses to run outside development/test.
 - Money: cart/checkout totals use exact integer-paise arithmetic (`utils/money.ts`).

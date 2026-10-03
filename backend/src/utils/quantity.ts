@@ -7,16 +7,16 @@ export const MAX_QUANTITY = 9999999.999;
 /**
  * Decimal places allowed per unit.
  * - PIECE: whole numbers (D-007).
+ * - PACK / DOZEN: whole numbers (D-012).
  * - GRAM: whole grams (D-012: GRAM quantities use gram precision).
  * - KG: up to 3 decimals, i.e. gram precision (D-012).
- * - PACK / DOZEN: not covered by D-012; keep the existing column precision.
  */
 const UNIT_DECIMALS: Record<ProductUnit, number> = {
   [ProductUnit.KG]: 3,
   [ProductUnit.GRAM]: 0,
   [ProductUnit.PIECE]: 0,
-  [ProductUnit.PACK]: MAX_QUANTITY_DECIMALS,
-  [ProductUnit.DOZEN]: MAX_QUANTITY_DECIMALS,
+  [ProductUnit.PACK]: 0,
+  [ProductUnit.DOZEN]: 0,
 };
 
 export const decimalsForUnit = (unit: ProductUnit): number => UNIT_DECIMALS[unit] ?? MAX_QUANTITY_DECIMALS;

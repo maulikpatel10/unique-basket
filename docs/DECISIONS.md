@@ -84,9 +84,9 @@ Each entry should include: date, decision, confirmed by, notes.
   - Nullable `Product.minQuantity` / `maxQuantity` / `quantityStep` (`Decimal(10,3)`, migration `20261003150000_add_product_quantity_rules`).
   - Validation lives in `backend/src/utils/quantity.ts` and runs on product create/update (`INVALID_QUANTITY_CONFIG`) and on cart add/update and order creation (`INVALID_QUANTITY`).
   - Configuration rules: min > 0, max ≥ min, step > 0; the step can be no larger than the range; max must be reachable from min in whole steps.
-  - Unit precision: PIECE and GRAM values are whole numbers; KG allows 3 decimals.
+  - Unit precision: PIECE, PACK, DOZEN and GRAM values are whole numbers; KG allows 3 decimals.
 - **Unconfigured products** (all three null, including every product that existed before this change) keep the earlier behaviour: unit precision only on the backend, start at 1 and step 1 in the app. Admins configure products in the admin product form.
-- **Not covered by this decision:** PACK/DOZEN precision stays at the existing 3 decimals (DECISION REQUIRED if they should be whole numbers). Whether configuration should be mandatory for every product is also DECISION REQUIRED.
+- **Confirmed follow-ups (2026-10-03):** PACK and DOZEN quantities are whole numbers only. Quantity rules stay **optional** per product; unconfigured products use unit precision only (app steps by 1 from 1).
 
 ### D-011 — `apps/customer_app/AGENTS.md` follows the root rules
 - **Date:** 2026-10-03

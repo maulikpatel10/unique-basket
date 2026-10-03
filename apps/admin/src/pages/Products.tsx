@@ -555,7 +555,7 @@ export const Products: React.FC = () => {
                 <legend className="px-1 text-xs font-semibold text-slate-300 uppercase tracking-wider">Purchase Quantity Rules</legend>
                 <p className="text-[11px] text-slate-400 mb-3">
                   Customers can buy from the minimum up to the maximum in multiples of the step, in the unit above.
-                  {formData.unit === 'PIECE' ? ' PIECE values must be whole numbers.' : formData.unit === 'GRAM' ? ' GRAM values must be whole grams.' : formData.unit === 'KG' ? ' KG values allow up to 3 decimals.' : ''}
+                  {formData.unit === 'KG' ? ' KG values allow up to 3 decimals.' : formData.unit === 'GRAM' ? ' GRAM values must be whole grams.' : ` ${formData.unit} values must be whole numbers.`}
                   {' '}Leave all three empty to keep the product unconfigured.
                 </p>
                 <div className="grid grid-cols-3 gap-3">

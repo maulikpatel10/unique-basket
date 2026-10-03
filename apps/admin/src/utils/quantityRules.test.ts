@@ -36,6 +36,9 @@ describe('validateQuantityConfig', () => {
     expect(validateQuantityConfig('PIECE', cfg('1', '10', '0.5')).quantityStep).toMatch(/whole number/);
     expect(validateQuantityConfig('GRAM', cfg('250.5', '2000', '250')).minQuantity).toMatch(/whole number/);
     expect(validateQuantityConfig('KG', cfg('0.0001', '1', '0.25')).minQuantity).toMatch(/at most 3 decimals/);
+    expect(validateQuantityConfig('PACK', cfg('1', '5', '0.5')).quantityStep).toMatch(/whole number/);
+    expect(validateQuantityConfig('DOZEN', cfg('0.5', '4', '1')).minQuantity).toMatch(/whole number/);
+    expect(validateQuantityConfig('PACK', cfg('1', '6', '1'))).toEqual({});
   });
 });
 

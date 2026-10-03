@@ -497,7 +497,7 @@
   - **Admin:** product form fields with validation, plus a rule summary in the product list.
   - **Customer app:** reads the rules for +/-, cart/checkout validation and the limits shown on product details.
   - **Tests:** `backend/tests/product_quantity_rules.test.ts`, `apps/admin/src/utils/quantityRules.test.ts`, Flutter tests listed under P1-03.
-  - **Open (DECISION REQUIRED):** PACK/DOZEN whole-number rule; whether configuration is mandatory for every product.)
+  - **Follow-ups confirmed:** PACK/DOZEN whole numbers only; quantity rules remain optional per product.)
 - **Problem:** Step size, minimum, maximum and integer-vs-decimal rules per unit (KG, GRAM, PIECE, PACK, DOZEN) are undefined, and the app and backend disagree (P1-03, P1-04).
 - **Evidence:** `ProductUnit` enum; cart code.
 - **Required fix:** Decide the rules.
