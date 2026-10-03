@@ -227,6 +227,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             deliverySettingsAsync.isRefreshing) &&
         totalCount > 0;
 
+    final Map<String, CartItemModel> serverCartItems = {
+      for (final item in cartSummary?.items ?? const <CartItemModel>[]) item.productId: item,
+    };
+
     // Resolve cart items
     final List<_CartItemData> cartItems = [];
     double calculatedSubtotal = 0.0;
@@ -241,20 +245,34 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             orElse: () => null,
           );
 
-      final product = matchedProduct ??
-          ProductModel(
-            id: productId,
-            categoryId: 'cat_general',
-            name: 'Fresh Item',
-            price: 0.0,
-            unit: '1 unit',
-            stockQuantity: 10.0,
-          );
+      // Same resolution as checkout (P1-06): store catalogue → server cart details → unavailable.
+      // Never invent a name or price for an item we cannot resolve.
+      final serverItem = serverCartItems[productId];
+      final ProductModel? product = matchedProduct ??
+          (serverItem != null
+              ? ProductModel(
+                  id: productId,
+                  categoryId: '',
+                  name: serverItem.productName ?? '',
+                  price: serverItem.price,
+                  mrp: serverItem.mrp,
+                  unit: serverItem.unit ?? '',
+                  minQuantity: serverItem.minQuantity,
+                  maxQuantity: serverItem.maxQuantity,
+                  quantityStep: serverItem.quantityStep,
+                )
+              : null);
+
+      if (product == null) {
+        cartItems.add(_CartItemData.unavailable(productId: productId, quantity: quantity));
+        continue;
+      }
 
       final itemTotal = product.price * quantity;
       calculatedSubtotal += itemTotal;
 
       cartItems.add(_CartItemData(
+        productId: productId,
         product: product,
         quantity: quantity,
         itemTotal: itemTotal,
@@ -316,7 +334,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 icon: Icons.arrow_forward_rounded,
                 iconPosition: IconPosition.trailing,
                 // D-012: lines that break the product's quantity rule must be fixed first
-                onPressed: cartItems.any((item) => item.quantityIssue != null) ? null : _handleProceedToCheckout,
+                // Unavailable lines must be removed first; checkout blocks them as well (P1-06)
+                onPressed: cartItems.any((item) => item.quantityIssue != null || item.isUnavailable)
+                    ? null
+                    : _handleProceedToCheckout,
               ),
             ),
           AppBottomNavBar(
@@ -474,10 +495,16 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   Widget _buildCartItemCard(_CartItemData item, bool isDark) {
     final product = item.product;
     final quantity = item.quantity;
+    // Unavailable lines reuse the Out of Stock treatment from AppProductCard: dimmed image,
+    // stock-variant pill badge, muted text and a disabled control in place of +/−.
+    final bool isUnavailable = product == null;
+    final Color mutedText = isDark ? AppColors.textSecondaryDark : const Color(0xFF64748B);
 
-    final unitSubtitle = product.categoryName != null && product.categoryName!.isNotEmpty
-        ? '${product.categoryName} • ${product.unit}'
-        : product.unit;
+    final unitSubtitle = isUnavailable
+        ? 'Remove it to continue to checkout'
+        : (product.categoryName != null && product.categoryName!.isNotEmpty
+            ? '${product.categoryName} • ${product.unit}'
+            : product.unit);
 
     return Container(
       padding: const EdgeInsets.all(12.0),
@@ -506,13 +533,16 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               width: context.r(68.0).clamp(56.0, 72.0),
               height: context.r(68.0).clamp(56.0, 72.0),
               color: isDark ? AppColors.surfaceDark : const Color(0xFFF1F5F9),
-              child: product.imageUrl != null && product.imageUrl!.isNotEmpty
-                  ? Image.network(
-                      product.imageUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _buildFallbackThumbnail(isDark),
-                    )
-                  : _buildFallbackThumbnail(isDark),
+              child: Opacity(
+                opacity: isUnavailable ? 0.45 : 1.0,
+                child: product?.imageUrl != null && product!.imageUrl!.isNotEmpty
+                    ? Image.network(
+                        product.imageUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _buildFallbackThumbnail(isDark),
+                      )
+                    : _buildFallbackThumbnail(isDark),
+              ),
             ),
           ),
 
@@ -523,14 +553,24 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (isUnavailable) ...[
+                  const AppBadge(
+                    key: Key('cart_item_unavailable_badge'),
+                    text: 'UNAVAILABLE',
+                    variant: BadgeVariant.stock,
+                  ),
+                  const SizedBox(height: 6.0),
+                ],
                 Text(
-                  product.name,
-                  maxLines: 1,
+                  isUnavailable ? 'This item is no longer available' : product.name,
+                  maxLines: isUnavailable ? 2 : 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: context.sp(15.5),
+                    fontSize: context.sp(isUnavailable ? 14.0 : 15.5),
                     fontWeight: FontWeight.w700,
-                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+                    color: isUnavailable
+                        ? mutedText
+                        : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimary),
                     fontFamily: AppTextStyles.fontFamily,
                   ),
                 ),
@@ -550,7 +590,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   const SizedBox(height: 3.0),
                   Text(
                     item.quantityIssue!,
-                    key: ValueKey('quantity_issue_${product.id}'),
+                    key: ValueKey('quantity_issue_${item.productId}'),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -561,17 +601,19 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     ),
                   ),
                 ],
-                const SizedBox(height: 10.0),
-                Text(
-                  CurrencyFormatter.format(product.price),
-                  style: TextStyle(
-                    fontSize: context.sp(17.0),
-                    fontWeight: FontWeight.w800,
-                    color: const Color(0xFF014D40),
-                    fontFamily: AppTextStyles.fontFamily,
-                    letterSpacing: -0.3,
+                if (!isUnavailable) ...[
+                  const SizedBox(height: 10.0),
+                  Text(
+                    CurrencyFormatter.format(product.price),
+                    style: TextStyle(
+                      fontSize: context.sp(17.0),
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF014D40),
+                      fontFamily: AppTextStyles.fontFamily,
+                      letterSpacing: -0.3,
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
@@ -585,7 +627,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             children: [
               // Remove 'X' Button
               GestureDetector(
-                onTap: () => _handleRemoveItem(product.id, product.name),
+                key: ValueKey('cart_item_remove_${item.productId}'),
+                onTap: () => _handleRemoveItem(item.productId, isUnavailable ? 'Unavailable item' : product.name),
                 behavior: HitTestBehavior.opaque,
                 child: Padding(
                   padding: const EdgeInsets.all(4.0),
@@ -599,20 +642,35 @@ class _CartScreenState extends ConsumerState<CartScreen> {
 
               const SizedBox(height: 14.0),
 
-              // Reused Shared ProductQuantityControl
-              ProductQuantityControl(
-                quantity: quantity,
-                canIncrement: product.quantityRule.canIncrement(quantity),
-                collapsedWidth: 32.0,
-                expandedWidth: 84.0,
-                height: 32.0,
-                onIncrement: () {
-                  ref.read(cartNotifierProvider.notifier).increment(product.id, rule: product.quantityRule);
-                },
-                onDecrement: () {
-                  ref.read(cartNotifierProvider.notifier).decrement(product.id, rule: product.quantityRule);
-                },
-              ),
+              // Unavailable: same disabled control as Out of Stock (no quantity changes)
+              if (isUnavailable)
+                Container(
+                  key: ValueKey('cart_item_disabled_control_${item.productId}'),
+                  width: 32.0,
+                  height: 32.0,
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF334155) : const Color(0xFF7BA19A),
+                    borderRadius: BorderRadius.circular(16.0),
+                  ),
+                  child: const Center(
+                    child: Icon(Icons.add_rounded, size: 20.0, color: Colors.white),
+                  ),
+                )
+              else
+                // Reused Shared ProductQuantityControl
+                ProductQuantityControl(
+                  quantity: quantity,
+                  canIncrement: product.quantityRule.canIncrement(quantity),
+                  collapsedWidth: 32.0,
+                  expandedWidth: 84.0,
+                  height: 32.0,
+                  onIncrement: () {
+                    ref.read(cartNotifierProvider.notifier).increment(product.id, rule: product.quantityRule);
+                  },
+                  onDecrement: () {
+                    ref.read(cartNotifierProvider.notifier).decrement(product.id, rule: product.quantityRule);
+                  },
+                ),
             ],
           ),
         ],
@@ -880,7 +938,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
 
 /// Helper data holder for resolved cart items
 class _CartItemData {
-  final ProductModel product;
+  final String productId;
+
+  /// Null when the item can no longer be resolved for the current store (unavailable).
+  final ProductModel? product;
   final double quantity;
   final double itemTotal;
 
@@ -888,9 +949,18 @@ class _CartItemData {
   final String? quantityIssue;
 
   const _CartItemData({
+    required this.productId,
     required this.product,
     required this.quantity,
     required this.itemTotal,
     this.quantityIssue,
   });
+
+  /// A line that cannot be resolved from the store catalogue or the server cart.
+  const _CartItemData.unavailable({required this.productId, required this.quantity})
+      : product = null,
+        itemTotal = 0,
+        quantityIssue = null;
+
+  bool get isUnavailable => product == null;
 }

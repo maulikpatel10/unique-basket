@@ -877,6 +877,40 @@ void main() {
       expect(orderRepo.lastPayload, isNull);
     });
 
+    testWidgets('P1-06c. Checkout stays blocked until the unavailable item is removed, then orders only resolved items', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final localStorage = LocalStorageService(prefs);
+      final orderRepo = MockOrderRepository();
+
+      tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+      tester.view.devicePixelRatio = 3.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      await tester.pumpWidget(_createCheckoutTestWidget(
+        localStorage: localStorage,
+        cartSummary: const CartSummaryModel(),
+        mockOrderRepo: orderRepo,
+        initialCart: {'p_kale': 2, 'p_ghost': 1},
+      ));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('checkout_blocked_message')), findsOneWidget);
+
+      // Customer removes the unavailable item (from the cart screen); nothing is removed silently
+      final container = ProviderScope.containerOf(tester.element(find.byType(CheckoutScreen)));
+      expect(container.read(cartNotifierProvider).containsKey('p_ghost'), isTrue);
+      container.read(cartNotifierProvider.notifier).removeItem('p_ghost');
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('checkout_blocked_message')), findsNothing);
+      await tester.ensureVisible(find.text('PLACE ORDER'));
+      await tester.tap(find.text('PLACE ORDER'));
+      await tester.pumpAndSettle();
+      expect(orderRepo.lastPayload?['items'], [
+        {'productId': 'p_kale', 'quantity': 2.0},
+      ]);
+    });
+
     testWidgets('18. Authoritative backend CartSummary pricing values render directly on Checkout screen', (tester) async {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();

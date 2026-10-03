@@ -13,6 +13,7 @@ import 'package:customer_app/features/home/presentation/providers/home_provider.
 import 'package:customer_app/features/store/data/models/store_model.dart';
 import 'package:customer_app/features/store/presentation/providers/store_provider.dart';
 import 'package:customer_app/shared/widgets/app_bottom_nav_bar.dart';
+import 'package:customer_app/shared/widgets/app_badge.dart';
 import 'package:customer_app/shared/widgets/app_button.dart';
 import 'package:customer_app/shared/widgets/product_quantity_control.dart';
 import 'package:flutter/material.dart';
@@ -1091,6 +1092,87 @@ void main() {
       expect(find.text('Minimum is 2 kg.'), findsOneWidget);
       final button = tester.widget<AppButton>(find.widgetWithText(AppButton, 'Proceed to Checkout'));
       expect(button.onPressed, isNull);
+    });
+  });
+
+  group('Unavailable cart items (reuse the Out of Stock pattern)', () {
+    Future<ProviderContainer> pumpCart(WidgetTester tester, {required Map<String, int> cart, List<ProductModel>? products}) async {
+      SharedPreferences.setMockInitialValues({});
+      final localStorage = LocalStorageService(await SharedPreferences.getInstance());
+      tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+      tester.view.devicePixelRatio = 3.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+      await tester.pumpWidget(_createCartTestWidget(localStorage: localStorage, products: products, initialCart: cart));
+      await tester.pumpAndSettle();
+      return ProviderScope.containerOf(tester.element(find.byType(CartScreen)));
+    }
+
+    testWidgets('an unresolvable item shows the Unavailable state, never a fake "Fresh Item" or ₹0', (tester) async {
+      await pumpCart(tester, cart: {'p_kale': 1, 'p_ghost': 2});
+
+      // Same visual language as Out of Stock: stock-variant pill badge, muted text, disabled control
+      final badge = tester.widget<AppBadge>(find.byKey(const Key('cart_item_unavailable_badge')));
+      expect(badge.text, 'UNAVAILABLE');
+      expect(badge.variant, BadgeVariant.stock);
+      expect(find.text('This item is no longer available'), findsOneWidget);
+      expect(find.text('OUT OF STOCK'), findsNothing, reason: 'unavailable is a distinct state');
+      expect(find.byKey(const ValueKey('cart_item_disabled_control_p_ghost')), findsOneWidget);
+
+      expect(find.text('Fresh Item'), findsNothing);
+      expect(find.text('₹0'), findsNothing);
+      // The resolved line is unaffected
+      expect(find.text('Fresh Local Kale'), findsOneWidget);
+      expect(find.byType(ProductQuantityControl), findsOneWidget);
+    });
+
+    testWidgets('an unavailable item cannot be increased or updated', (tester) async {
+      final container = await pumpCart(tester, cart: {'p_ghost': 2});
+
+      // No +/− control is rendered for the unavailable line; tapping the disabled control does nothing
+      expect(find.byType(ProductQuantityControl), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('cart_item_disabled_control_p_ghost')));
+      await tester.pumpAndSettle();
+      expect(container.read(cartNotifierProvider)['p_ghost'], 2);
+    });
+
+    testWidgets('the customer can remove the unavailable item with the normal remove action', (tester) async {
+      final container = await pumpCart(tester, cart: {'p_kale': 1, 'p_ghost': 2});
+
+      await tester.tap(find.byKey(const ValueKey('cart_item_remove_p_ghost')));
+      await tester.pumpAndSettle();
+
+      expect(container.read(cartNotifierProvider).containsKey('p_ghost'), isFalse);
+      expect(container.read(cartNotifierProvider)['p_kale'], 1, reason: 'other lines untouched');
+      expect(find.byKey(const Key('cart_item_unavailable_badge')), findsNothing);
+      expect(find.text('Unavailable item removed from basket'), findsOneWidget);
+    });
+
+    testWidgets('proceeding to checkout is blocked until the unavailable item is removed', (tester) async {
+      await pumpCart(tester, cart: {'p_kale': 1, 'p_ghost': 1});
+      AppButton proceed() => tester.widget<AppButton>(find.widgetWithText(AppButton, 'Proceed to Checkout'));
+      expect(proceed().onPressed, isNull);
+
+      await tester.tap(find.byKey(const ValueKey('cart_item_remove_p_ghost')));
+      await tester.pumpAndSettle();
+      expect(proceed().onPressed, isNotNull);
+    });
+
+    testWidgets('a resolved out-of-stock product keeps its existing cart line (no Unavailable state)', (tester) async {
+      const outOfStockKale = ProductModel(
+        id: 'p_kale',
+        categoryId: 'cat_greens',
+        name: 'Fresh Local Kale',
+        price: 180.0,
+        unit: '1 Bunch',
+        stockQuantity: 0.0,
+        isAvailable: false,
+      );
+      await pumpCart(tester, cart: {'p_kale': 1}, products: const [outOfStockKale]);
+
+      expect(find.byKey(const Key('cart_item_unavailable_badge')), findsNothing);
+      expect(find.text('Fresh Local Kale'), findsOneWidget);
+      expect(find.text('₹180'), findsWidgets);
+      expect(find.byType(ProductQuantityControl), findsOneWidget);
     });
   });
 }
