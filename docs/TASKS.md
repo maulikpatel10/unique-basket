@@ -307,7 +307,16 @@
     - `services/serviceabilityService.ts`: the active-pincode checks, shared by address create/update and the public endpoints (the serviceability model is still pending, P4-05).
     - `utils/request.ts`: `requireUserId` replaces the repeated 401 blocks (same `UNAUTHORIZED` response).
     - **Behaviour:** responses and error codes are unchanged; all 461 existing tests pass. New tests in `backend/tests/customer_services.test.ts`.
-    - **Remaining candidates:** admin order status (`adminOrderController`), manager CRUD.
+  - **Service extraction (part 3, `adminOrderController` 474→76 lines):**
+    - `services/adminOrderService.ts`:
+      - `assertStoreAccess`: the store-manager isolation rule.
+      - `buildAdminOrderFilter` / `listAdminOrders`: a manager can never widen the list to another store.
+      - `getAdminOrderDetails`.
+      - The pure `assertStatusTransition`: the transition table, D-006 (PICKED_UP only via verification), the PICKUP fulfilment check and D-005 (unpaid ONLINE can only be cancelled).
+      - `changeOrderStatus`: atomic claim, stock restore on cancel, audit log, customer notification.
+      - `verifyPickupHandover`.
+    - **Behaviour:** responses and error codes are unchanged; all 468 existing tests pass. New unit tests in `backend/tests/admin_order_service.test.ts`. The status lifecycle itself is still pending owner review (P-012).
+    - **Remaining candidate:** manager CRUD (`adminManagerController`).
 - **Problem:** Orders, cart, inventory and pricing live in 300–800-line controllers with `any`-typed `whereClause`es and ad-hoc parsing.
 - **Evidence:** `customerController.ts` 800 lines, `orderController.ts` 627, `productController.ts` 535.
 - **Required fix:** Extract services (orders, inventory, pricing) and a validation layer; keep the HTTP contracts unchanged.
