@@ -19,7 +19,7 @@ src/app.ts            route mounting, 404, global error handler
 src/routes/*.ts       URL → middleware → controller
 src/controllers/*.ts  request handling + business logic (static class methods)
 src/middlewares/      authenticate, requireRole, requireStoreAccess
-src/services/         otpService, notificationService, pricing/inventory/session services
+src/services/         otp, notification, pricing, inventory (stock deduction/adjustment), order (fulfillment, lines, charges), cart (summary), session
 src/validation/       request body schemas + validator (use validateBody(schema) in routes)
 src/utils/            jwt, distance (Haversine), orderNumber
 src/config/           db (Prisma client), razorpay

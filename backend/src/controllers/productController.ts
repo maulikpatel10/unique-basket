@@ -2,8 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../config/db';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 import { getParam } from '../utils/request';
-import { lockInventoryRow } from '../services/inventoryService';
-import { AppError } from '../utils/errors';
+import { adjustStoreInventory } from '../services/inventoryService';
 import { parseQuantityConfig } from '../utils/quantity';
 import { validatedBody } from '../middlewares/validate';
 import { createProductSchema, updateProductSchema, updateStoreInventorySchema } from '../validation/schemas';
@@ -432,107 +431,20 @@ export class ProductController {
         return;
       }
 
-      // Perform inside transaction to guarantee atomic updates and history logging
-      const result = await prisma.$transaction(async (tx) => {
-        // P0-06: lock the inventory row so concurrent checkouts/adjustments cannot be overwritten
-        await lockInventoryRow(tx, storeId, productId);
-
-        // 1. Fetch current inventory details
-        const currentInv = await tx.storeInventory.findUnique({
-          where: {
-            storeId_productId: { storeId, productId },
-          },
-        });
-
-        const prevStock = currentInv ? Number(currentInv.stockQuantity) : 0;
-        let newStock = prevStock;
-        let changeVal = 0;
-        let type: 'STOCK_ADDED' | 'STOCK_REMOVED' | 'STOCK_ADJUSTED' = 'STOCK_ADJUSTED';
-
-        if (adjustmentType) {
-          // New adjustment UI signature
-          if (quantity == null) {
-            throw new AppError(400, 'INVALID_QUANTITY', 'Quantity must be a positive number.');
-          }
-          const qty = quantity;
-
-          if (adjustmentType === 'ADD') {
-            newStock = prevStock + qty;
-            changeVal = qty;
-            type = 'STOCK_ADDED';
-          } else if (adjustmentType === 'REMOVE') {
-            newStock = prevStock - qty;
-            changeVal = -qty;
-            type = 'STOCK_REMOVED';
-          } else if (adjustmentType === 'SET') {
-            newStock = qty;
-            changeVal = qty - prevStock;
-            type = 'STOCK_ADJUSTED';
-          }
-        } else if (stockQuantity != null) {
-          // Existing test compatibility signature
-          const targetQty = stockQuantity;
-          newStock = targetQty;
-          changeVal = targetQty - prevStock;
-          type = 'STOCK_ADJUSTED';
-        } else {
-          // If only updating threshold or availability without changing quantity
-          newStock = prevStock;
-          changeVal = 0;
-        }
-
-        // Negative stock protection
-        if (newStock < 0) {
-          throw new Error('NEGATIVE_STOCK_BLOCKED');
-        }
-
-        // 2. Upsert store inventory record
-        const inventory = await tx.storeInventory.upsert({
-          where: {
-            storeId_productId: { storeId, productId },
-          },
-          update: {
-            stockQuantity: newStock,
-            lowStockThreshold: lowStockThreshold ?? undefined,
-            isAvailable,
-            updatedAt: new Date(),
-          },
-          create: {
-            storeId,
-            productId,
-            stockQuantity: newStock,
-            lowStockThreshold: lowStockThreshold ?? 5.0,
-            isAvailable: isAvailable ?? true,
-          },
-        });
-
-        // 3. Log history transaction record
-        if (changeVal !== 0 || adjustmentType || stockQuantity !== undefined) {
-          await tx.inventoryTransaction.create({
-            data: {
-              storeId,
-              productId,
-              previousQuantity: prevStock,
-              changeQuantity: changeVal,
-              newQuantity: newStock,
-              type,
-              reason: reason || 'Manual stock override',
-              performedByAdminId: req.user?.id,
-            },
-          });
-        }
-
-        // 4. Write Audit Log
-        await tx.auditLog.create({
-          data: {
-            adminUserId: req.user?.id,
-            action: 'UPDATE_INVENTORY',
-            details: `Manual inventory adjust (${type}) for store ID: ${storeId}, product ID: ${productId}. Old: ${prevStock}, Change: ${changeVal}, New: ${newStock}`,
-          },
-        });
-
-        return inventory;
-      });
+      // Atomic: row lock (P0-06), stock change, history + audit log
+      const result = await prisma.$transaction((tx) =>
+        adjustStoreInventory(tx, {
+          storeId,
+          productId,
+          adjustmentType,
+          quantity,
+          stockQuantity,
+          lowStockThreshold,
+          isAvailable,
+          reason,
+          adminUserId: req.user?.id,
+        }),
+      );
 
       res.status(200).json({
         success: true,

@@ -1,18 +1,15 @@
 import { Response, NextFunction } from 'express';
 import { prisma } from '../config/db';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
-import { calculateHaversineDistance } from '../utils/distance';
 import { razorpay } from '../config/razorpay';
 import { FulfillmentType, PaymentMethod, PaymentStatus, OrderStatus } from '@prisma/client';
 import { NotificationService } from '../services/notificationService';
 import { generateNextOrderNumber } from '../utils/orderNumber';
-import { AppError } from '../utils/errors';
-import { snapshotDeliveryAddress, withDeliveryAddress } from '../utils/orderAddress';
-import { validateProductQuantity } from '../utils/quantity';
+import { withDeliveryAddress } from '../utils/orderAddress';
 import { validatedBody } from '../middlewares/validate';
 import { createOrderSchema } from '../validation/schemas';
-import { fromPaise, lineTotalPaise, toPaise } from '../utils/money';
-import { loadFareSettings, calculateDeliveryFee } from '../services/pricingService';
+import { loadFareSettings } from '../services/pricingService';
+import { calculateOrderCharges, reserveOrderLines, resolveFulfillment } from '../services/orderService';
 import { claimOrderStatus, restoreOrderStock, ORDER_STATUS_CHANGED } from '../services/inventoryService';
 import { getParam } from '../utils/request';
 
@@ -38,209 +35,26 @@ export class OrderController {
     try {
       // Execute entire order creation within a database transaction
       const result = await prisma.$transaction(async (tx) => {
-        let assignedStoreId = storeId;
-        let deliveryAddressSnapshot: ReturnType<typeof snapshotDeliveryAddress> | undefined;
-        let calculatedDeliveryFee = 0.00;
-
-        // 1. Load system configurations
+        // 1. Fare/COD configuration (D-009, admin-configurable)
         const fares = await loadFareSettings(tx);
-        const configMinDeliveryOrder = fares.minimumOrderAmount;
-        const configCodCharge = fares.codCharge;
-        const configMinCodOrder = fares.minimumCodOrderAmount;
-        const configMaxCodOrder = fares.maximumCodOrderAmount;
 
-        // 2. Fulfillment checks
-        if (fulfillmentType === 'DELIVERY') {
-          // Check if delivery is enabled
-          if (!fares.deliveryEnabled) {
-            throw new Error('DELIVERY_DISABLED');
-          }
+        // 2. Which store fulfils the order (nearest in range for DELIVERY, chosen store for PICKUP)
+        const { storeId: assignedStoreId, deliveryAddressSnapshot } = await resolveFulfillment(tx, userId, fares, {
+          fulfillmentType,
+          addressId,
+          storeId,
+        });
 
-          if (!addressId) {
-            throw new AppError(400, 'MISSING_ADDRESS_ID', 'Address ID is required for delivery fulfillment.');
-          }
+        // 3. Validate items, deduct stock (CAS) and price the lines
+        const { lines: orderItemsToCreate, subtotalPaise } = await reserveOrderLines(tx, assignedStoreId, items);
 
-          // Fetch Address coordinates
-          const address = await tx.userAddress.findUnique({
-            where: { id: addressId },
-          });
-
-          if (!address || address.userId !== userId) {
-            throw new AppError(404, 'ADDRESS_NOT_FOUND', 'Delivery address not found.');
-          }
-
-          deliveryAddressSnapshot = snapshotDeliveryAddress(address);
-
-          const clientLat = Number(address.latitude);
-          const clientLng = Number(address.longitude);
-
-          // Find active stores
-          const activeStores = await tx.store.findMany({
-            where: { isActive: true },
-          });
-
-          // Calculate proximity and find nearest eligible store
-          let nearestStore = null;
-          let minDistance = Infinity;
-
-          for (const store of activeStores) {
-            const distance = calculateHaversineDistance(
-              clientLat,
-              clientLng,
-              Number(store.latitude),
-              Number(store.longitude)
-            );
-
-            if (distance <= Number(store.deliveryRadiusKm)) {
-              if (distance < minDistance) {
-                minDistance = distance;
-                nearestStore = store;
-              }
-            }
-          }
-
-          if (!nearestStore) {
-            // Throw unique error text to signal out of bounds location to client
-            throw new Error('NO_DELIVERY_AVAILABLE');
-          }
-
-          assignedStoreId = nearestStore.id;
-        } else if (fulfillmentType === 'PICKUP') {
-          if (!assignedStoreId) {
-            throw new AppError(400, 'MISSING_STORE_ID', 'Store ID is required for pickup fulfillment.');
-          }
-
-          const store = await tx.store.findUnique({
-            where: { id: assignedStoreId },
-          });
-
-          if (!store || !store.isActive) {
-            throw new AppError(400, 'STORE_UNAVAILABLE', 'Selected store is inactive or unavailable.');
-          }
-        } else {
-          throw new AppError(400, 'INVALID_FULFILLMENT_TYPE', 'Invalid fulfillment type.');
-        }
-
-        // 3. Process products & inventories
-        let subtotalPaise = 0;
-        const orderItemsToCreate = [];
-
-        for (const item of items) {
-          const { productId, quantity: qtyVal } = item;
-
-          // Get global product details
-          const product = await tx.product.findUnique({
-            where: { id: productId },
-            include: { category: true },
-          });
-
-          if (!product || !product.isActive || !product.category.isActive) {
-            throw new AppError(400, 'PRODUCT_UNAVAILABLE', `Product with ID ${productId} is not available.`);
-          }
-
-          const quantityError = validateProductQuantity(product, qtyVal);
-          if (quantityError) {
-            throw new AppError(400, 'INVALID_QUANTITY', quantityError);
-          }
-
-          // Load current inventory to perform CAS update and transaction log
-          const currentInv = await tx.storeInventory.findUnique({
-            where: {
-              storeId_productId: { storeId: assignedStoreId, productId },
-            },
-          });
-
-          const prevStock = currentInv ? Number(currentInv.stockQuantity) : 0;
-
-          if (!currentInv || !currentInv.isAvailable || prevStock < qtyVal) {
-            throw new Error(`INSUFFICIENT_STOCK:${product.name}:${prevStock}:${product.unit}`);
-          }
-
-          const newStock = prevStock - qtyVal;
-
-          const updateCount = await tx.storeInventory.updateMany({
-            where: {
-              storeId: assignedStoreId,
-              productId,
-              isAvailable: true,
-              stockQuantity: prevStock, // CAS check
-            },
-            data: {
-              stockQuantity: newStock,
-            },
-          });
-
-          if (updateCount.count === 0) {
-            throw new AppError(409, 'CONCURRENCY_ERROR', 'Stock changed while placing the order. Please try again.');
-          }
-
-          // Create inventory transaction record
-          await tx.inventoryTransaction.create({
-            data: {
-              storeId: assignedStoreId,
-              productId,
-              previousQuantity: prevStock,
-              changeQuantity: -qtyVal,
-              newQuantity: newStock,
-              type: 'ORDER_DEDUCTION',
-              reason: 'Checkout stock deduction',
-            },
-          });
-
-          const itemPrice = Number(product.price);
-          // P2-03: exact paise arithmetic (no float rounding drift)
-          const itemTotalPaise = lineTotalPaise(qtyVal, product.price);
-          subtotalPaise += itemTotalPaise;
-          const totalItemPrice = fromPaise(itemTotalPaise);
-
-          orderItemsToCreate.push({
-            productId,
-            productName: product.name,
-            unit: product.unit,
-            quantity: qtyVal,
-            unitPrice: itemPrice,
-            totalPrice: totalItemPrice,
-          });
-        }
-
-        const subtotal = fromPaise(subtotalPaise);
-
-        // 4. Validate Delivery minimum order amount & Calculate Delivery Fee
-        if (fulfillmentType === 'DELIVERY') {
-          if (subtotal < configMinDeliveryOrder) {
-            throw new Error(`MINIMUM_DELIVERY_AMOUNT_NOT_MET:${configMinDeliveryOrder}`);
-          }
-
-          calculatedDeliveryFee = calculateDeliveryFee(subtotal, fares);
-        } else if (fulfillmentType === 'PICKUP') {
-          calculatedDeliveryFee = 0.00;
-        }
-
-        // 5. Validate COD & Calculate COD charge
-        let calculatedCodCharge = 0.00;
-        if (paymentMethod === 'COD') {
-          if (!fares.codEnabled) {
-            throw new Error('COD_DISABLED');
-          }
-
-          if (fulfillmentType === 'PICKUP' && !fares.pickupCodEnabled) {
-            throw new Error('PICKUP_COD_DISABLED');
-          }
-
-          if (subtotal < configMinCodOrder) {
-            throw new Error(`MINIMUM_COD_AMOUNT_NOT_MET:${configMinCodOrder}`);
-          }
-
-          if (subtotal > configMaxCodOrder) {
-            throw new Error(`MAXIMUM_COD_AMOUNT_EXCEEDED:${configMaxCodOrder}`);
-          }
-
-          calculatedCodCharge = configCodCharge;
-        } else if (paymentMethod === 'ONLINE') {
-          calculatedCodCharge = 0.00;
-        }
-
-        const grandTotal = fromPaise(subtotalPaise + toPaise(calculatedDeliveryFee) + toPaise(calculatedCodCharge));
+        // 4–5. Delivery minimum/fee and COD rules/charge
+        const {
+          subtotal,
+          deliveryFee: calculatedDeliveryFee,
+          codCharge: calculatedCodCharge,
+          total: grandTotal,
+        } = calculateOrderCharges(fares, fulfillmentType, paymentMethod, subtotalPaise);
 
         // 6. Generate standardized Order Number (Format: #UB-DDMMYY-XXX)
         const orderNumber = await generateNextOrderNumber(tx);

@@ -272,7 +272,7 @@
 ## P2 — Architecture/maintainability
 
 ### P2-01 — Business logic in controllers; no request validation layer
-- **Priority:** P2 · **Area:** Backend / Architecture · **Status:** IN PROGRESS. The request validation layer is done; extracting services (orders, inventory, pricing) remains.
+- **Priority:** P2 · **Area:** Backend / Architecture · **Status:** IN PROGRESS. The request validation layer is done (parts 1–2). Service extraction part 1 is done for orders, inventory and cart; more controllers can follow.
   - **Validator:** `backend/src/validation/validator.ts`, an in-house typed schema/parsers module with no new dependency (`zod` is still awaiting approval).
   - **Middleware:** `middlewares/validate.ts` (`validateBody`/`validatedBody`).
   - **Schemas:** `validation/schemas.ts`, covering auth send/verify OTP, customer profile, add/update address, cart add/update, order creation, and admin product create/update.
@@ -294,6 +294,13 @@
     - A null pincode city/state on update caused a 500; null values are now ignored.
   - **Part 2 tests:** `backend/tests/admin_request_validation.test.ts`.
   - **Not migrated:** payment endpoints (payment code is frozen until P-001), notification read/token endpoints, and refresh/logout (already explicit).
+  - **Service extraction (part 1):**
+    - `services/orderService.ts`: `resolveFulfillment` (address → nearest in-range store, or the pickup store), `findNearestDeliveryStore`, `reserveOrderLines` (product, category and D-012 quantity checks, stock deduction, paise pricing) and the pure `calculateOrderCharges` (delivery minimum/fee, COD rules/charge).
+    - `services/inventoryService.ts`: `deductStockForOrder` (checkout CAS + ORDER_DEDUCTION log), the pure `computeStockAdjustment`, and `adjustStoreInventory` (lock, upsert, history, audit).
+    - `services/cartService.ts`: `getCartSummary`.
+    - **Controllers** now orchestrate request → service → response: `orderController` 615→429 lines, `cartController` 295→227, `productController` 597→509. The Razorpay block inside order creation is unchanged (payment code is frozen until P-001).
+    - **Behaviour:** HTTP contracts and error codes are unchanged; all 449 existing tests pass. New unit tests in `backend/tests/order_services.test.ts` cover the pure rules without HTTP or a database.
+    - **Remaining candidates:** customer addresses/profile (`customerController`, 647 lines), admin order status (`adminOrderController`), manager CRUD.
 - **Problem:** Orders, cart, inventory and pricing live in 300–800-line controllers with `any`-typed `whereClause`es and ad-hoc parsing.
 - **Evidence:** `customerController.ts` 800 lines, `orderController.ts` 627, `productController.ts` 535.
 - **Required fix:** Extract services (orders, inventory, pricing) and a validation layer; keep the HTTP contracts unchanged.

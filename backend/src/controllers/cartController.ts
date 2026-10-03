@@ -4,8 +4,7 @@ import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 import { validateProductQuantity } from '../utils/quantity';
 import { validatedBody } from '../middlewares/validate';
 import { addCartItemSchema, updateCartItemSchema } from '../validation/schemas';
-import { loadFareSettings, calculateDeliveryFee } from '../services/pricingService';
-import { fromPaise, lineTotalPaise, toPaise } from '../utils/money';
+import { getCartSummary } from '../services/cartService';
 import { getParam } from '../utils/request';
 
 export class CartController {
@@ -25,76 +24,9 @@ export class CartController {
         return;
       }
 
-      const cartItems = await prisma.cartItem.findMany({
-        where: { userId },
-        include: {
-          product: {
-            select: {
-              id: true,
-              name: true,
-              price: true,
-              mrp: true,
-              unit: true,
-              minQuantity: true,
-              maxQuantity: true,
-              quantityStep: true,
-              isActive: true,
-              category: { select: { isActive: true } },
-            },
-          },
-        },
-      });
-
-      // Exclude items checkout would reject: inactive products or products in inactive categories (P1-05)
-      const activeItems = cartItems.filter((item) => item.product.isActive && item.product.category.isActive);
-
-      // Calculate subtotal safely avoiding floating point errors
-      let subtotalPaise = 0;
-      const formattedItems = activeItems.map((item) => {
-        const itemQty = Number(item.quantity);
-        const itemPrice = Number(item.product.price);
-        // P2-03: exact paise arithmetic
-        const itemTotalPaise = lineTotalPaise(itemQty, item.product.price);
-        subtotalPaise += itemTotalPaise;
-        const totalItemPrice = fromPaise(itemTotalPaise);
-
-        return {
-          id: item.id,
-          productId: item.productId,
-          productName: item.product.name,
-          unit: item.product.unit,
-          minQuantity: item.product.minQuantity != null ? Number(item.product.minQuantity) : null,
-          maxQuantity: item.product.maxQuantity != null ? Number(item.product.maxQuantity) : null,
-          quantityStep: item.product.quantityStep != null ? Number(item.product.quantityStep) : null,
-          price: itemPrice,
-          mrp: item.product.mrp ? Number(item.product.mrp) : null,
-          quantity: itemQty,
-          totalPrice: totalItemPrice,
-        };
-      });
-
-      // Fetch delivery settings for authoritative pricing calculations
-      const subtotal = fromPaise(subtotalPaise);
-
-      // Same fare rules as checkout (P1-05). No delivery fee when the cart is empty or delivery is disabled.
-      const fares = await loadFareSettings(prisma);
-      const deliveryFee = activeItems.length > 0 && fares.deliveryEnabled
-        ? calculateDeliveryFee(subtotal, fares)
-        : 0.00;
-
-      const total = fromPaise(subtotalPaise + toPaise(deliveryFee));
-
       res.status(200).json({
         success: true,
-        data: {
-          items: formattedItems,
-          subtotal,
-          deliveryFee,
-          total,
-          freeDeliveryThreshold: fares.freeDeliveryThreshold,
-          deliveryEnabled: fares.deliveryEnabled,
-          minimumOrderAmount: fares.minimumOrderAmount,
-        },
+        data: await getCartSummary(userId),
       });
     } catch (error) {
       next(error);
