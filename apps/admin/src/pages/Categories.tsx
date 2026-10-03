@@ -20,6 +20,7 @@ import {
   Layers
 } from 'lucide-react';
 import { asApiError } from '../utils/apiError';
+import { handleImageError } from '../utils/imageFallback';
 
 interface Category {
   id: string;
@@ -309,9 +310,7 @@ export const Categories: React.FC = () => {
                           src={cat.imageUrl}
                           alt={cat.name}
                           className="h-10 w-12 rounded object-cover border border-slate-700"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=120&q=80';
-                          }}
+                          onError={handleImageError}
                         />
                       ) : (
                         <div className="h-10 w-12 rounded bg-slate-900 border border-slate-850 flex items-center justify-center text-slate-500">
